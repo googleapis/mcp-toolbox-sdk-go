@@ -16,7 +16,7 @@ name: ✨ Feature Request
 description: Suggest an idea for new or improved behavior.
 title: "<brief summary of the proposed feature>"
 labels: ["type: feature request"]
-type: feature
+
 body:
   - type: markdown
     attributes:
@@ -30,7 +30,7 @@ body:
       description: |
         Please run through the following list and make sure you've tried the usual "quick fixes":
       options:
-        - label: "Search the [current open issues](https://github.com/googleapis/genai-toolbox/issues)"
+        - label: "Search the [current open issues](https://github.com/googleapis/mcp-toolbox-sdk-go/issues)"
           required: true
 
   - type: textarea

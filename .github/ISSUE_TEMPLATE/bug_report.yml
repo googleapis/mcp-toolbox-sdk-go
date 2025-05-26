@@ -16,7 +16,6 @@ name: 🐞 Bug Report
 description: File a report for unexpected or undesired behavior.
 title: "<brief summary of what bug or error was observed>"
 labels: ["type: bug"]
-type: "bug"
 
 body:
   - type: markdown
@@ -70,7 +69,7 @@ body:
       label: Client
       description: "How are you connecting to Toolbox?"
       value: |
-        1. Client: <name and link to the client are you using>
+        1. Client: <name and link to the SDK are you using>
         2. Version: <what exact version of the SDK are you using>
         3. Example: If possible, please include your code of configuration:
 
