@@ -21,7 +21,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping us improve! 🙏 Please answer these questions and provide as much information as possible about your feature request. 
+        Thanks for helping us improve! 🙏 Please answer these questions and provide as much information as possible about your feature request.
 
   - id: preamble
     type: checkboxes
@@ -36,7 +36,7 @@ body:
   - type: textarea
     id: use-case
     attributes:
-      label: What are you trying to do that currently feels hard or impossible? 
+      label: What are you trying to do that currently feels hard or impossible?
       description: "A clear and concise description of what the end goal for the feature should be -- avoid generalizing and try to provide a specific use-case."
     validations:
       required: true

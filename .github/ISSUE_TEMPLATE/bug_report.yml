@@ -32,6 +32,7 @@ body:
         Please run through the following list and make sure you've tried the usual "quick fixes":
         - Search the [current open issues](https://github.com/googleapis/mcp-toolbox-sdk-go/issues)
         - Update to the [latest version of Toolbox](https://github.com/googleapis/genai-toolbox/releases)
+        - Update to the [latest version of the SDK](https://github.com/googleapis/mcp-toolbox-sdk-go/blob/main/CHANGELOG.md).
       options:
         - label: "I've searched the current open issues"
           required: true
@@ -61,6 +62,7 @@ body:
           - As a downloaded binary (e.g. from `curl -O https://storage.googleapis.com/genai-toolbox/v$VERSION/linux/amd64/toolbox`)
           - As a container (e.g. from `us-central1-docker.pkg.dev/database-toolbox/toolbox/toolbox:$VERSION`)
           - Compiled from source (include the command used to build)
+        3. Go version: (output of `go version`)
 
   - type: textarea
     id: client
@@ -69,7 +71,7 @@ body:
       description: "How are you connecting to Toolbox?"
       value: |
         1. Client: <name and link to the client are you using>
-        2. Version: <what exact version of the client are you using>
+        2. Version: <what exact version of the SDK are you using>
         3. Example: If possible, please include your code of configuration:
 
         ```go
