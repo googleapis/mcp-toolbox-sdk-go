@@ -1,27 +1,13 @@
+![MCP Toolbox
+Logo](https://raw.githubusercontent.com/googleapis/genai-toolbox/main/logo.png)
 # MCP Toolbox SDKs for Go
 
-[![Open in Cloud Shell](https://gstatic.com/cloudssh/images/open-btn.svg)](https://ssh.cloud.google.com/cloudshell/editor?cloudshell_git_repo=GITHUB_URL)
+[![License: Apache
+2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-*Description*
+This repository contains Go SDKs designed to seamlessly integrate the
+functionalities of the [MCP
+Toolbox](https://github.com/googleapis/genai-toolbox) into your Gen AI
+applications.
 
-> **🧪 Preview:** Any notes about stability or launch stage.
-
-## Features
-
-## Getting Started
-
-### Prerequisites
-
-## Contributing
-
-Contributions to this library are always welcome and highly encouraged.
-
-See [CONTRIBUTING](CONTRIBUTING.md) for more information how to get started.
-
-Please note that this project is released with a Contributor Code of Conduct. By participating in
-this project you agree to abide by its terms. See [Code of Conduct](CODE_OF_CONDUCT.md) for more
-information.
-
-## License
-
-Apache 2.0 - See [LICENSE](LICENSE) for more information.
+# TODO: Edit readme
