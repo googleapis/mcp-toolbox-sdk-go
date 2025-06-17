@@ -1,3 +1,17 @@
+// Copyright 2024 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package core
 
 import (
@@ -6,7 +20,7 @@ import (
 )
 
 func TestToolboxTool_Getters(t *testing.T) {
-	sampleParams := []Parameter{
+	sampleParams := []ParameterSchema{
 		{Name: "param_one", Type: "string"},
 		{Name: "param_two", Type: "integer"},
 	}
@@ -34,7 +48,6 @@ func TestToolboxTool_Getters(t *testing.T) {
 	t.Run("Parameters Method Behavior", func(t *testing.T) {
 		t.Run("Returns Correct Slice Content", func(t *testing.T) {
 			params := tool.Parameters()
-			// reflect.DeepEqual is the standard way to compare complex types like slices of structs.
 			if !reflect.DeepEqual(params, sampleParams) {
 				t.Fatalf("Parameters() returned incorrect slice.\nExpected: %+v\nGot: %+v", sampleParams, params)
 			}
@@ -53,7 +66,7 @@ func TestToolboxTool_Getters(t *testing.T) {
 
 		t.Run("Handles Case With No Parameters", func(t *testing.T) {
 			emptyTool := &ToolboxTool{
-				parameters: []Parameter{},
+				parameters: []ParameterSchema{},
 			}
 
 			params := emptyTool.Parameters()

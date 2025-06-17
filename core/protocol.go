@@ -1,3 +1,17 @@
+// Copyright 2024 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package core
 
 import (
@@ -6,16 +20,16 @@ import (
 )
 
 // Schema for a tool parameter.
-type Parameter struct {
-	Name        string     `json:"name"`
-	Type        string     `json:"type"`
-	Description string     `json:"description"`
-	AuthSources []string   `json:"authSources,omitempty"`
-	Items       *Parameter `json:"items,omitempty"`
+type ParameterSchema struct {
+	Name        string           `json:"name"`
+	Type        string           `json:"type"`
+	Description string           `json:"description"`
+	AuthSources []string         `json:"authSources,omitempty"`
+	Items       *ParameterSchema `json:"items,omitempty"`
 }
 
 // validateType is a helper for manual type checking.
-func (p *Parameter) validateType(value any) error {
+func (p *ParameterSchema) validateType(value any) error {
 	if value == nil {
 		return fmt.Errorf("parameter '%s' received a nil value", p.Name)
 	}
@@ -61,9 +75,9 @@ func (p *Parameter) validateType(value any) error {
 
 // Schema for a tool.
 type ToolSchema struct {
-	Description  string      `json:"description"`
-	Parameters   []Parameter `json:"parameters"`
-	AuthRequired []string    `json:"authRequired,omitempty"`
+	Description  string            `json:"description"`
+	Parameters   []ParameterSchema `json:"parameters"`
+	AuthRequired []string          `json:"authRequired,omitempty"`
 }
 
 // Schema for the Toolbox manifest.
