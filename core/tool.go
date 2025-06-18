@@ -50,6 +50,5 @@ func (tt *ToolboxTool) Description() string {
 func (tt *ToolboxTool) Parameters() []ParameterSchema {
 	paramsCopy := make([]ParameterSchema, len(tt.parameters))
 	copy(paramsCopy, tt.parameters)
-
 	return paramsCopy
 }
