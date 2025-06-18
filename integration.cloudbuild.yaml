@@ -33,7 +33,7 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test -c -race ./tests/...
+      go test -c -race .
 
 options:
   logging: CLOUD_LOGGING_ONLY
