@@ -28,7 +28,9 @@ branchProtectionRules:
       - "cla/google"
       - "conventionalcommits.org"
       - "header-check"
+      - "lint"
     # - Add required status checks like presubmit tests
+      - "core-go-sdk-pr (toolbox-testing-438616)"
     requiredApprovingReviewCount: 1
     requiresCodeOwnerReviews: true
     requiresStrictStatusChecks: true
