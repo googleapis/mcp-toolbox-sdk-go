@@ -28,13 +28,96 @@ func TestParameterSchemaInteger(t *testing.T) {
 		Description: "integer parameter",
 	}
 
-	value := 1
+	t.Run("Test int param", func(t *testing.T) {
+		value := 1
 
-	err := schema.validateType(value)
+		err := schema.validateType(value)
 
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
+	t.Run("Test int8 param", func(t *testing.T) {
+		var value int8 = 1
+
+		err := schema.validateType(value)
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
+	t.Run("Test int16 param", func(t *testing.T) {
+		var value int16 = 1
+
+		err := schema.validateType(value)
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
+	t.Run("Test int32 param", func(t *testing.T) {
+		var value int32 = 1
+
+		err := schema.validateType(value)
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
+	t.Run("Test int64 param", func(t *testing.T) {
+		var value int64 = 1
+
+		err := schema.validateType(value)
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
+	t.Run("Test uint param", func(t *testing.T) {
+		var value uint = 1
+
+		err := schema.validateType(value)
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
+	t.Run("Test uint8 param", func(t *testing.T) {
+		var value uint8 = 1
+
+		err := schema.validateType(value)
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
+	t.Run("Test uint16 param", func(t *testing.T) {
+		var value uint16 = 1
+
+		err := schema.validateType(value)
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
+	t.Run("Test uint32 param", func(t *testing.T) {
+		var value uint32 = 1
+
+		err := schema.validateType(value)
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
+	t.Run("Test uint64 param", func(t *testing.T) {
+		var value uint64 = 1
+
+		err := schema.validateType(value)
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
 
 }
 
@@ -85,13 +168,24 @@ func TestParameterSchemaFloat(t *testing.T) {
 		Description: "float parameter",
 	}
 
-	value := 3.14
+	t.Run("Test float32 param", func(t *testing.T) {
+		var value float32 = 3.14
 
-	err := schema.validateType(value)
+		err := schema.validateType(value)
 
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
+	t.Run("Test float64 param", func(t *testing.T) {
+		var value float64 = 3.14
+
+		err := schema.validateType(value)
+
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	})
 
 }
 

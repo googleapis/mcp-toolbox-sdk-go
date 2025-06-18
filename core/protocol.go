@@ -40,13 +40,16 @@ func (p *ParameterSchema) validateType(value any) error {
 			return fmt.Errorf("parameter '%s' expects a string, but got %T", p.Name, value)
 		}
 	case "integer":
-		_, ok := value.(int)
-		if !ok {
+		switch value.(type) {
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		default:
 			return fmt.Errorf("parameter '%s' expects an integer, but got %T", p.Name, value)
 		}
 	case "float":
-		if _, ok := value.(float64); !ok {
-			return fmt.Errorf("parameter '%s' expects a number, but got %T", p.Name, value)
+		switch value.(type) {
+		case float32, float64:
+		default:
+			return fmt.Errorf("parameter '%s' expects an float, but got %T", p.Name, value)
 		}
 	case "boolean":
 		if _, ok := value.(bool); !ok {
@@ -54,7 +57,7 @@ func (p *ParameterSchema) validateType(value any) error {
 		}
 	case "array":
 		v := reflect.ValueOf(value)
-		if v.Kind() != reflect.Slice {
+		if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
 			return fmt.Errorf("parameter '%s' expects an array/slice, but got %T", p.Name, value)
 		}
 		if p.Items == nil {
