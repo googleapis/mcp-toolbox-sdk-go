@@ -1,4 +1,4 @@
-module toolbox
+module mcp-toolbox-sdk-go
 
 go 1.24.2
 
