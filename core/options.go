@@ -14,10 +14,15 @@
 
 package core
 
-import "golang.org/x/oauth2"
+import (
+	"fmt"
+	"net/http"
+
+	"golang.org/x/oauth2"
+)
 
 // ClientOption configures a ToolboxClient at creation time.
-type ClientOption func(*ToolboxClient)
+type ClientOption func(*ToolboxClient) error
 
 // ToolConfig holds all configurable aspects for creating or deriving a tool.
 type ToolConfig struct {
@@ -25,7 +30,218 @@ type ToolConfig struct {
 	BoundParams      map[string]any
 	Name             string
 	Strict           bool
+	nameSet          bool
+	strictSet        bool
 }
 
 // ToolOption defines a single, universal type for a functional option that configures a tool.
-type ToolOption func(*ToolConfig)
+type ToolOption func(*ToolConfig) error
+
+// WithHTTPClient provides a custom http.Client to the ToolboxClient.
+func WithHTTPClient(client *http.Client) ClientOption {
+	return func(tc *ToolboxClient) error {
+		if client == nil {
+			return fmt.Errorf("WithHTTPClient: provided http.Client cannot be nil")
+		}
+		tc.httpClient = client
+		return nil
+	}
+}
+
+// WithClientHeaderString adds a static string value as a client-wide HTTP header.
+func WithClientHeaderString(headerName string, value string) ClientOption {
+	return func(tc *ToolboxClient) error {
+		if _, exists := tc.clientHeaderSources[headerName]; exists {
+			return fmt.Errorf("client header '%s' is already set and cannot be overridden", headerName)
+		}
+		staticToken := &oauth2.Token{AccessToken: value}
+		tc.clientHeaderSources[headerName] = oauth2.StaticTokenSource(staticToken)
+		return nil
+	}
+}
+
+// WithClientHeaderTokenSource adds a dynamic client-wide HTTP header from a TokenSource.
+func WithClientHeaderTokenSource(headerName string, value oauth2.TokenSource) ClientOption {
+	return func(tc *ToolboxClient) error {
+		if _, exists := tc.clientHeaderSources[headerName]; exists {
+			return fmt.Errorf("client header '%s' is already set and cannot be overridden", headerName)
+		}
+		if value == nil {
+			return fmt.Errorf("WithClientHeaderTokenSource: provided oauth2.TokenSource for header '%s' cannot be nil", headerName)
+		}
+		tc.clientHeaderSources[headerName] = value
+		return nil
+	}
+}
+
+// WithDefaultToolOptions provides default Options that will be applied to every tool
+// loaded by this client.
+func WithDefaultToolOptions(opts ...ToolOption) ClientOption {
+	return func(tc *ToolboxClient) error {
+		if tc.defaultOptionsSet {
+			return fmt.Errorf("default tool options have already been set and cannot be modified")
+		}
+		tc.defaultToolOptions = append(tc.defaultToolOptions, opts...)
+		tc.defaultOptionsSet = true
+		return nil
+	}
+}
+
+type Integer interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 |
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+}
+
+type Float interface {
+	~float32 | ~float64
+}
+
+// WithName provides an option to specify the name of a toolset for LoadToolset.
+func WithName(name string) ToolOption {
+	return func(c *ToolConfig) error {
+		if c.nameSet {
+			return fmt.Errorf("name is already set and cannot be overridden")
+		}
+		c.Name = name
+		c.nameSet = true
+		return nil
+	}
+}
+
+// WithStrict provides an option to enable strict validation for LoadToolset.
+func WithStrict(strict bool) ToolOption {
+	return func(c *ToolConfig) error {
+		if c.strictSet {
+			return fmt.Errorf("strict mode is already set and cannot be overridden")
+		}
+		c.Strict = strict
+		c.strictSet = true // Set the flag after successful assignment
+		return nil
+	}
+}
+
+// WithAuthTokenSource provides an authentication token from a standard TokenSource.
+func WithAuthTokenSource(authSource string, idToken oauth2.TokenSource) ToolOption {
+	return func(c *ToolConfig) error {
+		if c.AuthTokenSources == nil {
+			c.AuthTokenSources = make(map[string]oauth2.TokenSource)
+		}
+		if _, exists := c.AuthTokenSources[authSource]; exists {
+			return fmt.Errorf("authentication source '%s' is already set and cannot be overridden", authSource)
+		}
+		c.AuthTokenSources[authSource] = idToken
+		return nil
+	}
+}
+
+// WithAuthTokenString provides a static string authentication token.
+func WithAuthTokenString(authSource string, idToken string) ToolOption {
+	return func(c *ToolConfig) error {
+		if c.AuthTokenSources == nil {
+			c.AuthTokenSources = make(map[string]oauth2.TokenSource)
+		}
+		if _, exists := c.AuthTokenSources[authSource]; exists {
+			return fmt.Errorf("authentication source '%s' is already set and cannot be overridden", authSource)
+		}
+		staticToken := &oauth2.Token{AccessToken: idToken}
+		c.AuthTokenSources[authSource] = oauth2.StaticTokenSource(staticToken)
+		return nil
+	}
+}
+
+func ensureBoundParamsMap(c *ToolConfig) {
+	if c.BoundParams == nil {
+		c.BoundParams = make(map[string]any)
+	}
+}
+
+func createToolOption(name string, value any) ToolOption {
+	return func(c *ToolConfig) error {
+		ensureBoundParamsMap(c)
+		if _, exists := c.BoundParams[name]; exists {
+			return fmt.Errorf("duplicate parameter binding: parameter '%s' is already set", name)
+		}
+		c.BoundParams[name] = value
+		return nil
+	}
+}
+
+// WithBindParamString binds a static string value to a parameter.
+func WithBindParamString(name string, value string) ToolOption {
+	return createToolOption(name, value)
+}
+
+// WithBindParamStringFunc binds a function that returns a string to a parameter.
+func WithBindParamStringFunc(name string, fn func() (string, error)) ToolOption {
+	return createToolOption(name, fn)
+}
+
+// WithBindParamInt binds a static int value to a parameter.
+func WithBindParamInt[T Integer](name string, value T) ToolOption {
+	return createToolOption(name, value)
+}
+
+// WithBindParamIntFunc binds a function that returns an int to a parameter.
+func WithBindParamIntFunc[T Integer](name string, fn func() (T, error)) ToolOption {
+	return createToolOption(name, fn)
+}
+
+// WithBindParamFloat binds a static float64 value to a parameter.
+func WithBindParamFloat[T Float](name string, value T) ToolOption {
+	return createToolOption(name, value)
+}
+
+// WithBindParamFloatFunc binds a function that returns a float64 to a parameter.
+func WithBindParamFloatFunc[T Float](name string, fn func() (T, error)) ToolOption {
+	return createToolOption(name, fn)
+}
+
+// WithBindParamBool binds a static boolean value to a parameter.
+func WithBindParamBool(name string, value bool) ToolOption {
+	return createToolOption(name, value)
+}
+
+// WithBindParamBoolFunc binds a function that returns a boolean to a parameter.
+func WithBindParamBoolFunc(name string, fn func() (bool, error)) ToolOption {
+	return createToolOption(name, fn)
+}
+
+// WithBindParamStringArray binds a static slice of strings to a parameter.
+func WithBindParamStringArray(name string, value []string) ToolOption {
+	return createToolOption(name, value)
+}
+
+// WithBindParamStringArrayFunc binds a function that returns a slice of strings.
+func WithBindParamStringArrayFunc(name string, fn func() ([]string, error)) ToolOption {
+	return createToolOption(name, fn)
+}
+
+// WithBindParamIntArray binds a static slice of ints to a parameter.
+func WithBindParamIntArray[T Integer](name string, value []T) ToolOption {
+	return createToolOption(name, value)
+}
+
+// WithBindParamIntArrayFunc binds a function that returns a slice of ints.
+func WithBindParamIntArrayFunc[T Integer](name string, fn func() ([]T, error)) ToolOption {
+	return createToolOption(name, fn)
+}
+
+// WithBindParamFloatArray binds a static slice of float64s to a parameter.
+func WithBindParamFloatArray[T Float](name string, value []T) ToolOption {
+	return createToolOption(name, value)
+}
+
+// WithBindParamFloatArrayFunc binds a function that returns a slice of float64s.
+func WithBindParamFloatArrayFunc[T Float](name string, fn func() ([]T, error)) ToolOption {
+	return createToolOption(name, fn)
+}
+
+// WithBindParamBoolArray binds a static slice of booleans to a parameter.
+func WithBindParamBoolArray(name string, value []bool) ToolOption {
+	return createToolOption(name, value)
+}
+
+// WithBindParamBoolArrayFunc binds a function that returns a slice of booleans.
+func WithBindParamBoolArrayFunc(name string, fn func() ([]bool, error)) ToolOption {
+	return createToolOption(name, fn)
+}

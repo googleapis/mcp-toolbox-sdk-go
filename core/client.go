@@ -26,4 +26,5 @@ type ToolboxClient struct {
 	httpClient          *http.Client
 	clientHeaderSources map[string]oauth2.TokenSource
 	defaultToolOptions  []ToolOption
+	defaultOptionsSet   bool
 }
