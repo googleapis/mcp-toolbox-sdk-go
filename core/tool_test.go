@@ -15,6 +15,12 @@
 package core
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
@@ -331,4 +337,432 @@ func TestCloneToolboxTool(t *testing.T) {
 			t.Errorf("Modifying clone's authTokenSources map changed the length of the original. Got length %d, want 1", len(originalTool.authTokenSources))
 		}
 	})
+}
+
+func TestValidateAndBuildPayload(t *testing.T) {
+	// A base tool where some parameters are unbound and others are bound.
+	// This setup is now logically consistent.
+	baseTool := &ToolboxTool{
+		parameters: []ParameterSchema{
+			{Name: "city", Type: "string"},
+			{Name: "days", Type: "integer"},
+			// "units" and "api_key" are NOT in this slice because they are bound.
+		},
+		boundParams: map[string]any{
+			"units": "metric", // A static bound parameter
+			"api_key": func() (string, error) { // A function-based bound parameter
+				return "secret-key", nil
+			},
+		},
+	}
+
+	t.Run("Happy Path - combines user input and bound params", func(t *testing.T) {
+		input := map[string]any{
+			"city": "London",
+			"days": 5,
+		}
+
+		payload, err := baseTool.validateAndBuildPayload(input)
+		if err != nil {
+			t.Fatalf("validateAndBuildPayload failed unexpectedly: %v", err)
+		}
+
+		expectedPayload := map[string]any{
+			"city":    "London",
+			"days":    5,
+			"units":   "metric",
+			"api_key": "secret-key",
+		}
+
+		if !reflect.DeepEqual(payload, expectedPayload) {
+			t.Errorf("Payload mismatch.\nExpected: %v\nGot:      %v", expectedPayload, payload)
+		}
+	})
+
+	t.Run("Negative Test - fails on type validation error", func(t *testing.T) {
+		input := map[string]any{
+			"city": "Paris",
+			"days": "five", // Incorrect type
+		}
+
+		_, err := baseTool.validateAndBuildPayload(input)
+
+		if err == nil {
+			t.Fatal("Expected a type validation error, but got nil")
+		}
+		if !strings.Contains(err.Error(), "expects an integer, but got string") {
+			t.Errorf("Incorrect error message for type mismatch. Got: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - fails on extra parameter provided in input", func(t *testing.T) {
+		input := map[string]any{
+			"city":        "Tokyo",
+			"extra_param": "this should now cause an error",
+		}
+
+		_, err := baseTool.validateAndBuildPayload(input)
+
+		if err == nil {
+			t.Fatal("Expected an error for extra parameter, but got nil")
+		}
+		if !strings.Contains(err.Error(), "unexpected parameter 'extra_param' provided") {
+			t.Errorf("Incorrect error message for extra parameter. Got: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - fails when bound function returns an error", func(t *testing.T) {
+		toolWithFailingFunc := &ToolboxTool{
+			boundParams: map[string]any{
+				"api_key": func() (string, error) {
+					return "", errors.New("failed to retrieve key")
+				},
+			},
+		}
+
+		_, err := toolWithFailingFunc.validateAndBuildPayload(map[string]any{})
+
+		if err == nil {
+			t.Fatal("Expected an error from a failing bound function, but got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to resolve bound parameter function for 'api_key'") {
+			t.Errorf("Incorrect error message for function resolution failure. Got: %v", err)
+		}
+	})
+
+	t.Run("Bound parameters overwrite user input for the same key", func(t *testing.T) {
+		// This test now uses a tool where "units" is bound, so the user's input
+		// for "units" will be ignored and then overwritten.
+		toolWithBoundUnits := &ToolboxTool{
+			parameters: []ParameterSchema{{Name: "city", Type: "string"}},
+			boundParams: map[string]any{
+				"units": "metric",
+			},
+		}
+
+		input := map[string]any{
+			"city":  "UserCity",
+			"units": "imperial", // User tries to provide a value for a bound param
+		}
+
+		payload, err := toolWithBoundUnits.validateAndBuildPayload(input)
+		if err != nil {
+			t.Fatalf("validateAndBuildPayload failed unexpectedly: %v", err)
+		}
+
+		// Assert that the bound value 'metric' won, not the user's 'imperial'.
+		if payload["units"] != "metric" {
+			t.Errorf("Expected bound parameter 'units' to overwrite user input. Got '%v', want 'metric'", payload["units"])
+		}
+		if payload["city"] != "UserCity" {
+			t.Error("User-provided parameter 'city' was not included in final payload")
+		}
+	})
+}
+
+type errorReader struct{}
+
+func (er *errorReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("simulated read error")
+}
+
+// failingTransport is a custom transport to inject a failing reader
+type failingTransport struct{}
+
+func (ft *failingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(&errorReader{}),
+	}, nil
+}
+
+func TestToolboxTool_Invoke(t *testing.T) {
+	// A base tool for successful invocations
+	createBaseTool := func(httpClient *http.Client, invocationURL string) *ToolboxTool {
+		return &ToolboxTool{
+			name:          "weather",
+			description:   "Get the weather",
+			invocationURL: invocationURL,
+			httpClient:    httpClient,
+			parameters: []ParameterSchema{
+				{Name: "city", Type: "string"},
+			},
+			boundParams: map[string]any{
+				"units": "metric",
+			},
+			authTokenSources: map[string]oauth2.TokenSource{
+				"weather_api": oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "api-token-123"}),
+			},
+			clientHeaderSources: map[string]oauth2.TokenSource{
+				"X-Client-Version": oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "v1.0.0"}),
+			},
+			requiredAuthzTokens: []string{"weather_api"},
+		}
+	}
+
+	t.Run("Successful invocation", func(t *testing.T) {
+		// Setup a mock server that validates the incoming request
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Content-Type") != "application/json" {
+				t.Error("Request missing Content-Type header")
+			}
+			if r.Header.Get("X-Client-Version") != "v1.0.0" {
+				t.Error("Request missing client version header")
+			}
+			if r.Header.Get("weather_api_token") != "api-token-123" {
+				t.Error("Request missing auth token header")
+			}
+
+			body, _ := io.ReadAll(r.Body)
+			var payload map[string]any
+			json.Unmarshal(body, &payload)
+			if payload["city"] != "London" || payload["units"] != "metric" {
+				t.Errorf("Received incorrect payload: %v", payload)
+			}
+
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]any{"result": "sunny"})
+		}))
+		defer server.Close()
+
+		tool := createBaseTool(server.Client(), server.URL)
+		result, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
+
+		if err != nil {
+			t.Fatalf("Invoke failed unexpectedly: %v", err)
+		}
+		if result != "sunny" {
+			t.Errorf("Expected result 'sunny', got '%v'", result)
+		}
+	})
+
+	t.Run("Applies correct _token suffix to auth headers but not client headers", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Assert client header is present without suffix
+			if r.Header.Get("X-Custom-Header") != "client-val" {
+				t.Errorf("Expected client header 'X-Custom-Header' to be 'client-val', got %q", r.Header.Get("X-Custom-Header"))
+			}
+
+			// Assert auth token header is present with suffix
+			if r.Header.Get("my_auth_token") != "auth-val" {
+				t.Errorf("Expected auth header 'my_auth_token' to be 'auth-val', got %q", r.Header.Get("my_auth_token"))
+			}
+
+			// Assert auth token header is NOT present without suffix
+			if r.Header.Get("my_auth") != "" {
+				t.Errorf("Auth header 'my_auth' should not exist, but it does")
+			}
+
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]any{"result": "ok"})
+		}))
+		defer server.Close()
+
+		tool := createBaseTool(server.Client(), server.URL)
+		// Add the specific headers for this test
+		tool.clientHeaderSources["X-Custom-Header"] = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "client-val"})
+		tool.authTokenSources["my_auth"] = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "auth-val"})
+
+		_, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
+		if err != nil {
+			t.Fatalf("Invoke failed unexpectedly: %v", err)
+		}
+	})
+
+	t.Run("Auth token headers overwrite client headers with the same final name", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("special_api_token") != "auth_value_should_win" {
+				t.Errorf("Expected header 'special_api_token' to be overwritten by auth token source, but it was not. Got: %q", r.Header.Get("special_api_token"))
+			}
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]any{"result": "ok"})
+		}))
+		defer server.Close()
+
+		tool := createBaseTool(server.Client(), server.URL)
+		tool.clientHeaderSources["special_api_token"] = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "client_value_should_lose"})
+		tool.authTokenSources["special_api"] = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "auth_value_should_win"})
+
+		_, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
+		if err != nil {
+			t.Fatalf("Invoke failed unexpectedly: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - Fails when http client is nil", func(t *testing.T) {
+		tool := createBaseTool(nil, "") // httpClient is nil
+		_, err := tool.Invoke(context.Background(), nil)
+
+		if err == nil {
+			t.Fatal("Expected an error for nil http client, but got nil")
+		}
+		if !strings.Contains(err.Error(), "http client is not set") {
+			t.Errorf("Incorrect error message for nil client. Got: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - Fails when required auth is missing", func(t *testing.T) {
+		tool := createBaseTool(http.DefaultClient, "")
+		tool.requiredAuthzTokens = []string{"required_service"} // This service is not in authTokenSources
+
+		_, err := tool.Invoke(context.Background(), nil)
+
+		if err == nil {
+			t.Fatal("Expected an error for missing auth service, but got nil")
+		}
+		if !strings.Contains(err.Error(), "permission error: auth service 'required_service' is required") {
+			t.Errorf("Incorrect error message for missing auth. Got: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - Fails when payload validation fails", func(t *testing.T) {
+		tool := createBaseTool(http.DefaultClient, "")
+
+		// Pass an extra parameter, which should be rejected
+		_, err := tool.Invoke(context.Background(), map[string]any{"extra": "param"})
+
+		if err == nil {
+			t.Fatal("Expected an error from payload validation, but got nil")
+		}
+		if !strings.Contains(err.Error(), "unexpected parameter 'extra' provided") {
+			t.Errorf("Incorrect error message for payload validation. Got: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - Fails when server returns an error status", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]any{"error": "invalid city format"})
+		}))
+		defer server.Close()
+
+		tool := createBaseTool(server.Client(), server.URL)
+		_, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
+
+		if err == nil {
+			t.Fatal("Expected an error from a non-200 server response, but got nil")
+		}
+		if !strings.Contains(err.Error(), "API returned error status 400: invalid city format") {
+			t.Errorf("Incorrect error message for server error. Got: %v", err)
+		}
+	})
+
+	t.Run("Success Path - Handles non-json successful response", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("Plain text success message"))
+		}))
+		defer server.Close()
+
+		tool := createBaseTool(server.Client(), server.URL)
+		result, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
+
+		if err != nil {
+			t.Fatalf("Invoke failed unexpectedly for plain text response: %v", err)
+		}
+		if result != "Plain text success message" {
+			t.Errorf("Expected plain text result, got '%v'", result)
+		}
+	})
+
+	t.Run("Negative Test - Fails when required AuthN (param-level) is missing", func(t *testing.T) {
+		tool := createBaseTool(http.DefaultClient, "")
+		// This tool requires a 'google' token for one of its parameters.
+		tool.requiredAuthnParams = map[string][]string{
+			"user_location": {"google"},
+		}
+		// The base tool does not provide the 'google' token source.
+
+		_, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
+
+		if err == nil {
+			t.Fatal("Expected an error for missing AuthN service, but got nil")
+		}
+		if !strings.Contains(err.Error(), "permission error: auth service 'google' is required") {
+			t.Errorf("Incorrect error message for missing param-level auth. Got: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - Fails when required AuthZ (tool-level) is missing", func(t *testing.T) {
+		tool := createBaseTool(http.DefaultClient, "")
+		tool.requiredAuthzTokens = []string{"required_service"} // This service is not in authTokenSources
+
+		_, err := tool.Invoke(context.Background(), nil)
+
+		if err == nil {
+			t.Fatal("Expected an error for missing auth service, but got nil")
+		}
+		if !strings.Contains(err.Error(), "permission error: auth service 'required_service' is required") {
+			t.Errorf("Incorrect error message for missing tool-level auth. Got: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - Fails when server returns an error status with non-JSON body", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Internal Server Error"))
+		}))
+		defer server.Close()
+
+		tool := createBaseTool(server.Client(), server.URL)
+		_, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
+
+		if err == nil {
+			t.Fatal("Expected an error from a non-200 server response, but got nil")
+		}
+		if !strings.Contains(err.Error(), "API returned unexpected status: 500") {
+			t.Errorf("Incorrect error message for non-JSON server error. Got: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - Fails when API call itself fails", func(t *testing.T) {
+		// Create a server and immediately close it to simulate a network error
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		server.Close()
+
+		tool := createBaseTool(server.Client(), server.URL)
+		_, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
+
+		if err == nil {
+			t.Fatal("Expected an error from a failed API call, but got nil")
+		}
+		if !strings.Contains(err.Error(), "API call to tool 'weather' failed") {
+			t.Errorf("Incorrect error message for failed API call. Got: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - Fails when API call itself fails", func(t *testing.T) {
+		// Create a server and immediately close it to simulate a network error
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		server.Close()
+
+		tool := createBaseTool(server.Client(), server.URL)
+		_, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
+
+		if err == nil {
+			t.Fatal("Expected an error from a failed API call, but got nil")
+		}
+		if !strings.Contains(err.Error(), "API call to tool 'weather' failed") {
+			t.Errorf("Incorrect error message for failed API call. Got: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - Fails when reading response body fails", func(t *testing.T) {
+		// The mock server for this test case is intentionally minimal,
+		// as the failure is injected via the custom http.Client.
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		defer server.Close()
+
+		failingClient := &http.Client{Transport: &failingTransport{}}
+		tool := createBaseTool(failingClient, server.URL)
+
+		_, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
+		if err == nil {
+			t.Fatal("Expected an error from a failing response body read, but got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to read API response body") {
+			t.Errorf("Incorrect error message for failed body read. Got: %v", err)
+		}
+	})
+
 }

@@ -15,7 +15,11 @@
 package core
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 	"strings"
@@ -175,4 +179,152 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 	maps.Copy(newTt.clientHeaderSources, tt.clientHeaderSources)
 
 	return newTt
+}
+
+// Invoke executes the tool after performing manual parameter validation.
+func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]interface{}) (any, error) {
+	if tt.httpClient == nil {
+		return nil, fmt.Errorf("http client is not set for toolbox tool '%s'", tt.name)
+	}
+
+	if len(tt.requiredAuthnParams) > 0 || len(tt.requiredAuthzTokens) > 0 {
+		reqAuthServices := make(map[string]struct{})
+		for _, services := range tt.requiredAuthnParams {
+			for _, service := range services {
+				reqAuthServices[service] = struct{}{}
+			}
+		}
+		for _, service := range tt.requiredAuthzTokens {
+			reqAuthServices[service] = struct{}{}
+		}
+
+		for service := range reqAuthServices {
+			if _, ok := tt.authTokenSources[service]; !ok {
+				return nil, fmt.Errorf("permission error: auth service '%s' is required to invoke this tool but was not provided", service)
+			}
+		}
+	}
+
+	finalPayload, err := tt.validateAndBuildPayload(input)
+	if err != nil {
+		return nil, fmt.Errorf("tool payload processing failed: %w", err)
+	}
+
+	payloadBytes, err := json.Marshal(finalPayload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal tool payload for API call: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", tt.invocationURL, bytes.NewBuffer(payloadBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create API request for tool '%s': %w", tt.name, err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	for name, source := range tt.clientHeaderSources {
+		token, tokenErr := source.Token()
+		if tokenErr != nil {
+			return nil, fmt.Errorf("failed to resolve client header '%s': %w", name, tokenErr)
+		}
+		req.Header.Set(name, token.AccessToken)
+	}
+	for authService, source := range tt.authTokenSources {
+		token, tokenErr := source.Token()
+		if tokenErr != nil {
+			return nil, fmt.Errorf("failed to get token for service '%s' for tool '%s': %w", authService, tt.name, tokenErr)
+		}
+		headerName := fmt.Sprintf("%s_token", authService)
+		req.Header.Set(headerName, token.AccessToken)
+	}
+
+	resp, err := tt.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("API call to tool '%s' failed: %w", tt.name, err)
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read API response body for tool '%s': %w", tt.name, err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var errorResponse map[string]any
+		if jsonErr := json.Unmarshal(responseBody, &errorResponse); jsonErr == nil {
+			if errMsg, ok := errorResponse["error"].(string); ok {
+				return nil, fmt.Errorf("tool '%s' API returned error status %d: %s", tt.name, resp.StatusCode, errMsg)
+			}
+		}
+		return nil, fmt.Errorf("tool '%s' API returned unexpected status: %d %s, body: %s", tt.name, resp.StatusCode, resp.Status, string(responseBody))
+	}
+
+	var apiResult map[string]any
+	if err := json.Unmarshal(responseBody, &apiResult); err == nil {
+		if result, ok := apiResult["result"]; ok {
+			return result, nil
+		}
+	}
+	return string(responseBody), nil
+}
+
+// validateAndBuildPayload performs manual type validation and applies bound parameters.
+func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string]any, error) {
+	paramSchema := make(map[string]ParameterSchema)
+	for _, p := range tt.parameters {
+		paramSchema[p.Name] = p
+	}
+
+	// Validate user input against the schema.
+	for key, value := range input {
+		param, isUnbound := paramSchema[key]
+		_, isBound := tt.boundParams[key]
+
+		if !isUnbound && !isBound {
+			return nil, fmt.Errorf("unexpected parameter '%s' provided", key)
+		}
+
+		if isUnbound {
+			if err := param.validateType(value); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	finalPayload := make(map[string]any, len(input)+len(tt.boundParams))
+	for k, v := range input {
+		if _, ok := paramSchema[k]; ok {
+			finalPayload[k] = v
+		}
+	}
+
+	for paramName, boundVal := range tt.boundParams {
+		var resolvedValue any
+		var resolveErr error
+		switch v := boundVal.(type) {
+		case func() (string, error):
+			resolvedValue, resolveErr = v()
+		case func() (int, error):
+			resolvedValue, resolveErr = v()
+		case func() (float64, error):
+			resolvedValue, resolveErr = v()
+		case func() (bool, error):
+			resolvedValue, resolveErr = v()
+		case func() ([]string, error):
+			resolvedValue, resolveErr = v()
+		case func() ([]int, error):
+			resolvedValue, resolveErr = v()
+		case func() ([]float64, error):
+			resolvedValue, resolveErr = v()
+		case func() ([]bool, error):
+			resolvedValue, resolveErr = v()
+		default:
+			resolvedValue = boundVal
+		}
+		if resolveErr != nil {
+			return nil, fmt.Errorf("failed to resolve bound parameter function for '%s': %w", paramName, resolveErr)
+		}
+		finalPayload[paramName] = resolvedValue
+	}
+
+	return finalPayload, nil
 }
