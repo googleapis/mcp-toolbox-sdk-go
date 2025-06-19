@@ -176,22 +176,22 @@ func WithBindParamStringFunc(name string, fn func() (string, error)) ToolOption 
 	return createToolOption(name, fn)
 }
 
-// WithBindParamInt binds a static int value to a parameter.
+// WithBindParamInt binds a static integer value to a parameter.
 func WithBindParamInt[T Integer](name string, value T) ToolOption {
 	return createToolOption(name, value)
 }
 
-// WithBindParamIntFunc binds a function that returns an int to a parameter.
+// WithBindParamIntFunc binds a function that returns an integer to a parameter.
 func WithBindParamIntFunc[T Integer](name string, fn func() (T, error)) ToolOption {
 	return createToolOption(name, fn)
 }
 
-// WithBindParamFloat binds a static float64 value to a parameter.
+// WithBindParamFloat binds a static float value to a parameter.
 func WithBindParamFloat[T Float](name string, value T) ToolOption {
 	return createToolOption(name, value)
 }
 
-// WithBindParamFloatFunc binds a function that returns a float64 to a parameter.
+// WithBindParamFloatFunc binds a function that returns a float to a parameter.
 func WithBindParamFloatFunc[T Float](name string, fn func() (T, error)) ToolOption {
 	return createToolOption(name, fn)
 }
@@ -216,22 +216,22 @@ func WithBindParamStringArrayFunc(name string, fn func() ([]string, error)) Tool
 	return createToolOption(name, fn)
 }
 
-// WithBindParamIntArray binds a static slice of ints to a parameter.
+// WithBindParamIntArray binds a static slice of integers to a parameter.
 func WithBindParamIntArray[T Integer](name string, value []T) ToolOption {
 	return createToolOption(name, value)
 }
 
-// WithBindParamIntArrayFunc binds a function that returns a slice of ints.
+// WithBindParamIntArrayFunc binds a function that returns a slice of integers.
 func WithBindParamIntArrayFunc[T Integer](name string, fn func() ([]T, error)) ToolOption {
 	return createToolOption(name, fn)
 }
 
-// WithBindParamFloatArray binds a static slice of float64s to a parameter.
+// WithBindParamFloatArray binds a static slice of floats to a parameter.
 func WithBindParamFloatArray[T Float](name string, value []T) ToolOption {
 	return createToolOption(name, value)
 }
 
-// WithBindParamFloatArrayFunc binds a function that returns a slice of float64s.
+// WithBindParamFloatArrayFunc binds a function that returns a slice of floats.
 func WithBindParamFloatArrayFunc[T Float](name string, fn func() ([]T, error)) ToolOption {
 	return createToolOption(name, fn)
 }
