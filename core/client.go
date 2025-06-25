@@ -34,6 +34,19 @@ type ToolboxClient struct {
 	defaultOptionsSet   bool
 }
 
+// applyOptions iterates over a slice of option functions and applies them to a target object.
+func applyOptions[T any, O ~func(*T) error](target *T, opts []O) error {
+	for _, opt := range opts {
+		if opt == nil {
+			return fmt.Errorf("received a nil option")
+		}
+		if err := opt(target); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // NewToolboxClient creates a new, immutable synchronous ToolboxClient.
 func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) {
 	tc := &ToolboxClient{
@@ -43,13 +56,8 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 		defaultToolOptions:  []ToolOption{},
 	}
 
-	for _, opt := range opts {
-		if opt == nil {
-			return nil, fmt.Errorf("NewToolboxClient: received a nil ClientOption")
-		}
-		if err := opt(tc); err != nil {
-			return nil, err
-		}
+	if err := applyOptions(tc, opts); err != nil {
+		return nil, fmt.Errorf("NewToolboxClient: %w", err)
 	}
 
 	return tc, nil
@@ -103,7 +111,7 @@ func (tc *ToolboxClient) loadManifest(ctx context.Context, url string) (*Manifes
 
 	var manifest ManifestSchema
 	if err = json.Unmarshal(body, &manifest); err != nil {
-		return nil, fmt.Errorf("failed to load tools: %w", err)
+		return nil, fmt.Errorf("invalid manifest structure received: %w", err)
 	}
 	return &manifest, nil
 }
@@ -173,19 +181,15 @@ func (tc *ToolboxClient) newToolboxTool(
 // LoadTool synchronously fetches and loads a single tool.
 func (tc *ToolboxClient) LoadTool(name string, opts ...ToolOption) (*ToolboxTool, error) {
 	finalConfig := &ToolConfig{}
-	for _, opt := range tc.defaultToolOptions {
-		if err := opt(finalConfig); err != nil {
-			return nil, err
-		}
+
+	if err := applyOptions(finalConfig, tc.defaultToolOptions); err != nil {
+		return nil, err
 	}
-	for _, opt := range opts {
-		if opt == nil {
-			return nil, fmt.Errorf("LoadTool: received a nil ToolOption in options list")
-		}
-		if err := opt(finalConfig); err != nil {
-			return nil, err
-		}
+
+	if err := applyOptions(finalConfig, opts); err != nil {
+		return nil, fmt.Errorf("LoadTool: %w", err)
 	}
+
 	if finalConfig.nameSet {
 		return nil, fmt.Errorf(
 			"the WithName option is not applicable to LoadTool; the tool name '%s' is provided as a direct argument",
@@ -250,18 +254,12 @@ func (tc *ToolboxClient) LoadTool(name string, opts ...ToolOption) (*ToolboxTool
 // LoadToolset synchronously fetches and loads all tools in a toolset.
 func (tc *ToolboxClient) LoadToolset(opts ...ToolOption) ([]*ToolboxTool, error) {
 	finalConfig := &ToolConfig{}
-	for _, opt := range tc.defaultToolOptions {
-		if err := opt(finalConfig); err != nil {
-			return nil, err
-		}
+	if err := applyOptions(finalConfig, tc.defaultToolOptions); err != nil {
+		return nil, err
 	}
-	for _, opt := range opts {
-		if opt == nil {
-			return nil, fmt.Errorf("LoadToolset: received a nil ToolOption in options list")
-		}
-		if err := opt(finalConfig); err != nil {
-			return nil, err
-		}
+
+	if err := applyOptions(finalConfig, opts); err != nil {
+		return nil, fmt.Errorf("LoadToolset: %w", err)
 	}
 
 	ctx := context.Background()
