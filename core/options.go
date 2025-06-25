@@ -141,6 +141,16 @@ func WithAuthTokenString(authSourceName string, idToken string) ToolOption {
 	}
 }
 
+<<<<<<< HEAD
+=======
+// Helper function to ensure the map used to configure bound parameters is not nil
+func ensureBoundParamsMap(c *ToolConfig) {
+	if c.BoundParams == nil {
+		c.BoundParams = make(map[string]any)
+	}
+}
+
+>>>>>>> a8936c0 (review changes)
 // Helper function
 func createBoundParamToolOption(name string, value any) ToolOption {
 	return func(c *ToolConfig) error {
