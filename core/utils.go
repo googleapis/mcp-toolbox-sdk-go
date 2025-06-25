@@ -70,6 +70,7 @@ func identifyAuthRequirements(
 	return unmetAuthnParams, unmetAuthzTokens, usedServicesSlice
 }
 
+// Finds unused keys from in a map given the used keys
 func findUnusedKeys(provided, used map[string]struct{}) []string {
 	unused := make([]string, 0)
 	for k := range provided {
