@@ -21,21 +21,10 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// ----- Client Options -----
+
 // ClientOption configures a ToolboxClient at creation time.
 type ClientOption func(*ToolboxClient) error
-
-// ToolConfig holds all configurable aspects for creating or deriving a tool.
-type ToolConfig struct {
-	AuthTokenSources map[string]oauth2.TokenSource
-	BoundParams      map[string]any
-	Name             string
-	Strict           bool
-	nameSet          bool
-	strictSet        bool
-}
-
-// ToolOption defines a single, universal type for a functional option that configures a tool.
-type ToolOption func(*ToolConfig) error
 
 // WithHTTPClient provides a custom http.Client to the ToolboxClient.
 func WithHTTPClient(client *http.Client) ClientOption {
@@ -86,6 +75,21 @@ func WithDefaultToolOptions(opts ...ToolOption) ClientOption {
 		return nil
 	}
 }
+
+// ----- Tool Options -----
+
+// ToolConfig holds all configurable aspects for creating or deriving a tool.
+type ToolConfig struct {
+	AuthTokenSources map[string]oauth2.TokenSource
+	BoundParams      map[string]any
+	Name             string
+	Strict           bool
+	nameSet          bool
+	strictSet        bool
+}
+
+// ToolOption defines a single, universal type for a functional option that configures a tool.
+type ToolOption func(*ToolConfig) error
 
 type Integer interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
