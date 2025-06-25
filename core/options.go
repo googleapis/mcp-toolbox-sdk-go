@@ -149,13 +149,15 @@ func WithAuthTokenString(authSource string, idToken string) ToolOption {
 	}
 }
 
+// Helper function to ensure the map used to configure bound parameters is not nil
 func ensureBoundParamsMap(c *ToolConfig) {
 	if c.BoundParams == nil {
 		c.BoundParams = make(map[string]any)
 	}
 }
 
-func createToolOption(name string, value any) ToolOption {
+// Helper function
+func createBoundParamToolOption(name string, value any) ToolOption {
 	return func(c *ToolConfig) error {
 		ensureBoundParamsMap(c)
 		if _, exists := c.BoundParams[name]; exists {
@@ -168,80 +170,80 @@ func createToolOption(name string, value any) ToolOption {
 
 // WithBindParamString binds a static string value to a parameter.
 func WithBindParamString(name string, value string) ToolOption {
-	return createToolOption(name, value)
+	return createBoundParamToolOption(name, value)
 }
 
 // WithBindParamStringFunc binds a function that returns a string to a parameter.
 func WithBindParamStringFunc(name string, fn func() (string, error)) ToolOption {
-	return createToolOption(name, fn)
+	return createBoundParamToolOption(name, fn)
 }
 
 // WithBindParamInt binds a static integer value to a parameter.
 func WithBindParamInt[T Integer](name string, value T) ToolOption {
-	return createToolOption(name, value)
+	return createBoundParamToolOption(name, value)
 }
 
 // WithBindParamIntFunc binds a function that returns an integer to a parameter.
 func WithBindParamIntFunc[T Integer](name string, fn func() (T, error)) ToolOption {
-	return createToolOption(name, fn)
+	return createBoundParamToolOption(name, fn)
 }
 
 // WithBindParamFloat binds a static float value to a parameter.
 func WithBindParamFloat[T Float](name string, value T) ToolOption {
-	return createToolOption(name, value)
+	return createBoundParamToolOption(name, value)
 }
 
 // WithBindParamFloatFunc binds a function that returns a float to a parameter.
 func WithBindParamFloatFunc[T Float](name string, fn func() (T, error)) ToolOption {
-	return createToolOption(name, fn)
+	return createBoundParamToolOption(name, fn)
 }
 
 // WithBindParamBool binds a static boolean value to a parameter.
 func WithBindParamBool(name string, value bool) ToolOption {
-	return createToolOption(name, value)
+	return createBoundParamToolOption(name, value)
 }
 
 // WithBindParamBoolFunc binds a function that returns a boolean to a parameter.
 func WithBindParamBoolFunc(name string, fn func() (bool, error)) ToolOption {
-	return createToolOption(name, fn)
+	return createBoundParamToolOption(name, fn)
 }
 
 // WithBindParamStringArray binds a static slice of strings to a parameter.
 func WithBindParamStringArray(name string, value []string) ToolOption {
-	return createToolOption(name, value)
+	return createBoundParamToolOption(name, value)
 }
 
 // WithBindParamStringArrayFunc binds a function that returns a slice of strings.
 func WithBindParamStringArrayFunc(name string, fn func() ([]string, error)) ToolOption {
-	return createToolOption(name, fn)
+	return createBoundParamToolOption(name, fn)
 }
 
 // WithBindParamIntArray binds a static slice of integers to a parameter.
 func WithBindParamIntArray[T Integer](name string, value []T) ToolOption {
-	return createToolOption(name, value)
+	return createBoundParamToolOption(name, value)
 }
 
 // WithBindParamIntArrayFunc binds a function that returns a slice of integers.
 func WithBindParamIntArrayFunc[T Integer](name string, fn func() ([]T, error)) ToolOption {
-	return createToolOption(name, fn)
+	return createBoundParamToolOption(name, fn)
 }
 
 // WithBindParamFloatArray binds a static slice of floats to a parameter.
 func WithBindParamFloatArray[T Float](name string, value []T) ToolOption {
-	return createToolOption(name, value)
+	return createBoundParamToolOption(name, value)
 }
 
 // WithBindParamFloatArrayFunc binds a function that returns a slice of floats.
 func WithBindParamFloatArrayFunc[T Float](name string, fn func() ([]T, error)) ToolOption {
-	return createToolOption(name, fn)
+	return createBoundParamToolOption(name, fn)
 }
 
 // WithBindParamBoolArray binds a static slice of booleans to a parameter.
 func WithBindParamBoolArray(name string, value []bool) ToolOption {
-	return createToolOption(name, value)
+	return createBoundParamToolOption(name, value)
 }
 
 // WithBindParamBoolArrayFunc binds a function that returns a slice of booleans.
 func WithBindParamBoolArrayFunc(name string, fn func() ([]bool, error)) ToolOption {
-	return createToolOption(name, fn)
+	return createBoundParamToolOption(name, fn)
 }
