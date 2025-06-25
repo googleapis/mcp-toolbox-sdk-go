@@ -261,6 +261,102 @@ func TestResolveAndApplyHeaders(t *testing.T) {
 	})
 }
 
+func TestApplyOptions(t *testing.T) {
+
+	// Test Case 1: The "happy path" where all options are valid and should succeed.
+	t.Run("SuccessWithValidOptions", func(t *testing.T) {
+		// Arrange
+		config := &ToolConfig{}
+		opts := []ToolOption{
+			WithName("MyAwesomeTool"),
+			WithStrict(true),
+			WithBindParamString("user", "jane.doe"),
+			WithBindParamInt("retries", 3),
+		}
+		expectedParams := map[string]any{
+			"user":    "jane.doe",
+			"retries": 3,
+		}
+
+		err := applyOptions(config, opts)
+
+		if err != nil {
+			t.Fatalf("applyOptions failed unexpectedly: %v", err)
+		}
+		if config.Name != "MyAwesomeTool" {
+			t.Errorf("Expected Name to be 'MyAwesomeTool', got '%s'", config.Name)
+		}
+		if !config.Strict {
+			t.Error("Expected Strict to be true, but it was false")
+		}
+		if !reflect.DeepEqual(config.BoundParams, expectedParams) {
+			t.Errorf("BoundParams mismatch.\nGot:  %v\nWant: %v", config.BoundParams, expectedParams)
+		}
+	})
+
+	// An option returns an error, applyOptions should stop and propagate it.
+	t.Run("StopsWhenOptionReturnsError", func(t *testing.T) {
+		config := &ToolConfig{}
+		opts := []ToolOption{
+			WithName("MyTool"),
+			WithBindParamString("user", "test"),
+			WithName("AnotherName"),
+			WithStrict(true),
+		}
+		expectedErr := errors.New("name is already set and cannot be overridden")
+
+		// Act
+		err := applyOptions(config, opts)
+
+		// Assert
+		if err == nil {
+			t.Fatal("Expected an error from a failing option, but got nil")
+		}
+		if err.Error() != expectedErr.Error() {
+			t.Errorf("Expected error message '%s', got '%s'", expectedErr, err.Error())
+		}
+		// Verify that processing stopped at the point of error.
+		if config.Name != "MyTool" {
+			t.Errorf("Expected Name to be 'MyTool', got '%s'", config.Name)
+		}
+		if config.strictSet {
+			t.Error("WithStrict should not have been applied after the error")
+		}
+		if _, ok := config.BoundParams["user"]; !ok {
+			t.Error("Expected parameter 'user' to be set, but it wasn't")
+		}
+	})
+
+	// The options slice contains a nil value, applyOptions should fail.
+	t.Run("StopsWhenOptionIsNil", func(t *testing.T) {
+		// Arrange
+		config := &ToolConfig{}
+		opts := []ToolOption{
+			WithName("MyTool"), // This should be applied.
+			nil,                // This should cause an error.
+			WithStrict(true),   // This should NOT be applied.
+		}
+		expectedErr := errors.New("received a nil option")
+
+		// Act
+		err := applyOptions(config, opts)
+
+		// Assert
+		if err == nil {
+			t.Fatal("Expected an error for a nil option, but got nil")
+		}
+		if err.Error() != expectedErr.Error() {
+			t.Errorf("Expected error message '%s', got '%s'", expectedErr, err.Error())
+		}
+		if config.Name != "MyTool" {
+			t.Error("Option before nil was not applied")
+		}
+		if config.strictSet {
+			t.Error("Option after nil should not have been applied")
+		}
+	})
+}
+
 func TestLoadManifest(t *testing.T) {
 	validManifest := ManifestSchema{
 		ServerVersion: "v1",
@@ -354,7 +450,7 @@ func TestLoadManifest(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error due to JSON unmarshal failure, but got nil")
 		}
-		if !strings.Contains(err.Error(), "failed to load tools") {
+		if !strings.Contains(err.Error(), "invalid manifest structure received") {
 			t.Errorf("Error message missing expected text. Got: %s", err.Error())
 		}
 	})
@@ -579,7 +675,7 @@ func TestNegativeAndEdgeCases(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error when a nil option is passed to LoadTool, but got nil")
 		}
-		if !strings.Contains(err.Error(), "received a nil ToolOption") {
+		if !strings.Contains(err.Error(), "received a nil option") {
 			t.Errorf("Expected nil option error, got: %v", err)
 		}
 	})
