@@ -177,9 +177,9 @@ func TestE2E_Basic(t *testing.T) {
 		tool := getNRowsTool(t, client)
 
 		// The Go SDK performs validation inside Invoke, so we check the error there.
-		_, err := tool.Invoke(context.Background(), map[string]interface{}{})
+		_, err := tool.Invoke(context.Background(), map[string]any{})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "missing required parameter: num_rows")
+		assert.Contains(t, err.Error(), "parameter \"num_rows\" is required")
 	})
 
 	t.Run("test_run_tool_wrong_param_type", func(t *testing.T) {
@@ -188,7 +188,7 @@ func TestE2E_Basic(t *testing.T) {
 
 		_, err := tool.Invoke(context.Background(), map[string]interface{}{"num_rows": 2}) // Pass int instead of string
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid type for parameter 'num_rows': expected string, got int")
+		assert.Contains(t, err.Error(), "parameter 'num_rows' expects a string, but got int")
 	})
 }
 
