@@ -16,9 +16,7 @@ package core
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -34,21 +32,20 @@ type ToolboxClient struct {
 	defaultOptionsSet   bool
 }
 
-// applyOptions iterates over a slice of option functions and applies them to a target object.
-func applyOptions[T any, O ~func(*T) error](target *T, opts []O) error {
-	for _, opt := range opts {
-		if opt == nil {
-			return fmt.Errorf("received a nil option")
-		}
-		if err := opt(target); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// NewToolboxClient creates a new, immutable synchronous ToolboxClient.
+// NewToolboxClient creates and configures a new, immutable client for interacting with a
+// Toolbox server.
+//
+// Inputs:
+//   - url: The base URL of the Toolbox server.
+//   - opts: A variadic list of ClientOption functions to configure the client,
+//     such as setting a custom http.Client or default headers.
+//
+// Returns:
+//
+//	A configured *ToolboxClient and a nil error on success, or a nil client
+//	and an error if configuration fails.
 func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) {
+	// Initialize the client with default values.
 	tc := &ToolboxClient{
 		baseURL:             url,
 		httpClient:          &http.Client{},
@@ -56,66 +53,34 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 		defaultToolOptions:  []ToolOption{},
 	}
 
-	if err := applyOptions(tc, opts); err != nil {
-		return nil, fmt.Errorf("NewToolboxClient: %w", err)
+	// Apply each functional option to customize the client configuration.
+	for _, opt := range opts {
+		if opt == nil {
+			return nil, fmt.Errorf("NewToolboxClient: received a nil ClientOption")
+		}
+		if err := opt(tc); err != nil {
+			return nil, err
+		}
 	}
 
 	return tc, nil
 }
 
-// Close closes the underlying client session's idle connections.
-func (tc *ToolboxClient) Close() {
-	if tr, ok := tc.httpClient.Transport.(*http.Transport); ok {
-		tr.CloseIdleConnections()
-	}
-}
-
-// resolveAndApplyHeaders resolves dynamic header values from TokenSources.
-func (tc *ToolboxClient) resolveAndApplyHeaders(req *http.Request) error {
-	for name, source := range tc.clientHeaderSources {
-		token, err := source.Token()
-		if err != nil {
-			return fmt.Errorf("failed to resolve header '%s': %w", name, err)
-		}
-		req.Header.Set(name, token.AccessToken)
-	}
-	return nil
-}
-
-// loadManifest is an internal helper for fetching manifests from the Toolbox server.
-func (tc *ToolboxClient) loadManifest(ctx context.Context, url string) (*ManifestSchema, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request to %s: %w", url, err)
-	}
-
-	if err := tc.resolveAndApplyHeaders(req); err != nil {
-		return nil, fmt.Errorf("failed to apply client headers: %w", err)
-	}
-
-	resp, err := tc.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to make HTTP request to %s: %w", url, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("server returned non-OK status: %d %s, body: %s", resp.StatusCode, resp.Status, string(bodyBytes))
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	var manifest ManifestSchema
-	if err = json.Unmarshal(body, &manifest); err != nil {
-		return nil, fmt.Errorf("invalid manifest structure received: %w", err)
-	}
-	return &manifest, nil
-}
-
+// newToolboxTool is an internal factory method that constructs a
+// ToolboxTool from its schema and a final configuration.
+//
+// Inputs:
+//   - name: The name of the tool being created.
+//   - schema: The definition of the tool from the server manifest.
+//   - finalConfig: The combined default and user-provided tool options.
+//   - isStrict: A flag that, if true, errors if a bound parameter
+//     config does not exist in the tool's schema.
+//
+// Returns:
+//   - *ToolboxTool: The fully constructed tool, ready for invocation.
+//   - []string: A slice of authentication source keys that were used by the tool.
+//   - []string: A slice of bound parameter keys that were used by the tool.
+//   - error: An error if validation fails (e.g., in strict mode).
 func (tc *ToolboxClient) newToolboxTool(
 	name string,
 	schema ToolSchema,
@@ -123,26 +88,34 @@ func (tc *ToolboxClient) newToolboxTool(
 	isStrict bool,
 ) (*ToolboxTool, []string, []string, error) {
 
+	// These will be the parameters that the end-user must provide at invocation time.
 	finalParameters := make([]ParameterSchema, 0)
+	// This map collects parameters that require an auth token to be fulfilled.
 	authnParams := make(map[string][]string)
+	// This set tracks all parameter names defined in the schema for validation.
 	paramSchema := make(map[string]struct{})
-
-	// This map will store only the bound parameters that are actually applicable
-	// to this tool, after considering AuthSources.
+	// This map stores bound parameters that are applicable to this specific tool.
 	localBoundParams := make(map[string]any)
 
+	// Iterate over the tool's parameters from the schema to categorize them.
 	for _, p := range schema.Parameters {
 		paramSchema[p.Name] = struct{}{}
 
 		if len(p.AuthSources) > 0 {
+			// The parameter is satisfied by an authentication source.
 			authnParams[p.Name] = p.AuthSources
 		} else if val, isBound := finalConfig.BoundParams[p.Name]; isBound {
+			// The parameter is satisfied by a pre-configured bound value.
 			localBoundParams[p.Name] = val
 		} else {
+			// The parameter is not satisfied by auth or bindings, so it must
+			// be provided by the user at invocation.
 			finalParameters = append(finalParameters, p)
 		}
 	}
 
+	// In strict mode, ensure that all provided bound parameters actually exist
+	// on the tool's schema.
 	if isStrict {
 		for boundName := range finalConfig.BoundParams {
 			if _, exists := paramSchema[boundName]; !exists {
@@ -151,17 +124,20 @@ func (tc *ToolboxClient) newToolboxTool(
 		}
 	}
 
+	// Collect the keys of the bound parameters that were actually used.
 	var usedBoundKeys []string
 	for k := range localBoundParams {
 		usedBoundKeys = append(usedBoundKeys, k)
 	}
 
+	// Determine which auth requirements are still unmet after applying the provided tokens.
 	remainingAuthnParams, remainingAuthzTokens, usedAuthKeys := identifyAuthRequirements(
 		authnParams,
 		schema.AuthRequired,
 		finalConfig.AuthTokenSources,
 	)
 
+	// Construct the final tool object.
 	tt := &ToolboxTool{
 		name:                name,
 		description:         schema.Description,
@@ -178,18 +154,39 @@ func (tc *ToolboxClient) newToolboxTool(
 	return tt, usedAuthKeys, usedBoundKeys, nil
 }
 
-// LoadTool synchronously fetches and loads a single tool.
-func (tc *ToolboxClient) LoadTool(name string, opts ...ToolOption) (*ToolboxTool, error) {
-	finalConfig := &ToolConfig{}
+// LoadTool fetches a manifest for a single tool
+//
+// Inputs:
+//   - name: The specific name of the tool to load.
+//   - ctx: The context to control the lifecycle of the request.
+//   - opts: A variadic list of ToolOption functions to configure auth tokens
+//     or bind parameters for this tool.
+//
+// Returns:
+//
+//	A configured *ToolboxTool and a nil error on success, or a nil tool and
+//	an error if loading or validation fails.
+func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...ToolOption) (*ToolboxTool, error) {
+	finalConfig := newToolConfig()
 
-	if err := applyOptions(finalConfig, tc.defaultToolOptions); err != nil {
-		return nil, err
+	// Apply client-wide default options first.
+	for _, opt := range tc.defaultToolOptions {
+		if err := opt(finalConfig); err != nil {
+			return nil, err
+		}
 	}
 
-	if err := applyOptions(finalConfig, opts); err != nil {
-		return nil, fmt.Errorf("LoadTool: %w", err)
+	// Then, apply the tool-specific options provided in this call.
+	for _, opt := range opts {
+		if opt == nil {
+			return nil, fmt.Errorf("LoadTool: received a nil ToolOption in options list")
+		}
+		if err := opt(finalConfig); err != nil {
+			return nil, err
+		}
 	}
 
+	// The WithName option is only for LoadToolset, not for loading a single tool.
 	if finalConfig.nameSet {
 		return nil, fmt.Errorf(
 			"the WithName option is not applicable to LoadTool; the tool name '%s' is provided as a direct argument",
@@ -197,9 +194,9 @@ func (tc *ToolboxClient) LoadTool(name string, opts ...ToolOption) (*ToolboxTool
 		)
 	}
 
-	ctx := context.Background()
+	// Fetch the manifest for the specified tool.
 	url := fmt.Sprintf("%s/api/tool/%s", tc.baseURL, name)
-	manifest, err := tc.loadManifest(ctx, url)
+	manifest, err := loadManifest(ctx, url, tc.httpClient, tc.clientHeaderSources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tool manifest for '%s': %w", name, err)
 	}
@@ -211,11 +208,13 @@ func (tc *ToolboxClient) LoadTool(name string, opts ...ToolOption) (*ToolboxTool
 		return nil, fmt.Errorf("tool '%s' not found", name)
 	}
 
+	// Construct the tool from its schema and the final configuration.
 	tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(name, schema, finalConfig, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create toolbox tool from schema for '%s': %w", name, err)
 	}
 
+	// Create sets of provided and used keys for efficient lookup.
 	providedAuthKeys := make(map[string]struct{})
 	for k := range finalConfig.AuthTokenSources {
 		providedAuthKeys[k] = struct{}{}
@@ -224,7 +223,6 @@ func (tc *ToolboxClient) LoadTool(name string, opts ...ToolOption) (*ToolboxTool
 	for k := range finalConfig.BoundParams {
 		providedBoundKeys[k] = struct{}{}
 	}
-
 	usedAuthSet := make(map[string]struct{})
 	for _, k := range usedAuthKeys {
 		usedAuthSet[k] = struct{}{}
@@ -234,6 +232,7 @@ func (tc *ToolboxClient) LoadTool(name string, opts ...ToolOption) (*ToolboxTool
 		usedBoundSet[k] = struct{}{}
 	}
 
+	// Find any provided options that were not consumed during tool creation.
 	var errorMessages []string
 	unusedAuth := findUnusedKeys(providedAuthKeys, usedAuthSet)
 	unusedBound := findUnusedKeys(providedBoundKeys, usedBoundSet)
@@ -251,25 +250,46 @@ func (tc *ToolboxClient) LoadTool(name string, opts ...ToolOption) (*ToolboxTool
 	return tool, nil
 }
 
-// LoadToolset synchronously fetches and loads all tools in a toolset.
-func (tc *ToolboxClient) LoadToolset(opts ...ToolOption) ([]*ToolboxTool, error) {
-	finalConfig := &ToolConfig{}
-	if err := applyOptions(finalConfig, tc.defaultToolOptions); err != nil {
-		return nil, err
+// LoadToolset fetches a manifest for a collection of tools.
+//
+// Inputs:
+//   - ctx: The context to control the lifecycle of the request.
+//   - opts: A variadic list of ToolOption functions. These can include WithName
+//     to specify a toolset, WithStrict, and options for auth or bound params
+//     that may apply to tools in the set.
+//
+// Returns:
+//
+//	A slice of configured *ToolboxTool and a nil error on success, or a nil
+//	slice and an error if loading or validation fails.
+func (tc *ToolboxClient) LoadToolset(ctx context.Context, opts ...ToolOption) ([]*ToolboxTool, error) {
+	finalConfig := newToolConfig()
+	// Apply client-wide default options first.
+	for _, opt := range tc.defaultToolOptions {
+		if err := opt(finalConfig); err != nil {
+			return nil, err
+		}
 	}
 
-	if err := applyOptions(finalConfig, opts); err != nil {
-		return nil, fmt.Errorf("LoadToolset: %w", err)
+	// Then, apply the toolset-specific options provided in this call.
+	for _, opt := range opts {
+		if opt == nil {
+			return nil, fmt.Errorf("LoadToolset: received a nil ToolOption in options list")
+		}
+		if err := opt(finalConfig); err != nil {
+			return nil, err
+		}
 	}
 
-	ctx := context.Background()
+	// Determine the manifest URL based on whether a specific toolset name was provided.
 	var url string
 	if finalConfig.Name == "" {
 		url = fmt.Sprintf("%s/api/toolset/", tc.baseURL)
 	} else {
 		url = fmt.Sprintf("%s/api/toolset/%s", tc.baseURL, finalConfig.Name)
 	}
-	manifest, err := tc.loadManifest(ctx, url)
+	// Fetch the manifest for the toolset.
+	manifest, err := loadManifest(ctx, url, tc.httpClient, tc.clientHeaderSources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load toolset manifest for '%s': %w", finalConfig.Name, err)
 	}
@@ -291,13 +311,16 @@ func (tc *ToolboxClient) LoadToolset(opts ...ToolOption) ([]*ToolboxTool, error)
 	}
 
 	for toolName, schema := range manifest.Tools {
+		// Construct each tool from its schema and the shared configuration.
 		tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(toolName, schema, finalConfig, finalConfig.Strict)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create tool '%s': %w", toolName, err)
 		}
 		tools = append(tools, tool)
 
+		// Validation behavior depends on whether strict mode is enabled.
 		if finalConfig.Strict {
+			// In strict mode, validate each tool individually for unused options.
 			usedAuthSet := make(map[string]struct{})
 			for _, k := range usedAuthKeys {
 				usedAuthSet[k] = struct{}{}
@@ -321,6 +344,8 @@ func (tc *ToolboxClient) LoadToolset(opts ...ToolOption) ([]*ToolboxTool, error)
 				return nil, fmt.Errorf("validation failed for tool '%s': %s", toolName, strings.Join(errorMessages, "; "))
 			}
 		} else {
+			// In non-strict mode, aggregate all used keys across all tools.
+			// Validation will happen once at the end.
 			for _, k := range usedAuthKeys {
 				overallUsedAuthKeys[k] = struct{}{}
 			}
@@ -330,6 +355,8 @@ func (tc *ToolboxClient) LoadToolset(opts ...ToolOption) ([]*ToolboxTool, error)
 		}
 	}
 
+	// For non-strict mode, perform a final validation to ensure all provided
+	// options were used by at least one tool in the set.
 	if !finalConfig.Strict {
 		unusedAuth := findUnusedKeys(providedAuthKeys, overallUsedAuthKeys)
 		unusedBound := findUnusedKeys(providedBoundKeys, overallUsedBoundParams)
