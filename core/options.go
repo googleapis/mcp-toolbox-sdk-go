@@ -26,6 +26,14 @@ import (
 // ClientOption configures a ToolboxClient at creation time.
 type ClientOption func(*ToolboxClient) error
 
+// Constructor for a newToolConfig which initializes the maps for auth token sources and bound parameters
+func newToolConfig() *ToolConfig {
+	return &ToolConfig{
+		AuthTokenSources: make(map[string]oauth2.TokenSource),
+		BoundParams:      make(map[string]any),
+	}
+}
+
 // WithHTTPClient provides a custom http.Client to the ToolboxClient.
 func WithHTTPClient(client *http.Client) ClientOption {
 	return func(tc *ToolboxClient) error {
@@ -127,9 +135,6 @@ func WithStrict(strict bool) ToolOption {
 // WithAuthTokenSource provides an authentication token from a standard TokenSource.
 func WithAuthTokenSource(authSource string, idToken oauth2.TokenSource) ToolOption {
 	return func(c *ToolConfig) error {
-		if c.AuthTokenSources == nil {
-			c.AuthTokenSources = make(map[string]oauth2.TokenSource)
-		}
 		if _, exists := c.AuthTokenSources[authSource]; exists {
 			return fmt.Errorf("authentication source '%s' is already set and cannot be overridden", authSource)
 		}
@@ -141,9 +146,6 @@ func WithAuthTokenSource(authSource string, idToken oauth2.TokenSource) ToolOpti
 // WithAuthTokenString provides a static string authentication token.
 func WithAuthTokenString(authSource string, idToken string) ToolOption {
 	return func(c *ToolConfig) error {
-		if c.AuthTokenSources == nil {
-			c.AuthTokenSources = make(map[string]oauth2.TokenSource)
-		}
 		if _, exists := c.AuthTokenSources[authSource]; exists {
 			return fmt.Errorf("authentication source '%s' is already set and cannot be overridden", authSource)
 		}
@@ -153,17 +155,9 @@ func WithAuthTokenString(authSource string, idToken string) ToolOption {
 	}
 }
 
-// Helper function to ensure the map used to configure bound parameters is not nil
-func ensureBoundParamsMap(c *ToolConfig) {
-	if c.BoundParams == nil {
-		c.BoundParams = make(map[string]any)
-	}
-}
-
 // Helper function
 func createBoundParamToolOption(name string, value any) ToolOption {
 	return func(c *ToolConfig) error {
-		ensureBoundParamsMap(c)
 		if _, exists := c.BoundParams[name]; exists {
 			return fmt.Errorf("duplicate parameter binding: parameter '%s' is already set", name)
 		}
