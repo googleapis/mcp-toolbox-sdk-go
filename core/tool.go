@@ -55,13 +55,22 @@ func (tt *ToolboxTool) Description() string {
 	return tt.description
 }
 
-// Parameters returns the tool's unbound parameters.
+// Parameters returns the list of parameters that must be provided by a user
+// at invocation time.
 func (tt *ToolboxTool) Parameters() []ParameterSchema {
 	paramsCopy := make([]ParameterSchema, len(tt.parameters))
 	copy(paramsCopy, tt.parameters)
 	return paramsCopy
 }
 
+// DescribeParameters returns a single, human-readable string that describes all
+// of the tool's unbound parameters, including their names, types, and
+// descriptions.
+//
+// Returns:
+//
+//	A formatted string of parameter descriptions, or an empty string if there
+//	are no unbound parameters.
 func (tt *ToolboxTool) DescribeParameters() string {
 	if len(tt.parameters) == 0 {
 		return ""
@@ -73,7 +82,19 @@ func (tt *ToolboxTool) DescribeParameters() string {
 	return strings.Join(paramDescriptions, ", ")
 }
 
-// ToolFrom creates a new, specialized tool from an existing one by applying additional options.
+// ToolFrom creates a new, more specialized tool from an existing one by applying
+// additional options. This is useful for creating variations of a tool with
+// different bound parameters without modifying the original and
+// all provided options must be applicable.
+//
+// Inputs:
+//   - opts: A variadic list of ToolOption functions to further configure the
+//     new tool, such as binding more parameters.
+//
+// Returns:
+//
+//	A new, specialized *ToolboxTool and a nil error, or a nil tool and an
+//	error if the new options are invalid or conflict with existing settings.
 func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 	// Create a config and apply the new options, checking for internal duplicates.
 	config := &ToolConfig{}
@@ -136,7 +157,8 @@ func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 	return newTt, nil
 }
 
-// cloneToolboxTool creates a deep copy of the ToolboxTool instance.
+// cloneToolboxTool creates a deep copy of the ToolboxTool instance to ensure
+// that derivative tools created with ToolFrom cannot mutate the parent.
 func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 	newTt := &ToolboxTool{
 		name:                tt.name,
@@ -151,10 +173,12 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 		clientHeaderSources: make(map[string]oauth2.TokenSource, len(tt.clientHeaderSources)),
 	}
 
+	// Perform deep copies for slices and maps to prevent shared state.
 	copy(newTt.parameters, tt.parameters)
 	copy(newTt.requiredAuthzTokens, tt.requiredAuthzTokens)
 
 	maps.Copy(newTt.authTokenSources, tt.authTokenSources)
+	maps.Copy(newTt.clientHeaderSources, tt.clientHeaderSources)
 
 	for k, v := range tt.boundParams {
 		val := reflect.ValueOf(v)
@@ -171,12 +195,12 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 		}
 	}
 
+	// Manually deep copy the map of string slices.
 	for k, v := range tt.requiredAuthnParams {
 		newSlice := make([]string, len(v))
 		copy(newSlice, v)
 		newTt.requiredAuthnParams[k] = newSlice
 	}
-	maps.Copy(newTt.clientHeaderSources, tt.clientHeaderSources)
 
 	return newTt
 }
