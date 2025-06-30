@@ -314,3 +314,170 @@ func TestCustomTokenSource(t *testing.T) {
 		}
 	})
 }
+
+func TestResolveAndApplyHeaders(t *testing.T) {
+	t.Run("Successfully applies headers", func(t *testing.T) {
+		// Setup
+		client, _ := NewToolboxClient("test-url")
+		client.clientHeaderSources["Authorization"] = &mockTokenSource{token: &oauth2.Token{AccessToken: "token123"}}
+		client.clientHeaderSources["X-Api-Key"] = &mockTokenSource{token: &oauth2.Token{AccessToken: "key456"}}
+
+		req, _ := http.NewRequest("GET", "https://toolbox.example.com", nil)
+
+		// Action
+		err := resolveAndApplyHeaders(client.clientHeaderSources, req)
+
+		// Assert
+		if err != nil {
+			t.Fatalf("Expected no error, but got: %v", err)
+		}
+		if auth := req.Header.Get("Authorization"); auth != "token123" {
+			t.Errorf("Expected Authorization header 'token123', got %q", auth)
+		}
+		if key := req.Header.Get("X-Api-Key"); key != "key456" {
+			t.Errorf("Expected X-Api-Key header 'key456', got %q", key)
+		}
+	})
+
+	t.Run("Returns error when a token source fails", func(t *testing.T) {
+		client, _ := NewToolboxClient("test-url")
+		client.clientHeaderSources["Authorization"] = &failingTokenSource{}
+
+		req, _ := http.NewRequest("GET", "https://toolbox.example.com", nil)
+
+		err := resolveAndApplyHeaders(client.clientHeaderSources, req)
+
+		if err == nil {
+			t.Fatal("Expected an error, but got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to resolve header 'Authorization'") {
+			t.Errorf("Error message missing expected text. Got: %s", err.Error())
+		}
+		if !strings.Contains(err.Error(), "token source failed as designed") {
+			t.Errorf("Error message did not wrap the underlying error. Got: %s", err.Error())
+		}
+	})
+}
+
+func TestLoadManifest(t *testing.T) {
+	validManifest := ManifestSchema{
+		ServerVersion: "v1",
+		Tools: map[string]ToolSchema{
+			"toolA": {Description: "Does a thing"},
+		},
+	}
+	validManifestJSON, _ := json.Marshal(validManifest)
+
+	t.Run("Successfully loads and unmarshals manifest", func(t *testing.T) {
+		// Setup mock server
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Authorization") != "Bearer test-token" {
+				t.Errorf("Server did not receive expected Authorization header")
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			if _, err := w.Write(validManifestJSON); err != nil {
+				t.Fatalf("Mock server failed to write response: %v", err)
+			}
+		}))
+		defer server.Close()
+
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client.clientHeaderSources["Authorization"] = oauth2.StaticTokenSource(&oauth2.Token{
+			AccessToken: "Bearer test-token",
+		})
+
+		manifest, err := loadManifest(context.Background(), server.URL, client.httpClient, client.clientHeaderSources)
+
+		if err != nil {
+			t.Fatalf("Expected no error, but got: %v", err)
+		}
+		if !reflect.DeepEqual(*manifest, validManifest) {
+			t.Errorf("Returned manifest does not match expected value")
+		}
+	})
+
+	t.Run("Fails when header resolution fails", func(t *testing.T) {
+		// Setup client with a failing token source
+		client, _ := NewToolboxClient("any-url")
+		client.clientHeaderSources["Authorization"] = &failingTokenSource{} // Use the failing mock
+
+		// Action
+		_, err := loadManifest(context.Background(), "http://example.com", client.httpClient, client.clientHeaderSources)
+
+		// Assert
+		if err == nil {
+			t.Fatal("Expected an error due to header resolution failure, but got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to apply client headers") {
+			t.Errorf("Error message missing expected text. Got: %s", err.Error())
+		}
+	})
+
+	t.Run("Fails when server returns non-200 status", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			if _, err := w.Write([]byte("internal server error")); err != nil {
+				t.Fatalf("Mock server failed to write response: %v", err)
+			}
+		}))
+		defer server.Close()
+
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+
+		_, err := loadManifest(context.Background(), server.URL, client.httpClient, client.clientHeaderSources)
+
+		if err == nil {
+			t.Fatal("Expected an error due to non-OK status, but got nil")
+		}
+		if !strings.Contains(err.Error(), "server returned non-OK status: 500") {
+			t.Errorf("Error message missing expected status code. Got: %s", err.Error())
+		}
+	})
+
+	t.Run("Fails when response body is invalid JSON", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			if _, err := w.Write([]byte(`{"serverVersion": "bad-json",`)); err != nil {
+				t.Fatalf("Mock server failed to write response: %v", err)
+			}
+		}))
+		defer server.Close()
+
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+
+		_, err := loadManifest(context.Background(), server.URL, client.httpClient, client.clientHeaderSources)
+
+		if err == nil {
+			t.Fatal("Expected an error due to JSON unmarshal failure, but got nil")
+		}
+		if !strings.Contains(err.Error(), "unable to parse manifest correctly") {
+			t.Errorf("Error message missing expected text. Got: %s", err.Error())
+		}
+	})
+
+	t.Run("Fails when context is canceled", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			time.Sleep(100 * time.Millisecond)
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+		defer cancel()
+
+		// Action
+		_, err := loadManifest(ctx, server.URL, client.httpClient, client.clientHeaderSources)
+
+		// Assert
+		if err == nil {
+			t.Fatal("Expected an error due to context cancellation, but got nil")
+		}
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Errorf("Expected context.DeadlineExceeded error, but got a different error: %v", err)
+		}
+	})
+}
