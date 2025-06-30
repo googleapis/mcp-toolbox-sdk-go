@@ -162,7 +162,7 @@ func TestE2E_Basic(t *testing.T) {
 		client := newClient(t)
 		tool := getNRowsTool(t, client)
 
-		response, err := tool.Invoke(context.Background(), map[string]interface{}{"num_rows": "2"})
+		response, err := tool.Invoke(context.Background(), map[string]any{"num_rows": "2"})
 		require.NoError(t, err)
 
 		respStr, ok := response.(string)
@@ -186,7 +186,7 @@ func TestE2E_Basic(t *testing.T) {
 		client := newClient(t)
 		tool := getNRowsTool(t, client)
 
-		_, err := tool.Invoke(context.Background(), map[string]interface{}{"num_rows": 2}) // Pass int instead of string
+		_, err := tool.Invoke(context.Background(), map[string]any{"num_rows": 2}) // Pass int instead of string
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "parameter 'num_rows' expects a string, but got int")
 	})
@@ -212,7 +212,7 @@ func TestE2E_BindParams(t *testing.T) {
 		newTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "3"))
 		require.NoError(t, err)
 
-		response, err := newTool.Invoke(context.Background(), map[string]interface{}{})
+		response, err := newTool.Invoke(context.Background(), map[string]any{})
 		require.NoError(t, err)
 
 		respStr, ok := response.(string)
@@ -234,7 +234,7 @@ func TestE2E_BindParams(t *testing.T) {
 		newTool, err := tool.ToolFrom(core.WithBindParamStringFunc("num_rows", callable))
 		require.NoError(t, err)
 
-		response, err := newTool.Invoke(context.Background(), map[string]interface{}{})
+		response, err := newTool.Invoke(context.Background(), map[string]any{})
 		require.NoError(t, err)
 
 		respStr, ok := response.(string)
@@ -273,7 +273,7 @@ func TestE2E_Auth(t *testing.T) {
 		tool, err := client.LoadTool("get-row-by-id-auth", context.Background())
 		require.NoError(t, err)
 
-		_, err = tool.Invoke(context.Background(), map[string]interface{}{"id": "2"})
+		_, err = tool.Invoke(context.Background(), map[string]any{"id": "2"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "permission error: auth service 'my-test-auth' is required")
 	})
@@ -288,7 +288,7 @@ func TestE2E_Auth(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		_, err = authedTool.Invoke(context.Background(), map[string]interface{}{"id": "2"})
+		_, err = authedTool.Invoke(context.Background(), map[string]any{"id": "2"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "tool invocation not authorized")
 	})
@@ -300,7 +300,7 @@ func TestE2E_Auth(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		response, err := tool.Invoke(context.Background(), map[string]interface{}{"id": "2"})
+		response, err := tool.Invoke(context.Background(), map[string]any{"id": "2"})
 		require.NoError(t, err)
 
 		respStr, ok := response.(string)
@@ -313,7 +313,7 @@ func TestE2E_Auth(t *testing.T) {
 		tool, err := client.LoadTool("get-row-by-email-auth", context.Background())
 		require.NoError(t, err)
 
-		_, err = tool.Invoke(context.Background(), map[string]interface{}{})
+		_, err = tool.Invoke(context.Background(), map[string]any{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "permission error: auth service 'my-test-auth' is required")
 	})
@@ -325,7 +325,7 @@ func TestE2E_Auth(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		response, err := tool.Invoke(context.Background(), map[string]interface{}{})
+		response, err := tool.Invoke(context.Background(), map[string]any{})
 		require.NoError(t, err)
 
 		respStr, ok := response.(string)
@@ -342,13 +342,13 @@ func TestE2E_Auth(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		_, err = tool.Invoke(context.Background(), map[string]interface{}{})
+		_, err = tool.Invoke(context.Background(), map[string]any{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no field named row_data in claims")
 	})
 }
 
-// --- Helper Functions (equivalent to utility functions in conftest.py) ---
+// --- Helper Functions ---
 
 func getEnvVar(key string) string {
 	value := os.Getenv(key)
