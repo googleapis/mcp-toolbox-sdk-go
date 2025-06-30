@@ -515,13 +515,13 @@ func TestToolboxTool_Invoke(t *testing.T) {
 
 			body, _ := io.ReadAll(r.Body)
 			var payload map[string]any
-			json.Unmarshal(body, &payload)
+			_ = json.Unmarshal(body, &payload)
 			if payload["city"] != "London" || payload["units"] != "metric" {
 				t.Errorf("Received incorrect payload: %v", payload)
 			}
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]any{"result": "sunny"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"result": "sunny"})
 		}))
 		defer server.Close()
 
@@ -554,7 +554,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 			}
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]any{"result": "ok"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"result": "ok"})
 		}))
 		defer server.Close()
 
@@ -575,7 +575,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 				t.Errorf("Expected header 'special_api_token' to be overwritten by auth token source, but it was not. Got: %q", r.Header.Get("special_api_token"))
 			}
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]any{"result": "ok"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"result": "ok"})
 		}))
 		defer server.Close()
 
@@ -632,7 +632,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 	t.Run("Negative Test - Fails when server returns an error status", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]any{"error": "invalid city format"})
+			_ = json.NewEncoder(w).Encode(map[string]any{"error": "invalid city format"})
 		}))
 		defer server.Close()
 
@@ -650,7 +650,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 	t.Run("Success Path - Handles non-json successful response", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Plain text success message"))
+			_, _ = w.Write([]byte("Plain text success message"))
 		}))
 		defer server.Close()
 
@@ -700,7 +700,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 	t.Run("Negative Test - Fails when server returns an error status with non-JSON body", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal Server Error"))
+			_, _ = w.Write([]byte("Internal Server Error"))
 		}))
 		defer server.Close()
 

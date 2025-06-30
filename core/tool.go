@@ -205,12 +205,24 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 	return newTt
 }
 
-// Invoke executes the tool after performing manual parameter validation.
-func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]interface{}) (any, error) {
+// Invoke executes the tool with the given input.
+//
+// Inputs:
+//   - ctx: The context to control the lifecycle of the API request.
+//   - input: A map of parameter names to values provided by the user for this
+//     specific invocation.
+//
+// Returns:
+//
+//	The result from the API call, which can be a structured object (from a JSON
+//	'result' field) or a raw string. Returns an error if any step of the
+//	process fails.
+func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, error) {
 	if tt.httpClient == nil {
 		return nil, fmt.Errorf("http client is not set for toolbox tool '%s'", tt.name)
 	}
 
+	// Before proceeding, ensure all authentication tokens required by the tool are available.
 	if len(tt.requiredAuthnParams) > 0 || len(tt.requiredAuthzTokens) > 0 {
 		reqAuthServices := make(map[string]struct{})
 		for _, services := range tt.requiredAuthnParams {
@@ -222,6 +234,7 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]interface{})
 			reqAuthServices[service] = struct{}{}
 		}
 
+		// Check if each required service has a corresponding token source.
 		for service := range reqAuthServices {
 			if _, ok := tt.authTokenSources[service]; !ok {
 				return nil, fmt.Errorf("permission error: auth service '%s' is required to invoke this tool but was not provided", service)
@@ -229,6 +242,7 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]interface{})
 		}
 	}
 
+	// Validate the user's input and merge it with pre-configured bound parameters.
 	finalPayload, err := tt.validateAndBuildPayload(input)
 	if err != nil {
 		return nil, fmt.Errorf("tool payload processing failed: %w", err)
@@ -239,12 +253,14 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]interface{})
 		return nil, fmt.Errorf("failed to marshal tool payload for API call: %w", err)
 	}
 
+	// Assemble the API request
 	req, err := http.NewRequestWithContext(ctx, "POST", tt.invocationURL, bytes.NewBuffer(payloadBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create API request for tool '%s': %w", tt.name, err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
+	// Apply client-wide headers.
 	for name, source := range tt.clientHeaderSources {
 		token, tokenErr := source.Token()
 		if tokenErr != nil {
@@ -252,6 +268,7 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]interface{})
 		}
 		req.Header.Set(name, token.AccessToken)
 	}
+	// Apply tool-specific authentication headers.
 	for authService, source := range tt.authTokenSources {
 		token, tokenErr := source.Token()
 		if tokenErr != nil {
@@ -261,6 +278,7 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]interface{})
 		req.Header.Set(headerName, token.AccessToken)
 	}
 
+	// API call execution
 	resp, err := tt.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("API call to tool '%s' failed: %w", tt.name, err)
@@ -272,6 +290,7 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]interface{})
 		return nil, fmt.Errorf("failed to read API response body for tool '%s': %w", tt.name, err)
 	}
 
+	// Handle non-successful status codes
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		var errorResponse map[string]any
 		if jsonErr := json.Unmarshal(responseBody, &errorResponse); jsonErr == nil {
@@ -282,6 +301,7 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]interface{})
 		return nil, fmt.Errorf("tool '%s' API returned unexpected status: %d %s, body: %s", tt.name, resp.StatusCode, resp.Status, string(responseBody))
 	}
 
+	// For successful responses, attempt to extract the 'result' field.
 	var apiResult map[string]any
 	if err := json.Unmarshal(responseBody, &apiResult); err == nil {
 		if result, ok := apiResult["result"]; ok {
@@ -292,7 +312,16 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]interface{})
 }
 
 // validateAndBuildPayload performs manual type validation and applies bound parameters.
+//
+// Inputs:
+//   - input: The map of parameters provided by the user for this invocation.
+//
+// Returns:
+//
+//	A map representing the final, validated JSON payload, or an error if
+//	validation or parameter resolution fails.
 func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string]any, error) {
+	// Create a map of the parameter schema for efficient lookups by name
 	paramSchema := make(map[string]ParameterSchema)
 	for _, p := range tt.parameters {
 		paramSchema[p.Name] = p
@@ -303,10 +332,13 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 		param, isUnbound := paramSchema[key]
 		_, isBound := tt.boundParams[key]
 
+		// An input key is invalid if it's neither an expected unbound parameter
+		// nor a parameter that has been pre-configured (bound).
 		if !isUnbound && !isBound {
 			return nil, fmt.Errorf("unexpected parameter '%s' provided", key)
 		}
 
+		// If the parameter is a valid unbound parameter, validate its type.
 		if isUnbound {
 			if err := param.validateType(value); err != nil {
 				return nil, err
@@ -314,6 +346,7 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 		}
 	}
 
+	// Initialize the final payload with the validated user input.
 	finalPayload := make(map[string]any, len(input)+len(tt.boundParams))
 	for k, v := range input {
 		if _, ok := paramSchema[k]; ok {
@@ -321,9 +354,12 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 		}
 	}
 
+	// Loop through the bound parameters and add them to the payload.
 	for paramName, boundVal := range tt.boundParams {
 		var resolvedValue any
 		var resolveErr error
+		// A bound parameter can be a static value or a function that must be
+		// executed at invocation time to resolve the value.
 		switch v := boundVal.(type) {
 		case func() (string, error):
 			resolvedValue, resolveErr = v()
