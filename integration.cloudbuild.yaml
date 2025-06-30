@@ -29,11 +29,16 @@ steps:
     waitFor: ["install-dependencies"]
     env:
       - "GOPATH=/gopath"
+      - TOOLBOX_VERSION=$_TOOLBOX_VERSION
+      - GOOGLE_CLOUD_PROJECT=$PROJECT_ID
     volumes:
       - name: "go"
         path: "/gopath"
     script: |
       go test ./... -v -race
 
+
 options:
   logging: CLOUD_LOGGING_ONLY
+substitutions:
+  _TOOLBOX_VERSION: '0.7.0'
