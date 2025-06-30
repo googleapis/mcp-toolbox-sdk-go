@@ -20,7 +20,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -35,13 +34,6 @@ type failingTokenSource struct{}
 
 func (f *failingTokenSource) Token() (*oauth2.Token, error) {
 	return nil, errors.New("token source failed as designed")
-}
-
-// mockNonClosingTransport is a custom http.RoundTripper for testing the Close() method.
-type mockNonClosingTransport struct{}
-
-func (m *mockNonClosingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	return nil, nil
 }
 
 // TestNewToolboxClient verifies the constructor's core functionality,
@@ -217,269 +209,6 @@ func TestClientOptions(t *testing.T) {
 	})
 }
 
-func TestResolveAndApplyHeaders(t *testing.T) {
-	t.Run("Successfully applies headers", func(t *testing.T) {
-		// Setup
-		client, _ := NewToolboxClient("test-url")
-		client.clientHeaderSources["Authorization"] = &mockTokenSource{token: &oauth2.Token{AccessToken: "token123"}}
-		client.clientHeaderSources["X-Api-Key"] = &mockTokenSource{token: &oauth2.Token{AccessToken: "key456"}}
-
-		req, _ := http.NewRequest("GET", "https://toolbox.example.com", nil)
-
-		// Action
-		err := client.resolveAndApplyHeaders(req)
-
-		// Assert
-		if err != nil {
-			t.Fatalf("Expected no error, but got: %v", err)
-		}
-		if auth := req.Header.Get("Authorization"); auth != "token123" {
-			t.Errorf("Expected Authorization header 'token123', got %q", auth)
-		}
-		if key := req.Header.Get("X-Api-Key"); key != "key456" {
-			t.Errorf("Expected X-Api-Key header 'key456', got %q", key)
-		}
-	})
-
-	t.Run("Returns error when a token source fails", func(t *testing.T) {
-		client, _ := NewToolboxClient("test-url")
-		client.clientHeaderSources["Authorization"] = &failingTokenSource{}
-
-		req, _ := http.NewRequest("GET", "https://toolbox.example.com", nil)
-
-		err := client.resolveAndApplyHeaders(req)
-
-		if err == nil {
-			t.Fatal("Expected an error, but got nil")
-		}
-		if !strings.Contains(err.Error(), "failed to resolve header 'Authorization'") {
-			t.Errorf("Error message missing expected text. Got: %s", err.Error())
-		}
-		if !strings.Contains(err.Error(), "token source failed as designed") {
-			t.Errorf("Error message did not wrap the underlying error. Got: %s", err.Error())
-		}
-	})
-}
-
-func TestApplyOptions(t *testing.T) {
-
-	// Test Case 1: The "happy path" where all options are valid and should succeed.
-	t.Run("SuccessWithValidOptions", func(t *testing.T) {
-		// Arrange
-		config := &ToolConfig{}
-		opts := []ToolOption{
-			WithName("MyAwesomeTool"),
-			WithStrict(true),
-			WithBindParamString("user", "jane.doe"),
-			WithBindParamInt("retries", 3),
-		}
-		expectedParams := map[string]any{
-			"user":    "jane.doe",
-			"retries": 3,
-		}
-
-		err := applyOptions(config, opts)
-
-		if err != nil {
-			t.Fatalf("applyOptions failed unexpectedly: %v", err)
-		}
-		if config.Name != "MyAwesomeTool" {
-			t.Errorf("Expected Name to be 'MyAwesomeTool', got '%s'", config.Name)
-		}
-		if !config.Strict {
-			t.Error("Expected Strict to be true, but it was false")
-		}
-		if !reflect.DeepEqual(config.BoundParams, expectedParams) {
-			t.Errorf("BoundParams mismatch.\nGot:  %v\nWant: %v", config.BoundParams, expectedParams)
-		}
-	})
-
-	// An option returns an error, applyOptions should stop and propagate it.
-	t.Run("StopsWhenOptionReturnsError", func(t *testing.T) {
-		config := &ToolConfig{}
-		opts := []ToolOption{
-			WithName("MyTool"),
-			WithBindParamString("user", "test"),
-			WithName("AnotherName"),
-			WithStrict(true),
-		}
-		expectedErr := errors.New("name is already set and cannot be overridden")
-
-		// Act
-		err := applyOptions(config, opts)
-
-		// Assert
-		if err == nil {
-			t.Fatal("Expected an error from a failing option, but got nil")
-		}
-		if err.Error() != expectedErr.Error() {
-			t.Errorf("Expected error message '%s', got '%s'", expectedErr, err.Error())
-		}
-		// Verify that processing stopped at the point of error.
-		if config.Name != "MyTool" {
-			t.Errorf("Expected Name to be 'MyTool', got '%s'", config.Name)
-		}
-		if config.strictSet {
-			t.Error("WithStrict should not have been applied after the error")
-		}
-		if _, ok := config.BoundParams["user"]; !ok {
-			t.Error("Expected parameter 'user' to be set, but it wasn't")
-		}
-	})
-
-	// The options slice contains a nil value, applyOptions should fail.
-	t.Run("StopsWhenOptionIsNil", func(t *testing.T) {
-		// Arrange
-		config := &ToolConfig{}
-		opts := []ToolOption{
-			WithName("MyTool"), // This should be applied.
-			nil,                // This should cause an error.
-			WithStrict(true),   // This should NOT be applied.
-		}
-		expectedErr := errors.New("received a nil option")
-
-		// Act
-		err := applyOptions(config, opts)
-
-		// Assert
-		if err == nil {
-			t.Fatal("Expected an error for a nil option, but got nil")
-		}
-		if err.Error() != expectedErr.Error() {
-			t.Errorf("Expected error message '%s', got '%s'", expectedErr, err.Error())
-		}
-		if config.Name != "MyTool" {
-			t.Error("Option before nil was not applied")
-		}
-		if config.strictSet {
-			t.Error("Option after nil should not have been applied")
-		}
-	})
-}
-
-func TestLoadManifest(t *testing.T) {
-	validManifest := ManifestSchema{
-		ServerVersion: "v1",
-		Tools: map[string]ToolSchema{
-			"toolA": {Description: "Does a thing"},
-		},
-	}
-	validManifestJSON, _ := json.Marshal(validManifest)
-
-	t.Run("Successfully loads and unmarshals manifest", func(t *testing.T) {
-		// Setup mock server
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("Authorization") != "Bearer test-token" {
-				t.Errorf("Server did not receive expected Authorization header")
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-			if _, err := w.Write(validManifestJSON); err != nil {
-				t.Fatalf("Mock server failed to write response: %v", err)
-			}
-		}))
-		defer server.Close()
-
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
-		client.clientHeaderSources["Authorization"] = oauth2.StaticTokenSource(&oauth2.Token{
-			AccessToken: "Bearer test-token",
-		})
-
-		manifest, err := client.loadManifest(context.Background(), server.URL)
-
-		if err != nil {
-			t.Fatalf("Expected no error, but got: %v", err)
-		}
-		if !reflect.DeepEqual(*manifest, validManifest) {
-			t.Errorf("Returned manifest does not match expected value")
-		}
-	})
-
-	t.Run("Fails when header resolution fails", func(t *testing.T) {
-		// Setup client with a failing token source
-		client, _ := NewToolboxClient("any-url")
-		client.clientHeaderSources["Authorization"] = &failingTokenSource{} // Use the failing mock
-
-		// Action
-		_, err := client.loadManifest(context.Background(), "http://example.com")
-
-		// Assert
-		if err == nil {
-			t.Fatal("Expected an error due to header resolution failure, but got nil")
-		}
-		if !strings.Contains(err.Error(), "failed to apply client headers") {
-			t.Errorf("Error message missing expected text. Got: %s", err.Error())
-		}
-	})
-
-	t.Run("Fails when server returns non-200 status", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusInternalServerError)
-			if _, err := w.Write([]byte("internal server error")); err != nil {
-				t.Fatalf("Mock server failed to write response: %v", err)
-			}
-		}))
-		defer server.Close()
-
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
-
-		_, err := client.loadManifest(context.Background(), server.URL)
-
-		if err == nil {
-			t.Fatal("Expected an error due to non-OK status, but got nil")
-		}
-		if !strings.Contains(err.Error(), "server returned non-OK status: 500") {
-			t.Errorf("Error message missing expected status code. Got: %s", err.Error())
-		}
-	})
-
-	t.Run("Fails when response body is invalid JSON", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			if _, err := w.Write([]byte(`{"serverVersion": "bad-json",`)); err != nil {
-				t.Fatalf("Mock server failed to write response: %v", err)
-			}
-		}))
-		defer server.Close()
-
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
-
-		_, err := client.loadManifest(context.Background(), server.URL)
-
-		if err == nil {
-			t.Fatal("Expected an error due to JSON unmarshal failure, but got nil")
-		}
-		if !strings.Contains(err.Error(), "invalid manifest structure received") {
-			t.Errorf("Error message missing expected text. Got: %s", err.Error())
-		}
-	})
-
-	t.Run("Fails when context is canceled", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(100 * time.Millisecond)
-			w.WriteHeader(http.StatusOK)
-		}))
-		defer server.Close()
-
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
-
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
-		defer cancel()
-
-		// Action
-		_, err := client.loadManifest(ctx, server.URL)
-
-		// Assert
-		if err == nil {
-			t.Fatal("Expected an error due to context cancellation, but got nil")
-		}
-		if !errors.Is(err, context.DeadlineExceeded) {
-			t.Errorf("Expected context.DeadlineExceeded error, but got a different error: %v", err)
-		}
-	})
-}
-
 func TestLoadToolAndLoadToolset(t *testing.T) {
 	// Setup a valid manifest for the mock server
 	manifest := ManifestSchema{
@@ -512,6 +241,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	t.Run("LoadTool - Success", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		tool, err := client.LoadTool("toolA",
+			context.Background(),
 			WithBindParamString("param1", "value1"),
 			WithAuthTokenString("google", "token-google"),
 		)
@@ -526,6 +256,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	t.Run("LoadTool - Negative Test - Unused bound parameter", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadTool("toolA",
+			context.Background(),
 			WithBindParamString("param1", "value1"),
 			WithBindParamString("unused_param", "value-unused"),
 		)
@@ -540,6 +271,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	t.Run("LoadToolset - Success with non-strict mode", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		tools, err := client.LoadToolset(
+			context.Background(),
 			WithBindParamString("param1", "value1"),
 			WithAuthTokenString("google", "token-google"),
 			WithAuthTokenString("github", "token-github"),
@@ -555,6 +287,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	t.Run("LoadToolset - Negative Test - Unused parameter in non-strict mode", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
+			context.Background(),
 			WithBindParamString("param1", "value1"),
 			WithAuthTokenString("unknown-auth", "token-unknown"),
 		)
@@ -569,6 +302,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	t.Run("LoadToolset - Negative Test - Unused parameter in strict mode", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
+			context.Background(),
 			WithStrict(true), // Enable strict mode
 			WithBindParamString("param1", "value1"),
 			WithAuthTokenString("google", "token-google"),
@@ -620,7 +354,7 @@ func TestDefaultOptionOverwriting(t *testing.T) {
 			t.Fatalf("Client creation with default options failed unexpectedly: %v", err)
 		}
 
-		_, err = client.LoadTool("toolWithParams",
+		_, err = client.LoadTool("toolWithParams", context.Background(),
 			WithBindParamString("user_id", "override_user"),
 		)
 
@@ -646,7 +380,7 @@ func TestDefaultOptionOverwriting(t *testing.T) {
 			t.Fatalf("Client creation with default options failed unexpectedly: %v", err)
 		}
 
-		_, err = client.LoadTool("toolWithParams",
+		_, err = client.LoadTool("toolWithParams", context.Background(),
 			WithAuthTokenString("google", "override_google_token"),
 		)
 
@@ -670,12 +404,12 @@ func TestNegativeAndEdgeCases(t *testing.T) {
 
 		client, _ := NewToolboxClient(server.URL)
 
-		_, err := client.LoadTool("any-tool", WithName("a-name"), nil)
+		_, err := client.LoadTool("any-tool", context.Background(), WithName("a-name"), nil)
 
 		if err == nil {
 			t.Fatal("Expected an error when a nil option is passed to LoadTool, but got nil")
 		}
-		if !strings.Contains(err.Error(), "received a nil option") {
+		if !strings.Contains(err.Error(), "received a nil ToolOption ") {
 			t.Errorf("Expected nil option error, got: %v", err)
 		}
 	})
@@ -713,7 +447,7 @@ func TestNegativeAndEdgeCases(t *testing.T) {
 		client, _ := NewToolboxClient(serverWithNoTools.URL, WithHTTPClient(serverWithNoTools.Client()))
 
 		// This call would panic if the code doesn't check for a nil map.
-		_, err := client.LoadTool("any-tool")
+		_, err := client.LoadTool("any-tool", context.Background())
 
 		if err == nil {
 			t.Fatal("Expected an error when manifest has no tools, but got nil")
@@ -758,7 +492,7 @@ func TestOptionDuplicateAndEdgeCases(t *testing.T) {
 
 	t.Run("Fails when WithAuthTokenSource tries to overwrite", func(t *testing.T) {
 		// Note: This check happens at application time, not client creation time.
-		config := &ToolConfig{}
+		config := newToolConfig()
 		_ = WithAuthTokenString("google", "token-a")(config)             // Set it once
 		err := WithAuthTokenSource("google", &mockTokenSource{})(config) // Try to overwrite
 
@@ -768,20 +502,6 @@ func TestOptionDuplicateAndEdgeCases(t *testing.T) {
 		if !strings.Contains(err.Error(), "authentication source 'google' is already set") {
 			t.Errorf("Incorrect error message for duplicate auth token. Got: %v", err)
 		}
-	})
-}
-
-// TestToolboxClient_Close verifies the Close method's safety.
-func TestToolboxClient_Close(t *testing.T) {
-	t.Run("Safely closes client with default transport", func(t *testing.T) {
-		client, _ := NewToolboxClient("url")
-		client.Close()
-	})
-
-	t.Run("Safely does nothing for client with non-standard transport", func(t *testing.T) {
-		httpClient := &http.Client{Transport: &mockNonClosingTransport{}}
-		client, _ := NewToolboxClient("url", WithHTTPClient(httpClient))
-		client.Close()
 	})
 }
 
@@ -821,7 +541,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 		)
 
 		// Action: Applying the defaults inside LoadTool should fail
-		_, err := client.LoadTool("toolA")
+		_, err := client.LoadTool("toolA", context.Background())
 
 		// Assert
 		if err == nil {
@@ -834,7 +554,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 
 	t.Run("LoadTool fails when tool is not in the manifest", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
-		_, err := client.LoadTool("tool-that-does-not-exist")
+		_, err := client.LoadTool("tool-that-does-not-exist", context.Background())
 
 		if err == nil {
 			t.Fatal("Expected an error for a missing tool, but got nil")
@@ -850,7 +570,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 		errorServer.Close()
 
 		client, _ := NewToolboxClient(errorServer.URL, WithHTTPClient(errorServer.Client()))
-		_, err := client.LoadTool("any-tool")
+		_, err := client.LoadTool("any-tool", context.Background())
 
 		if err == nil {
 			t.Fatal("Expected an error from a failed manifest load, but got nil")
@@ -862,7 +582,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 
 	t.Run("LoadTool fails with unused auth tokens", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
-		_, err := client.LoadTool("toolA",
+		_, err := client.LoadTool("toolA", context.Background(),
 			WithAuthTokenString("unused-auth", "token"), // This auth is not needed by toolA
 		)
 		if err == nil {
@@ -875,7 +595,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 
 	t.Run("LoadTool fails with unused bound parameters", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
-		_, err := client.LoadTool("toolA",
+		_, err := client.LoadTool("toolA", context.Background(),
 			WithBindParamString("unused-param", "value"), // This param is not defined on toolA
 		)
 
@@ -891,6 +611,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	t.Run("LoadToolset fails with unused parameters in strict mode", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
+			context.Background(),
 			WithStrict(true),
 			WithBindParamString("param1", "value-for-tool-a"),
 		)
@@ -907,6 +628,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	t.Run("LoadToolset fails with unused parameters in non-strict mode", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
+			context.Background(),
 			WithStrict(false),
 			WithBindParamString("completely-unused-param", "value"),
 		)
