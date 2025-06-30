@@ -15,9 +15,11 @@
 package core
 
 import (
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -31,9 +33,150 @@ func (m *mockTokenSource) Token() (*oauth2.Token, error) {
 	return m.token, nil
 }
 
+// Enforcing the TokenSource type on the mockTokenSource
+var _ oauth2.TokenSource = &mockTokenSource{}
+
+// Helper to create a new client for each test, ensuring a clean state.
+func newTestClient() *ToolboxClient {
+	return &ToolboxClient{
+		clientHeaderSources: make(map[string]oauth2.TokenSource),
+	}
+}
+
+func TestWithHTTPClient(t *testing.T) {
+	t.Run("Success case", func(t *testing.T) {
+		client := newTestClient()
+		customHTTPClient := &http.Client{Timeout: 30 * time.Second}
+		opt := WithHTTPClient(customHTTPClient)
+		err := opt(client)
+
+		if err != nil {
+			t.Errorf("Expected no error, but got: %v", err)
+		}
+		if client.httpClient != customHTTPClient {
+			t.Error("httpClient was not set correctly")
+		}
+	})
+
+	t.Run("Failure on nil client", func(t *testing.T) {
+		client := newTestClient()
+		opt := WithHTTPClient(nil)
+		err := opt(client)
+		if err == nil {
+			t.Error("Expected an error for nil http.Client, but got none")
+		}
+	})
+}
+
+func TestWithClientHeaderString(t *testing.T) {
+	t.Run("Success case", func(t *testing.T) {
+		client := newTestClient()
+		headerName := "X-Api-Key"
+		headerValue := "static-secret-value"
+		opt := WithClientHeaderString(headerName, headerValue)
+		err := opt(client)
+
+		if err != nil {
+			t.Errorf("Expected no error, but got: %v", err)
+		}
+
+		source, ok := client.clientHeaderSources[headerName]
+		if !ok {
+			t.Fatalf("Header source for '%s' was not set", headerName)
+		}
+		token, _ := source.Token()
+		if token.AccessToken != headerValue {
+			t.Errorf("Expected token value '%s', but got '%s'", headerValue, token.AccessToken)
+		}
+	})
+
+	t.Run("Failure on duplicate header", func(t *testing.T) {
+		client := newTestClient()
+		headerName := "X-Api-Key"
+		opt := WithClientHeaderString(headerName, "value1")
+		_ = opt(client) // Apply once
+
+		err := opt(client) // Apply again
+		if err == nil {
+			t.Error("Expected an error for duplicate header, but got none")
+		}
+	})
+}
+
+func TestWithClientHeaderTokenSource(t *testing.T) {
+	mockTokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "dynamic-token"})
+
+	t.Run("Success case", func(t *testing.T) {
+		client := newTestClient()
+		headerName := "Authorization"
+		opt := WithClientHeaderTokenSource(headerName, mockTokenSource)
+		err := opt(client)
+
+		if err != nil {
+			t.Errorf("Expected no error, but got: %v", err)
+		}
+		if _, ok := client.clientHeaderSources[headerName]; !ok {
+			t.Errorf("TokenSource for header '%s' was not set", headerName)
+		}
+	})
+
+	t.Run("Failure on nil token source", func(t *testing.T) {
+		client := newTestClient()
+		opt := WithClientHeaderTokenSource("Authorization", nil)
+		err := opt(client)
+		if err == nil {
+			t.Error("Expected an error for nil TokenSource, but got none")
+		}
+	})
+
+	t.Run("Failure on duplicate header", func(t *testing.T) {
+		client := newTestClient()
+		headerName := "Authorization"
+		opt := WithClientHeaderTokenSource(headerName, mockTokenSource)
+		_ = opt(client) // Apply once
+
+		err := opt(client) // Apply again
+		if err == nil {
+			t.Error("Expected an error for duplicate header, but got none")
+		}
+	})
+}
+
+func TestWithDefaultToolOptions(t *testing.T) {
+	// A dummy ToolOption for testing purposes.
+	dummyOpt := func(c *ToolConfig) error { return nil }
+
+	t.Run("Success case", func(t *testing.T) {
+		client := newTestClient()
+		opt := WithDefaultToolOptions(dummyOpt, dummyOpt)
+		err := opt(client)
+
+		if err != nil {
+			t.Errorf("Expected no error, but got: %v", err)
+		}
+		if len(client.defaultToolOptions) != 2 {
+			t.Errorf("Expected 2 default options, but got %d", len(client.defaultToolOptions))
+		}
+		if !client.defaultOptionsSet {
+			t.Error("defaultOptionsSet flag was not set to true")
+		}
+	})
+
+	t.Run("Failure on setting twice", func(t *testing.T) {
+		client := newTestClient()
+		opt := WithDefaultToolOptions(dummyOpt)
+		_ = opt(client) // Apply once
+
+		err := opt(client) // Apply again
+		if err == nil {
+			t.Error("Expected an error when setting default options twice, but got none")
+		}
+	})
+}
+
 func TestToolOptions(t *testing.T) {
 	newTestConfig := func() *ToolConfig {
-		return &ToolConfig{}
+		return newToolConfig()
 	}
 
 	t.Run("WithName", func(t *testing.T) {
@@ -223,7 +366,7 @@ func TestToolOptions(t *testing.T) {
 
 func TestArrayAndArrayFuncOptions(t *testing.T) {
 	newTestConfig := func() *ToolConfig {
-		return &ToolConfig{}
+		return newToolConfig()
 	}
 
 	t.Run("Static Array Parameter Binding", func(t *testing.T) {
@@ -295,7 +438,7 @@ func TestArrayAndArrayFuncOptions(t *testing.T) {
 
 // TestFunctionParameterBinding covers the less common function-based binding options.
 func TestFunctionParameterBinding(t *testing.T) {
-	config := &ToolConfig{}
+	config := newToolConfig()
 
 	// Bind different function types
 	_ = WithBindParamFloatFunc("price", func() (float64, error) { return 99.50, nil })(config)
@@ -321,5 +464,33 @@ func TestFunctionParameterBinding(t *testing.T) {
 		t.Fatal("BoolArrayFunc was not stored correctly")
 	} else if val, err := fn(); err != nil || !reflect.DeepEqual(val, []bool{true, false, true}) {
 		t.Errorf("Executing stored BoolArrayFunc failed. Got val=%v, err=%v", val, err)
+	}
+}
+
+func TestNewToolConfig(t *testing.T) {
+	// Call the function to get a new config.
+	config := newToolConfig()
+
+	// Check that the returned pointer is not nil.
+	if config == nil {
+		t.Fatal("NewToolConfig() returned a nil pointer")
+	}
+
+	//Check that the maps are initialized (not nil).
+	if config.AuthTokenSources == nil {
+		t.Error("Expected AuthTokenSources map to be initialized, but it was nil")
+	}
+
+	if config.BoundParams == nil {
+		t.Error("Expected BoundParams map to be initialized, but it was nil")
+	}
+
+	// Check that other fields have their correct zero-values.
+	if config.Name != "" {
+		t.Errorf("Expected Name to be empty, but got '%s'", config.Name)
+	}
+
+	if config.Strict != false {
+		t.Errorf("Expected Strict to be false, but got %t", config.Strict)
 	}
 }
