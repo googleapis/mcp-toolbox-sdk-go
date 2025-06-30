@@ -98,7 +98,7 @@ func (tt *ToolboxTool) DescribeParameters() string {
 //	error if the new options are invalid or conflict with existing settings.
 func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 	// Create a config and apply the new options, checking for internal duplicates.
-	config := &ToolConfig{}
+	config := newToolConfig()
 	for _, opt := range opts {
 		if err := opt(config); err != nil {
 			return nil, err
