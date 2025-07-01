@@ -118,3 +118,26 @@ func TestIdentifyAuthRequirements(t *testing.T) {
 		}
 	})
 }
+
+func TestCustomTokenSource(t *testing.T) {
+	// Test case 1: The provider returns a valid, non-empty token string.
+	t.Run("successful token retrieval", func(t *testing.T) {
+		expectedToken := "my-secret-test-token-12345"
+		mockProvider := func() string {
+			return expectedToken
+		}
+		tokenSource := NewCustomTokenSource(mockProvider)
+
+		token, err := tokenSource.Token()
+
+		if err != nil {
+			t.Fatalf("Token() returned an unexpected error: %v", err)
+		}
+		if token == nil {
+			t.Fatal("Token() returned a nil token, but a valid one was expected.")
+		}
+		if token.AccessToken != expectedToken {
+			t.Errorf("Expected access token '%s', but got '%s'", expectedToken, token.AccessToken)
+		}
+	})
+}
