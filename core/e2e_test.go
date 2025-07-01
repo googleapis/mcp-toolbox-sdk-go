@@ -84,7 +84,7 @@ func TestMain(m *testing.M) {
 	if err := cmd.Process.Kill(); err != nil {
 		log.Printf("Failed to kill toolbox server process: %v", err)
 	}
-	cmd.Wait() // Clean up the process resources
+	_ = cmd.Wait() // Clean up the process resources
 
 	os.Exit(exitCode)
 }
