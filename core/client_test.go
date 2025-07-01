@@ -36,6 +36,29 @@ func (f *failingTokenSource) Token() (*oauth2.Token, error) {
 	return nil, errors.New("token source failed as designed")
 }
 
+// stringTokenSource is a custom type that implements the oauth2.TokenSource interface.
+type customTokenSource struct {
+	provider func() string
+}
+
+// Provides a way to convert a function into TokenSource
+func NewCustomTokenSource(provider func() string) oauth2.TokenSource {
+	return &customTokenSource{
+		provider: provider,
+	}
+}
+
+func (s *customTokenSource) Token() (*oauth2.Token, error) {
+	tokenStr := s.provider()
+	return &oauth2.Token{
+		AccessToken: tokenStr,
+	}, nil
+}
+
+func getMyToken() string {
+	return "dynamic-token-from-func"
+}
+
 // TestNewToolboxClient verifies the constructor's core functionality,
 // including default values and panic handling.
 func TestNewToolboxClient(t *testing.T) {
@@ -146,6 +169,31 @@ func TestClientOptions(t *testing.T) {
 		token, _ := source.Token()
 		if token.AccessToken != "dynamic-token" {
 			t.Errorf("Expected token from source to be 'dynamic-token', got %q", token.AccessToken)
+		}
+	})
+
+	t.Run("WithClientHeaderTokenSource as a dynamic function", func(t *testing.T) {
+		// Setup
+		client, _ := NewToolboxClient("test-url")
+		dynamicTokenSource := NewCustomTokenSource(getMyToken)
+
+		// Action
+		opt := WithClientHeaderTokenSource("X-Api-Key", dynamicTokenSource)
+		if err := opt(client); err != nil {
+			t.Fatalf("WithHTTPClient returned an unexpected error: %v", err)
+		}
+
+		// Assert
+		source, ok := client.clientHeaderSources["X-Api-Key"]
+		if !ok {
+			t.Fatal("WithClientHeaderTokenSource did not add the header source.")
+		}
+		if source != dynamicTokenSource {
+			t.Error("The stored token source is not the one that was provided.")
+		}
+		token, _ := source.Token()
+		if token.AccessToken != "dynamic-token-from-func" {
+			t.Errorf("Expected token from source to be 'dynamic-token-from-func', got %q", token.AccessToken)
 		}
 	})
 
