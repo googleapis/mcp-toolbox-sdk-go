@@ -120,7 +120,6 @@ func TestIdentifyAuthRequirements(t *testing.T) {
 }
 
 func TestCustomTokenSource(t *testing.T) {
-	// Test case 1: The provider returns a valid, non-empty token string.
 	t.Run("successful token retrieval", func(t *testing.T) {
 		expectedToken := "my-secret-test-token-12345"
 		mockProvider := func() string {
