@@ -57,7 +57,7 @@ This repository hosts the following Go packages. See the package-specific
 README for detailed installation and usage instructions:
 
 | Package | Target Use Case | Integration | Path | Details (README) |
-| :------ | :---------- | :---------- | :---------------------- | :---------- | :---------
+| :------ | :----------| :---------- | :---------------------- | :---------- |
 | `core` | Framework-agnostic / Custom applications | Use directly / Custom | `core/` | 📄 [View README](https://github.com/googleapis/mcp-toolbox-sdk-go/blob/main/core/README.md) |
 
 ## Getting Started
