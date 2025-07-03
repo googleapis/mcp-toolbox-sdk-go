@@ -181,24 +181,19 @@ func TestClientOptions(t *testing.T) {
 	t.Run("WithDefaultToolOptions", func(t *testing.T) {
 		// Setup
 		client, _ := NewToolboxClient("test-url")
-		// Create two distinct tool options for testing
 		opt1 := func(tc *ToolConfig) error {
 			tc.Strict = true
 			return nil
 		}
-		opt2 := func(tc *ToolConfig) error {
-			tc.Name = "TestTool"
-			return nil
-		}
 
 		// Action
-		clientOpt := WithDefaultToolOptions(opt1, opt2)
+		clientOpt := WithDefaultToolOptions(opt1)
 		if err := clientOpt(client); err != nil {
 			t.Fatalf("WithDefaultToolOptions returned an unexpected error: %v", err)
 		}
 
 		// Assert
-		if len(client.defaultToolOptions) != 2 {
+		if len(client.defaultToolOptions) != 1 {
 			t.Fatalf("Expected 2 default tool options, got %d", len(client.defaultToolOptions))
 		}
 
@@ -209,15 +204,6 @@ func TestClientOptions(t *testing.T) {
 		}
 		if !testConfig.Strict {
 			t.Error("The first tool option (Strict=true) was not stored correctly.")
-		}
-
-		if err := client.defaultToolOptions[1](testConfig); err != nil {
-			t.Fatalf("Executing second stored ToolOption returned an unexpected error: %v", err)
-		}
-
-		_ = client.defaultToolOptions[1](testConfig)
-		if testConfig.Name != "TestTool" {
-			t.Error("The second tool option (Name=TestTool) was not stored correctly.")
 		}
 	})
 
@@ -300,6 +286,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	t.Run("LoadToolset - Success with non-strict mode", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		tools, err := client.LoadToolset(
+			"",
 			context.Background(),
 			WithBindParamString("param1", "value1"),
 			WithAuthTokenString("google", "token-google"),
@@ -316,6 +303,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	t.Run("LoadToolset - Negative Test - Unused parameter in non-strict mode", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
+			"",
 			context.Background(),
 			WithBindParamString("param1", "value1"),
 			WithAuthTokenString("unknown-auth", "token-unknown"),
@@ -331,6 +319,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	t.Run("LoadToolset - Negative Test - Unused parameter in strict mode", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
+			"",
 			context.Background(),
 			WithStrict(true), // Enable strict mode
 			WithBindParamString("param1", "value1"),
@@ -433,7 +422,7 @@ func TestNegativeAndEdgeCases(t *testing.T) {
 
 		client, _ := NewToolboxClient(server.URL)
 
-		_, err := client.LoadTool("any-tool", context.Background(), WithName("a-name"), nil)
+		_, err := client.LoadTool("any-tool", context.Background(), nil)
 
 		if err == nil {
 			t.Fatal("Expected an error when a nil option is passed to LoadTool, but got nil")
@@ -492,8 +481,8 @@ func TestOptionDuplicateAndEdgeCases(t *testing.T) {
 	t.Run("Fails when trying to add default tool options twice", func(t *testing.T) {
 		// Action: Try to configure a client with the same option type twice.
 		_, err := NewToolboxClient("url",
-			WithDefaultToolOptions(WithName("a")), // First call
-			WithDefaultToolOptions(WithName("b")), // Second call should fail
+			WithDefaultToolOptions(WithStrict(true)), // First call
+			WithDefaultToolOptions(WithStrict(true)), // Second call should fail
 		)
 
 		// Assert
@@ -564,8 +553,8 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL,
 			WithHTTPClient(server.Client()),
 			WithDefaultToolOptions(
-				WithName("set-a"),
-				WithName("set-b"),
+				WithStrict(true),
+				WithStrict(false),
 			),
 		)
 
@@ -576,7 +565,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from duplicate default options, but got nil")
 		}
-		if !strings.Contains(err.Error(), "name is already set") {
+		if !strings.Contains(err.Error(), "strict mode is already set") {
 			t.Errorf("Incorrect error for duplicate default option. Got: %v", err)
 		}
 	})
@@ -640,6 +629,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	t.Run("LoadToolset fails with unused parameters in strict mode", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
+			"",
 			context.Background(),
 			WithStrict(true),
 			WithBindParamString("param1", "value-for-tool-a"),
@@ -657,6 +647,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	t.Run("LoadToolset fails with unused parameters in non-strict mode", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
+			"",
 			context.Background(),
 			WithStrict(false),
 			WithBindParamString("completely-unused-param", "value"),
