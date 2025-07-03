@@ -230,28 +230,3 @@ func loadManifest(ctx context.Context, url string, httpClient *http.Client,
 	return &manifest, nil
 
 }
-
-// stringTokenSource is a custom type that implements the oauth2.TokenSource interface.
-type customTokenSource struct {
-	provider func() string
-}
-
-// This function converts a custom function that returns a string into an oauth2.TokenSource type.
-//
-// Inputs:
-//   - provider: A custom function that returns a token as a string.
-//
-// Returns:
-//   - An oauth2.TokenSource that wraps the custom function.
-func NewCustomTokenSource(provider func() string) oauth2.TokenSource {
-	return &customTokenSource{
-		provider: provider,
-	}
-}
-
-func (s *customTokenSource) Token() (*oauth2.Token, error) {
-	tokenStr := s.provider()
-	return &oauth2.Token{
-		AccessToken: tokenStr,
-	}, nil
-}
