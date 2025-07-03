@@ -90,9 +90,7 @@ func WithDefaultToolOptions(opts ...ToolOption) ClientOption {
 type ToolConfig struct {
 	AuthTokenSources map[string]oauth2.TokenSource
 	BoundParams      map[string]any
-	Name             string
 	Strict           bool
-	nameSet          bool
 	strictSet        bool
 }
 
@@ -106,18 +104,6 @@ type Integer interface {
 
 type Float interface {
 	~float32 | ~float64
-}
-
-// WithName provides an option to specify the name of a toolset for LoadToolset.
-func WithName(name string) ToolOption {
-	return func(c *ToolConfig) error {
-		if c.nameSet {
-			return fmt.Errorf("name is already set and cannot be overridden")
-		}
-		c.Name = name
-		c.nameSet = true
-		return nil
-	}
 }
 
 // WithStrict provides an option to enable strict validation for LoadToolset.
