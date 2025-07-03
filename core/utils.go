@@ -28,10 +28,10 @@ import "golang.org/x/oauth2"
 //     names for which token getters are available.
 //
 // Returns:
-//   - unmetAuthnParams: A map representing the subset of required authentication
+//   - requiredAuthnParams: A map representing the subset of required authentication
 //     parameters that are not covered by the
 //     provided authTokenSources.
-//   - unmetAuthzTokens: A slice of authorization tokens that were not satisfied
+//   - requiredAuthzTokens: A slice of authorization tokens that were not satisfied
 //     by any of the provided authTokenSources.
 //   - usedServices: A slice of service names from authTokenSources that were used
 //     to satisfy one or more authentication or authorization requirements.
@@ -42,7 +42,7 @@ func identifyAuthRequirements(
 ) (map[string][]string, []string, []string) {
 
 	// This map will be populated with authentication parameters that are NOT met.
-	unmetAuthnParams := make(map[string][]string)
+	requiredAuthnParams := make(map[string][]string)
 	// This map is used as a "set" to track every available service that was
 	// used to meet ANY requirement.
 	usedServices := make(map[string]struct{})
@@ -60,12 +60,12 @@ func identifyAuthRequirements(
 			}
 		} else {
 			// If no match was found, this parameter is still required by the user.
-			unmetAuthnParams[param] = services
+			requiredAuthnParams[param] = services
 		}
 	}
 
 	// Find which of the required authz tokens are covered by available services.
-	var unmetAuthzTokens []string
+	var requiredAuthzTokens []string
 	isAuthzMet := false
 	for _, reqToken := range reqAuthzTokens {
 		// If an available service can satisfy one of the token requirements mark
@@ -79,7 +79,7 @@ func identifyAuthRequirements(
 	// After checking all tokens, if the authorization requirement was still not met...
 	// ...then ALL original tokens are still required.
 	if !isAuthzMet {
-		unmetAuthzTokens = reqAuthzTokens
+		requiredAuthzTokens = reqAuthzTokens
 	}
 
 	// Convert the `usedServices` map (acting as a set) into a slice for the return value.
@@ -88,7 +88,7 @@ func identifyAuthRequirements(
 		usedServicesSlice = append(usedServicesSlice, service)
 	}
 
-	return unmetAuthnParams, unmetAuthzTokens, usedServicesSlice
+	return requiredAuthnParams, requiredAuthzTokens, usedServicesSlice
 }
 
 // isServiceProvided checks if any of the required services are available in the
