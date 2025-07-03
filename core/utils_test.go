@@ -292,6 +292,7 @@ func TestLoadManifest(t *testing.T) {
 		}
 	})
 }
+
 func TestCustomTokenSource(t *testing.T) {
 	t.Run("successful token retrieval", func(t *testing.T) {
 		expectedToken := "my-secret-test-token-12345"
