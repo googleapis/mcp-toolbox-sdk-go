@@ -36,25 +36,6 @@ func (f *failingTokenSource) Token() (*oauth2.Token, error) {
 	return nil, errors.New("token source failed as designed")
 }
 
-// stringTokenSource is a custom type that implements the oauth2.TokenSource interface.
-type customTokenSource struct {
-	provider func() string
-}
-
-// Provides a way to convert a function into TokenSource
-func NewCustomTokenSource(provider func() string) oauth2.TokenSource {
-	return &customTokenSource{
-		provider: provider,
-	}
-}
-
-func (s *customTokenSource) Token() (*oauth2.Token, error) {
-	tokenStr := s.provider()
-	return &oauth2.Token{
-		AccessToken: tokenStr,
-	}, nil
-}
-
 func getMyToken() string {
 	return "dynamic-token-from-func"
 }
