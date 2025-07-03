@@ -101,9 +101,6 @@ func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 	}
 
 	// Validate that inapplicable options were not used.
-	if config.nameSet {
-		return nil, fmt.Errorf("ToolFrom: WithName option is not applicable when creating a tool from an existing instance")
-	}
 	if config.strictSet {
 		return nil, fmt.Errorf("ToolFrom: WithStrict option is not applicable as the behavior is always strict")
 	}
