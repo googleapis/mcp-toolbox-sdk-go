@@ -179,18 +179,6 @@ func TestToolOptions(t *testing.T) {
 		return newToolConfig()
 	}
 
-	t.Run("WithName", func(t *testing.T) {
-		config := newTestConfig()
-		opt := WithName("MyTool")
-
-		if err := opt(config); err != nil {
-			t.Fatalf("WithName returned an unexpected error: %v", err)
-		}
-		if config.Name != "MyTool" {
-			t.Errorf("WithName() failed: expected Name 'MyTool', got %q", config.Name)
-		}
-	})
-
 	t.Run("WithStrict", func(t *testing.T) {
 		config := newTestConfig()
 		opt := WithStrict(true)
@@ -326,14 +314,6 @@ func TestToolOptions(t *testing.T) {
 	})
 
 	t.Run("Negative Tests - Preventing Overwrites", func(t *testing.T) {
-		t.Run("WithName", func(t *testing.T) {
-			config := newTestConfig()
-			_ = WithName("first-name")(config)
-			err := WithName("second-name")(config)
-			if err == nil {
-				t.Error("Expected an error when setting Name twice, but got nil")
-			}
-		})
 
 		t.Run("WithStrict", func(t *testing.T) {
 			config := newTestConfig()
@@ -484,12 +464,7 @@ func TestNewToolConfig(t *testing.T) {
 	if config.BoundParams == nil {
 		t.Error("Expected BoundParams map to be initialized, but it was nil")
 	}
-
-	// Check that other fields have their correct zero-values.
-	if config.Name != "" {
-		t.Errorf("Expected Name to be empty, but got '%s'", config.Name)
-	}
-
+  
 	if config.Strict != false {
 		t.Errorf("Expected Strict to be false, but got %t", config.Strict)
 	}

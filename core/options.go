@@ -90,9 +90,7 @@ func WithDefaultToolOptions(opts ...ToolOption) ClientOption {
 type ToolConfig struct {
 	AuthTokenSources map[string]oauth2.TokenSource
 	BoundParams      map[string]any
-	Name             string
 	Strict           bool
-	nameSet          bool
 	strictSet        bool
 }
 
@@ -108,18 +106,6 @@ type Float interface {
 	~float32 | ~float64
 }
 
-// WithName provides an option to specify the name of a toolset for LoadToolset.
-func WithName(name string) ToolOption {
-	return func(c *ToolConfig) error {
-		if c.nameSet {
-			return fmt.Errorf("name is already set and cannot be overridden")
-		}
-		c.Name = name
-		c.nameSet = true
-		return nil
-	}
-}
-
 // WithStrict provides an option to enable strict validation for LoadToolset.
 func WithStrict(strict bool) ToolOption {
 	return func(c *ToolConfig) error {
@@ -133,24 +119,24 @@ func WithStrict(strict bool) ToolOption {
 }
 
 // WithAuthTokenSource provides an authentication token from a standard TokenSource.
-func WithAuthTokenSource(authSource string, idToken oauth2.TokenSource) ToolOption {
+func WithAuthTokenSource(authSourceName string, idToken oauth2.TokenSource) ToolOption {
 	return func(c *ToolConfig) error {
-		if _, exists := c.AuthTokenSources[authSource]; exists {
-			return fmt.Errorf("authentication source '%s' is already set and cannot be overridden", authSource)
+		if _, exists := c.AuthTokenSources[authSourceName]; exists {
+			return fmt.Errorf("authentication source '%s' is already set and cannot be overridden", authSourceName)
 		}
-		c.AuthTokenSources[authSource] = idToken
+		c.AuthTokenSources[authSourceName] = idToken
 		return nil
 	}
 }
 
 // WithAuthTokenString provides a static string authentication token.
-func WithAuthTokenString(authSource string, idToken string) ToolOption {
+func WithAuthTokenString(authSourceName string, idToken string) ToolOption {
 	return func(c *ToolConfig) error {
-		if _, exists := c.AuthTokenSources[authSource]; exists {
-			return fmt.Errorf("authentication source '%s' is already set and cannot be overridden", authSource)
+		if _, exists := c.AuthTokenSources[authSourceName]; exists {
+			return fmt.Errorf("authentication source '%s' is already set and cannot be overridden", authSourceName)
 		}
 		staticToken := &oauth2.Token{AccessToken: idToken}
-		c.AuthTokenSources[authSource] = oauth2.StaticTokenSource(staticToken)
+		c.AuthTokenSources[authSourceName] = oauth2.StaticTokenSource(staticToken)
 		return nil
 	}
 }
