@@ -200,17 +200,6 @@ func TestToolFrom(t *testing.T) {
 		}
 	})
 
-	t.Run("Negative Test - fails when using WithName option", func(t *testing.T) {
-		tool := getTestTool()
-		_, err := tool.ToolFrom(WithName("new-name"))
-		if err == nil {
-			t.Fatal("Expected an error when using WithName, but got nil")
-		}
-		if !strings.Contains(err.Error(), "WithName option is not applicable") {
-			t.Errorf("Incorrect error message for WithName. Got: %v", err)
-		}
-	})
-
 	t.Run("Negative Test - fails when using WithStrict option", func(t *testing.T) {
 		tool := getTestTool()
 		_, err := tool.ToolFrom(WithStrict(true))

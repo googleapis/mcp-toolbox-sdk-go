@@ -186,14 +186,6 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 		}
 	}
 
-	// The WithName option is only for LoadToolset, not for loading a single tool.
-	if finalConfig.nameSet {
-		return nil, fmt.Errorf(
-			"the WithName option is not applicable to LoadTool; the tool name '%s' is provided as a direct argument",
-			name,
-		)
-	}
-
 	// Fetch the manifest for the specified tool.
 	url := fmt.Sprintf("%s/api/tool/%s", tc.baseURL, name)
 	manifest, err := loadManifest(ctx, url, tc.httpClient, tc.clientHeaderSources)
@@ -253,16 +245,16 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 // LoadToolset fetches a manifest for a collection of tools.
 //
 // Inputs:
+//   - name: Name of the toolset to be loaded.Set this arg to "" to load the default toolset
 //   - ctx: The context to control the lifecycle of the request.
-//   - opts: A variadic list of ToolOption functions. These can include WithName
-//     to specify a toolset, WithStrict, and options for auth or bound params
-//     that may apply to tools in the set.
+//   - opts: A variadic list of ToolOption functions. These can include WithStrict
+//     and options for auth or bound params that may apply to tools in the set.
 //
 // Returns:
 //
 //	A slice of configured *ToolboxTool and a nil error on success, or a nil
 //	slice and an error if loading or validation fails.
-func (tc *ToolboxClient) LoadToolset(ctx context.Context, opts ...ToolOption) ([]*ToolboxTool, error) {
+func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...ToolOption) ([]*ToolboxTool, error) {
 	finalConfig := newToolConfig()
 	// Apply client-wide default options first.
 	for _, opt := range tc.defaultToolOptions {
@@ -283,18 +275,18 @@ func (tc *ToolboxClient) LoadToolset(ctx context.Context, opts ...ToolOption) ([
 
 	// Determine the manifest URL based on whether a specific toolset name was provided.
 	var url string
-	if finalConfig.Name == "" {
+	if name == "" {
 		url = fmt.Sprintf("%s/api/toolset/", tc.baseURL)
 	} else {
-		url = fmt.Sprintf("%s/api/toolset/%s", tc.baseURL, finalConfig.Name)
+		url = fmt.Sprintf("%s/api/toolset/%s", tc.baseURL, name)
 	}
 	// Fetch the manifest for the toolset.
 	manifest, err := loadManifest(ctx, url, tc.httpClient, tc.clientHeaderSources)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load toolset manifest for '%s': %w", finalConfig.Name, err)
+		return nil, fmt.Errorf("failed to load toolset manifest for '%s': %w", name, err)
 	}
 	if manifest.Tools == nil {
-		return nil, fmt.Errorf("toolset '%s' not found (manifest contains no tools)", finalConfig.Name)
+		return nil, fmt.Errorf("toolset '%s' not found (manifest contains no tools)", name)
 	}
 
 	var tools []*ToolboxTool
@@ -369,7 +361,6 @@ func (tc *ToolboxClient) LoadToolset(ctx context.Context, opts ...ToolOption) ([
 			errorMessages = append(errorMessages, fmt.Sprintf("unused bound parameters could not be applied to any tool: %s", strings.Join(unusedBound, ", ")))
 		}
 		if len(errorMessages) > 0 {
-			name := finalConfig.Name
 			if name == "" {
 				name = "default"
 			}

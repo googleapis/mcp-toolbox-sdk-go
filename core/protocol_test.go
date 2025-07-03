@@ -178,7 +178,7 @@ func TestParameterSchemaFloat(t *testing.T) {
 		}
 	})
 	t.Run("Test float64 param", func(t *testing.T) {
-		var value = 3.14
+		value := 3.14
 
 		err := schema.validateType(value)
 
