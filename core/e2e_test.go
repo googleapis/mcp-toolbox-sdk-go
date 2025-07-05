@@ -16,36 +16,27 @@ package core_test
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"log"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
 	"testing"
-	"time"
 
-	secretmanager "cloud.google.com/go/secretmanager/apiv1"
-	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
-	"cloud.google.com/go/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
-	"google.golang.org/api/idtoken"
 
 	"mcp-toolbox-sdk-go/core"
 )
 
 // Global variables to hold session-scoped "fixtures"
 var (
-	projectID      string = getEnvVar("GOOGLE_CLOUD_PROJECT")
-	toolboxVersion string = getEnvVar("TOOLBOX_VERSION")
+	projectID      string
+	toolboxVersion string
 	authToken1     string
 	authToken2     string
 )
 
 func TestMain(m *testing.M) {
+	ctx := context.Background()
 	log.Println("Starting E2E test setup...")
 
 	// Get mandatory environment variables
@@ -54,11 +45,11 @@ func TestMain(m *testing.M) {
 
 	// Get secrets and auth tokens
 	log.Println("Fetching secrets and auth tokens...")
-	toolsManifestContent := accessSecretVersion(projectID, "sdk_testing_tools")
-	clientID1 := accessSecretVersion(projectID, "sdk_testing_client1")
-	clientID2 := accessSecretVersion(projectID, "sdk_testing_client2")
-	authToken1 = getAuthToken(clientID1)
-	authToken2 = getAuthToken(clientID2)
+	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools")
+	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1")
+	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2")
+	authToken1 = getAuthToken(ctx, clientID1)
+	authToken2 = getAuthToken(ctx, clientID2)
 
 	// Create a temporary file for the tools manifest
 	toolsFile, err := os.CreateTemp("", "tools-*.json")
@@ -73,7 +64,7 @@ func TestMain(m *testing.M) {
 	defer os.Remove(toolsFilePath) // Ensure cleanup
 
 	// Download and start the toolbox server
-	cmd := setupAndStartToolboxServer(toolboxVersion, toolsFilePath)
+	cmd := setupAndStartToolboxServer(ctx, toolboxVersion, toolsFilePath)
 
 	// --- 2. Run Tests ---
 	log.Println("Setup complete. Running tests...")
@@ -346,117 +337,4 @@ func TestE2E_Auth(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no field named row_data in claims")
 	})
-}
-
-// --- Helper Functions ---
-
-func getEnvVar(key string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		log.Fatalf("Must set env var %s", key)
-	}
-	return value
-}
-
-func accessSecretVersion(projectID, secretID string) string {
-	ctx := context.Background()
-	client, err := secretmanager.NewClient(ctx)
-	if err != nil {
-		log.Fatalf("Failed to create secretmanager client: %v", err)
-	}
-	defer client.Close()
-
-	req := &secretmanagerpb.AccessSecretVersionRequest{
-		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/latest", projectID, secretID),
-	}
-
-	result, err := client.AccessSecretVersion(ctx, req)
-	if err != nil {
-		log.Fatalf("Failed to access secret version: %v", err)
-	}
-	return string(result.Payload.Data)
-}
-
-func downloadBlob(bucketName, sourceBlobName, destinationFileName string) {
-	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		log.Fatalf("Failed to create storage client: %v", err)
-	}
-	defer client.Close()
-
-	rc, err := client.Bucket(bucketName).Object(sourceBlobName).NewReader(ctx)
-	if err != nil {
-		log.Fatalf("Failed to create reader for blob %s: %v", sourceBlobName, err)
-	}
-	defer rc.Close()
-
-	f, err := os.Create(destinationFileName)
-	if err != nil {
-		log.Fatalf("Failed to create destination file %s: %v", destinationFileName, err)
-	}
-	defer f.Close()
-
-	if _, err := io.Copy(f, rc); err != nil {
-		log.Fatalf("Failed to download blob %s: %v", sourceBlobName, err)
-	}
-	log.Printf("Blob %s downloaded to %s.", sourceBlobName, destinationFileName)
-}
-
-func getToolboxBinaryURL(toolboxVersion string) string {
-	osSystem := runtime.GOOS
-	arch := runtime.GOARCH
-	return fmt.Sprintf("v%s/%s/%s/toolbox", toolboxVersion, osSystem, arch)
-}
-
-func getAuthToken(clientID string) string {
-	ctx := context.Background()
-	tokenSource, err := idtoken.NewTokenSource(ctx, clientID)
-	if err != nil {
-		log.Fatalf("Failed to create token source for audience %s: %v", clientID, err)
-	}
-	token, err := tokenSource.Token()
-	if err != nil {
-		log.Fatalf("Failed to retrieve token: %v", err)
-	}
-	return token.AccessToken
-}
-
-func setupAndStartToolboxServer(version, toolsFilePath string) *exec.Cmd {
-	log.Println("Downloading toolbox binary from GCS bucket...")
-	binaryURL := getToolboxBinaryURL(version)
-	binaryPath := "toolbox"
-	downloadBlob("genai-toolbox", binaryURL, binaryPath)
-	log.Println("Toolbox binary downloaded successfully.")
-
-	// Make the binary executable
-	if err := os.Chmod(binaryPath, 0755); err != nil {
-		log.Fatalf("Failed to make toolbox binary executable: %v", err)
-	}
-
-	// Get absolute path for the binary to ensure it can be found
-	absBinaryPath, err := filepath.Abs(binaryPath)
-	if err != nil {
-		log.Fatalf("Failed to get absolute path for toolbox binary: %v", err)
-	}
-
-	log.Println("Starting toolbox server process...")
-	cmd := exec.Command(absBinaryPath, "--tools-file", toolsFilePath)
-	cmd.Stdout = os.Stdout // Pipe server stdout to test stdout
-	cmd.Stderr = os.Stderr // Pipe server stderr to test stderr
-
-	if err := cmd.Start(); err != nil {
-		log.Fatalf("Failed to start toolbox server: %v", err)
-	}
-
-	log.Println("Waiting for server to initialize...")
-	time.Sleep(5 * time.Second) // Wait a few seconds for the server to bind to the port
-
-	// Check if the process exited prematurely
-	if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-		log.Fatalf("Toolbox server failed to start and exited with code: %d", cmd.ProcessState.ExitCode())
-	}
-
-	log.Println("Toolbox server started successfully.")
-	return cmd
 }
