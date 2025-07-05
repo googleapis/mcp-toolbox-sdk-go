@@ -39,13 +39,13 @@ func TestMain(m *testing.M) {
 	ctx := context.Background()
 	log.Println("Starting E2E test setup...")
 
-	// Get mandatory environment variables
-	projectID = getEnvVar("GOOGLE_CLOUD_PROJECT")
-	toolboxVersion = getEnvVar("TOOLBOX_VERSION")
-
 	// Get secrets and auth tokens
 	log.Println("Fetching secrets and auth tokens...")
 	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools")
+	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1")
+	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2")
+	authToken1 = getAuthToken(ctx, clientID1)
+	authToken2 = getAuthToken(ctx, clientID2)
 
 	// Create a temporary file for the tools manifest
 	toolsFile, err := os.CreateTemp("", "tools-*.json")
