@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
-	"mcp-toolbox-sdk-go/core"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core"
 )
 
 // Global variables to hold session-scoped "fixtures"
