@@ -39,26 +39,20 @@ import (
 
 // Global variables to hold session-scoped "fixtures"
 var (
-	projectID      string
-	toolboxVersion string
-	authToken1     string
-	authToken2     string
+	projectID      string = getEnvVar("GOOGLE_CLOUD_PROJECT")
+	toolboxVersion string = getEnvVar("TOOLBOX_VERSION")
+	clientID1      string = accessSecretVersion(projectID, "sdk_testing_client1")
+	clientID2      string = accessSecretVersion(projectID, "sdk_testing_client2")
+	authToken1     string = getAuthToken(clientID1)
+	authToken2     string = getAuthToken(clientID2)
 )
 
 func TestMain(m *testing.M) {
 	log.Println("Starting E2E test setup...")
 
-	// Get mandatory environment variables
-	projectID = getEnvVar("GOOGLE_CLOUD_PROJECT")
-	toolboxVersion = getEnvVar("TOOLBOX_VERSION")
-
 	// Get secrets and auth tokens
 	log.Println("Fetching secrets and auth tokens...")
 	toolsManifestContent := accessSecretVersion(projectID, "sdk_testing_tools")
-	clientID1 := accessSecretVersion(projectID, "sdk_testing_client1")
-	clientID2 := accessSecretVersion(projectID, "sdk_testing_client2")
-	authToken1 = getAuthToken(clientID1)
-	authToken2 = getAuthToken(clientID2)
 
 	// Create a temporary file for the tools manifest
 	toolsFile, err := os.CreateTemp("", "tools-*.json")
@@ -120,7 +114,7 @@ func TestE2E_Basic(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				client := newClient(t)
-				toolset, err := client.LoadToolset(context.Background(), core.WithName(tc.toolsetName))
+				toolset, err := client.LoadToolset(tc.toolsetName, context.Background())
 
 				require.NoError(t, err)
 				assert.Len(t, toolset, tc.expectedLength)
@@ -140,7 +134,7 @@ func TestE2E_Basic(t *testing.T) {
 
 	t.Run("test_load_toolset_default", func(t *testing.T) {
 		client := newClient(t)
-		toolset, err := client.LoadToolset(context.Background())
+		toolset, err := client.LoadToolset("", context.Background())
 		require.NoError(t, err)
 
 		assert.Len(t, toolset, 5)
