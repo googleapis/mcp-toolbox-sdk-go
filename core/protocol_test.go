@@ -252,3 +252,82 @@ func TestParameterSchemaUndefinedType(t *testing.T) {
 	}
 
 }
+
+func TestOptionalStringParameter(t *testing.T) {
+	schema := ParameterSchema{
+		Name:        "nickname",
+		Type:        "string",
+		Description: "An optional nickname",
+		Required:    false, // Explicitly optional
+	}
+
+	t.Run("allows nil value for optional parameter", func(t *testing.T) {
+		err := schema.validateType(nil)
+		if err != nil {
+			t.Errorf("validateType() with nil should not return an error for an optional parameter, but got: %v", err)
+		}
+	})
+
+	t.Run("allows valid string value", func(t *testing.T) {
+		err := schema.validateType("my-name")
+		if err != nil {
+			t.Errorf("validateType() should not return an error for a valid string, but got: %v", err)
+		}
+	})
+}
+
+func TestRequiredParameter(t *testing.T) {
+	schema := ParameterSchema{
+		Name:        "id",
+		Type:        "integer",
+		Description: "A required ID",
+		Required:    true, // Explicitly required
+	}
+
+	t.Run("rejects nil value for required parameter", func(t *testing.T) {
+		err := schema.validateType(nil)
+		if err == nil {
+			t.Errorf("validateType() with nil should return an error for a required parameter, but it didn't")
+		}
+	})
+
+	t.Run("allows valid integer value", func(t *testing.T) {
+		err := schema.validateType(12345)
+		if err != nil {
+			t.Errorf("validateType() should not return an error for a valid integer, but got: %v", err)
+		}
+	})
+}
+
+func TestOptionalArrayParameter(t *testing.T) {
+	schema := ParameterSchema{
+		Name:        "optional_scores",
+		Type:        "array",
+		Description: "An optional list of scores",
+		Required:    false,
+		Items: &ParameterSchema{
+			Type: "integer",
+		},
+	}
+
+	t.Run("allows nil value for optional array", func(t *testing.T) {
+		err := schema.validateType(nil)
+		if err != nil {
+			t.Errorf("validateType() with nil should not return an error for an optional array, but got: %v", err)
+		}
+	})
+
+	t.Run("allows valid integer slice", func(t *testing.T) {
+		err := schema.validateType([]int{95, 100})
+		if err != nil {
+			t.Errorf("validateType() should not return an error for a valid slice, but got: %v", err)
+		}
+	})
+
+	t.Run("rejects slice with wrong item type", func(t *testing.T) {
+		err := schema.validateType([]string{"not", "an", "int"})
+		if err == nil {
+			t.Errorf("validateType() should have returned an error for a slice with incorrect item types, but it didn't")
+		}
+	})
+}

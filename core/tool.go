@@ -343,10 +343,22 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 		}
 	}
 
+	for _, param := range tt.parameters {
+		if param.Required {
+			// A required parameter must be present in either the user input or as a bound parameter.
+			_, isProvided := input[param.Name]
+			_, isBound := tt.boundParams[param.Name]
+
+			if !isProvided && !isBound {
+				return nil, fmt.Errorf("missing required parameter '%s'", param.Name)
+			}
+		}
+	}
+
 	// Initialize the final payload with the validated user input.
 	finalPayload := make(map[string]any, len(input)+len(tt.boundParams))
 	for k, v := range input {
-		if _, ok := paramSchema[k]; ok {
+		if _, ok := paramSchema[k]; ok && v != nil {
 			finalPayload[k] = v
 		}
 	}
