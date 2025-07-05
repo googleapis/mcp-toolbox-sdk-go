@@ -167,7 +167,7 @@ func TestE2E_Basic(t *testing.T) {
 		// The Go SDK performs validation inside Invoke, so we check the error there.
 		_, err := tool.Invoke(context.Background(), map[string]any{})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "parameter \"num_rows\" is required")
+		assert.Contains(t, err.Error(), "missing required parameter 'num_rows'")
 	})
 
 	t.Run("test_run_tool_wrong_param_type", func(t *testing.T) {
