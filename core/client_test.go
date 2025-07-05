@@ -332,7 +332,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 			t.Fatal("Expected an error for unused auth token in strict mode, but got nil")
 		}
 		// In strict mode, the error is reported for the first tool it doesn't apply to
-		if !strings.Contains(err.Error(), "validation failed for tool") {
+		if !strings.Contains(errStr, "validation failed for tool") || !strings.Contains(errStr, "unused auth tokens: unused-auth") { {
 			t.Errorf("Incorrect error for unused auth token in strict mode. Got: %v", err)
 		}
 	})
