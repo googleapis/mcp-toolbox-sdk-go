@@ -23,7 +23,7 @@ import (
 type ParameterSchema struct {
 	Name        string           `json:"name"`
 	Type        string           `json:"type"`
-	Required    bool             `json:"required,omitempty"` // Add this field
+	Required    bool             `json:"required,omitempty"`
 	Description string           `json:"description"`
 	AuthSources []string         `json:"authSources,omitempty"`
 	Items       *ParameterSchema `json:"items,omitempty"`
