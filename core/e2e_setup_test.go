@@ -28,7 +28,7 @@ import (
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"cloud.google.com/go/storage"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core"
+	"google.golang.org/api/idtoken"
 )
 
 // --- Helper Functions ---
@@ -91,20 +91,15 @@ func getToolboxBinaryURL(toolboxVersion string) string {
 }
 
 func getAuthToken(ctx context.Context, clientID string) string {
-	token, err := core.GetGoogleIDToken(ctx, clientID)
+	tokenSource, err := idtoken.NewTokenSource(ctx, clientID)
 	if err != nil {
 		log.Fatalf("Failed to create token source for audience %s: %v", clientID, err)
 	}
-	return token
-	// tokenSource, err := idtoken.NewTokenSource(ctx, clientID)
-	// if err != nil {
-	// 	log.Fatalf("Failed to create token source for audience %s: %v", clientID, err)
-	// }
-	// token, err := tokenSource.Token()
-	// if err != nil {
-	// 	log.Fatalf("Failed to retrieve token: %v", err)
-	// }
-	// return token.AccessToken
+	token, err := tokenSource.Token()
+	if err != nil {
+		log.Fatalf("Failed to retrieve token: %v", err)
+	}
+	return token.AccessToken
 }
 
 func setupAndStartToolboxServer(ctx context.Context, version, toolsFilePath string) *exec.Cmd {
