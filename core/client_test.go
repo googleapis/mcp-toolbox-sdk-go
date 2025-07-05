@@ -423,7 +423,6 @@ func TestNegativeAndEdgeCases(t *testing.T) {
 
 		client, _ := NewToolboxClient(server.URL)
 		_, err := client.LoadTool("any-tool", context.Background(), nil)
-
 		if err == nil {
 			t.Fatal("Expected an error when a nil option is passed to LoadTool, but got nil")
 		}

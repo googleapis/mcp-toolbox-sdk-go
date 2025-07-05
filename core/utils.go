@@ -121,7 +121,6 @@ func findUnusedKeys(provided, used map[string]struct{}) []string {
 	}
 	return unused
 }
-
 // stringTokenSource is a custom type that implements the oauth2.TokenSource interface.
 type customTokenSource struct {
 	provider func() string
