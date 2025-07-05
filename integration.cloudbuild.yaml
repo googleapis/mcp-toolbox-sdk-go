@@ -33,7 +33,7 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test ./... -v -race
+      go test -tags=unit ./... -v -race
 
   - id: "run-e2e-tests"
     name: golang:1
