@@ -247,8 +247,21 @@ For Toolbox servers hosted on Google Cloud (e.g., Cloud Run) and requiring
       Engine, GKE, another Cloud Run service, Cloud Functions), ADC is typically
       configured automatically, using the environment's default service account.
 3. **Connect to the Toolbox Server**
+    ```go
+    import "github.com/googleapis/mcp-toolbox-sdk-go/core"
+    import "context"
 
-    - TODO
+    ctx := context.Background()
+
+    token, err := core.GetGoogleIDToken(ctx, URL)
+
+    client, err := core.NewToolboxClient(
+      URL,
+      core.WithClientHeaderString("Authorization", token),
+    )
+
+    // Now, you can use the client as usual.
+    ```
 
 ## Authenticating Tools
 
