@@ -49,7 +49,7 @@ These steps will guide you through setting up the monorepo and this specific pac
 
       Remember to remove the replace directive before committing your changes!
 
-    * Use a Go Workspace
+    * Go Workspaces
 
       Clone the `mcp-toolbox-sdk-go` and your package in the same directory
       (ex. /development).
