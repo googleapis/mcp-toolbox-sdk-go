@@ -1,4 +1,4 @@
-module mcp-toolbox-sdk-go
+module github.com/googleapis/mcp-toolbox-sdk-go
 
 go 1.24.2
 
