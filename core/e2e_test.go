@@ -130,7 +130,7 @@ func TestE2E_Basic(t *testing.T) {
 		toolset, err := client.LoadToolset("", context.Background())
 		require.NoError(t, err)
 
-		assert.Len(t, toolset, 5)
+		assert.Len(t, toolset, 6)
 		toolNames := make(map[string]struct{})
 		for _, tool := range toolset {
 			toolNames[tool.Name()] = struct{}{}
@@ -141,6 +141,7 @@ func TestE2E_Basic(t *testing.T) {
 			"get-row-by-id-auth":      {},
 			"get-row-by-id":           {},
 			"get-n-rows":              {},
+			"search-rows":             {},
 		}
 		assert.Equal(t, expectedTools, toolNames)
 	})
