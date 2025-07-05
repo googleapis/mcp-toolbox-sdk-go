@@ -23,6 +23,7 @@ import (
 type ParameterSchema struct {
 	Name        string           `json:"name"`
 	Type        string           `json:"type"`
+	Required    bool             `json:"required,omitempty"` // Add this field
 	Description string           `json:"description"`
 	AuthSources []string         `json:"authSources,omitempty"`
 	Items       *ParameterSchema `json:"items,omitempty"`
@@ -31,7 +32,10 @@ type ParameterSchema struct {
 // validateType is a helper for manual type checking.
 func (p *ParameterSchema) validateType(value any) error {
 	if value == nil {
-		return fmt.Errorf("parameter '%s' received a nil value", p.Name)
+		if p.Required {
+			return fmt.Errorf("parameter '%s' is required but received a nil value", p.Name)
+		}
+		return nil
 	}
 
 	switch p.Type {

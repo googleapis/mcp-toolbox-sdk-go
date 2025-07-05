@@ -335,3 +335,141 @@ func TestE2E_Auth(t *testing.T) {
 		assert.Contains(t, err.Error(), "no field named row_data in claims")
 	})
 }
+
+// TestE2E_OptionalParams maps to the TestOptionalParams class
+func TestE2E_OptionalParams(t *testing.T) {
+	// Helper to create a new client
+	newClient := func(t *testing.T) *core.ToolboxClient {
+		client, err := core.NewToolboxClient("http://localhost:5000")
+		require.NoError(t, err, "Failed to create ToolboxClient")
+		return client
+	}
+
+	// Helper to load the search-rows tool
+	searchRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
+		tool, err := client.LoadTool("search-rows", context.Background())
+		require.NoError(t, err, "Failed to load tool 'search-rows'")
+		return tool
+	}
+
+	t.Run("test_tool_schema_is_correct", func(t *testing.T) {
+		client := newClient(t)
+		tool := searchRowsTool(t, client)
+		params := tool.Parameters()
+
+		// Convert slice to map for easy lookup
+		paramMap := make(map[string]core.ParameterSchema)
+		for _, p := range params {
+			paramMap[p.Name] = p
+		}
+
+		// Check required parameter 'email'
+		emailParam, ok := paramMap["email"]
+		require.True(t, ok, "email parameter should exist")
+		assert.True(t, emailParam.Required, "'email' should be required")
+		assert.Equal(t, "string", emailParam.Type)
+
+		// Check optional parameter 'data'
+		dataParam, ok := paramMap["data"]
+		require.True(t, ok, "data parameter should exist")
+		assert.False(t, dataParam.Required, "'data' should be optional")
+		assert.Equal(t, "string", dataParam.Type)
+
+		// Check optional parameter 'id'
+		idParam, ok := paramMap["id"]
+		require.True(t, ok, "id parameter should exist")
+		assert.False(t, idParam.Required, "'id' should be optional")
+		assert.Equal(t, "integer", idParam.Type)
+	})
+
+	t.Run("test_run_tool_omitting_optionals", func(t *testing.T) {
+		client := newClient(t)
+		tool := searchRowsTool(t, client)
+
+		// Test case 1: Optional params are completely omitted
+		response1, err1 := tool.Invoke(context.Background(), map[string]any{
+			"email": "twishabansal@google.com",
+		})
+		require.NoError(t, err1)
+		respStr1, ok1 := response1.(string)
+		require.True(t, ok1)
+		assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
+		assert.Contains(t, respStr1, "row2")
+		assert.NotContains(t, respStr1, "row3")
+
+		// Test case 2: Optional params are explicitly nil
+		// This should produce the same result as omitting them
+		response2, err2 := tool.Invoke(context.Background(), map[string]any{
+			"email": "twishabansal@google.com",
+			"data":  nil,
+			"id":    nil,
+		})
+		require.NoError(t, err2)
+		respStr2, ok2 := response2.(string)
+		require.True(t, ok2)
+		assert.Equal(t, respStr1, respStr2)
+	})
+
+	t.Run("test_run_tool_with_all_params_provided", func(t *testing.T) {
+		client := newClient(t)
+		tool := searchRowsTool(t, client)
+		response, err := tool.Invoke(context.Background(), map[string]any{
+			"email": "twishabansal@google.com",
+			"data":  "row3",
+			"id":    3,
+		})
+		require.NoError(t, err)
+		respStr, ok := response.(string)
+		require.True(t, ok)
+		assert.Contains(t, respStr, `"email":"twishabansal@google.com"`)
+		assert.Contains(t, respStr, `"id":3`)
+		assert.Contains(t, respStr, "row3")
+		assert.NotContains(t, respStr, "row2")
+	})
+
+	t.Run("test_run_tool_missing_required_param", func(t *testing.T) {
+		client := newClient(t)
+		tool := searchRowsTool(t, client)
+		_, err := tool.Invoke(context.Background(), map[string]any{
+			"data": "row5",
+			"id":   5,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "missing required parameter 'email'")
+	})
+
+	t.Run("test_run_tool_required_param_is_nil", func(t *testing.T) {
+		client := newClient(t)
+		tool := searchRowsTool(t, client)
+		_, err := tool.Invoke(context.Background(), map[string]any{
+			"email": nil,
+			"id":    5,
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "parameter 'email' is required but received a nil value")
+	})
+
+	// Corresponds to tests that check server-side logic by providing data that doesn't match
+	t.Run("test_run_tool_with_non_matching_data", func(t *testing.T) {
+		client := newClient(t)
+		tool := searchRowsTool(t, client)
+
+		// Test with a different email
+		response, err := tool.Invoke(context.Background(), map[string]any{
+			"email": "anubhavdhawan@google.com",
+			"id":    3,
+			"data":  "row3",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "null", response, "Response should be null for non-matching email")
+
+		// Test with different data
+		response, err = tool.Invoke(context.Background(), map[string]any{
+			"email": "twishabansal@google.com",
+			"id":    3,
+			"data":  "row4", // This data doesn't match the id
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "null", response, "Response should be null for non-matching data")
+	})
+}
