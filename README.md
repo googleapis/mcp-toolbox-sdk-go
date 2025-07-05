@@ -76,7 +76,7 @@ To get started using Toolbox tools with an application, follow these general ste
 
     ```bash
     # For the core, framework-agnostic SDK
-    go get github.com/mcp-toolbox-sdk-go
+    go get github.com/googleapis/mcp-toolbox-sdk-go
     ```
 
 3. **Use the SDK:**
