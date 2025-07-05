@@ -29,8 +29,8 @@ import (
 
 // Global variables to hold session-scoped "fixtures"
 var (
-	projectID      string
-	toolboxVersion string
+	projectID      string = getEnvVar("GOOGLE_CLOUD_PROJECT")
+	toolboxVersion string = getEnvVar("TOOLBOX_VERSION")
 	authToken1     string
 	authToken2     string
 )
@@ -46,10 +46,6 @@ func TestMain(m *testing.M) {
 	// Get secrets and auth tokens
 	log.Println("Fetching secrets and auth tokens...")
 	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools")
-	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1")
-	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2")
-	authToken1 = getAuthToken(ctx, clientID1)
-	authToken2 = getAuthToken(ctx, clientID2)
 
 	// Create a temporary file for the tools manifest
 	toolsFile, err := os.CreateTemp("", "tools-*.json")
