@@ -138,11 +138,11 @@ A toolset is a collection of related tools. You can load all tools in a toolset
 or a specific one:
 
 ```go
-// Load default toolset
-tools, err := client.LoadToolset(ctx)
+// Load default toolset by providing an empty string as the name
+tools, err := client.LoadToolset("", ctx)
 
 // Load a specific toolset
-tools, err := client.LoadToolset(ctx, core.WithName("my-toolset"))
+tools, err := client.LoadToolset("my-toolset", ctx)
 ```
 
 
@@ -157,8 +157,8 @@ tool, err = client.LoadTool("my-tool", ctx)
 ## Invoking Tools
 
 Once loaded, tools behave like Go structs. You invoke them using `Invoke` method
-by pass arguments corresponding to the parameters defined in the tool's
-configuration within the Toolbox service as a map of parameter name to value.
+by passing arguments corresponding to the parameters defined in the tool's
+configuration within the Toolbox service.
 
 ```go
 tool, err = client.LoadTool("my-tool", ctx)
@@ -273,7 +273,8 @@ Oauth2 tokens) when invoking that specific tool.
 
 ### Supported Authentication Mechanisms
 
-The Toolbox service enables secure tool usage through **Authenticated Parameters**. For detailed information on how these mechanisms work within the Toolbox service and how to configure them, please refer to [Toolbox Service Documentation - Authenticated Parameters](https://googleapis.github.io/genai-toolbox/resources/tools/#authenticated-parameters)
+The Toolbox service enables secure tool usage through **Authenticated Parameters**.
+For detailed information on how these mechanisms work within the Toolbox service and how to configure them, please refer to [Toolbox Service Documentation - Authenticated Parameters](https://googleapis.github.io/genai-toolbox/resources/tools/#authenticated-parameters).
 
 ### Step 1: Configure Tools in Toolbox Service
 
@@ -347,8 +348,8 @@ AuthTool, err := client.LoadTool("my-tool", ctx, core.WithAuthTokenString("my-au
 // or
 
 AuthTools, err := client.LoadToolset(
+  "my-toolset",
   ctx,
-  core.WithName("my-toolset"),
   core.WithAuthTokenString("my-auth-1", "value"),
 )
 ```
@@ -437,7 +438,7 @@ boundTool, err := client.LoadTool("my-tool", ctx, core.WithBindParamString("para
 
 // OR
 
-boundTool, err := client.LoadToolset(ctx, core.WithBindParamString("param", "value"))
+boundTool, err := client.LoadToolset("", ctx, core.WithBindParamString("param", "value"))
 ```
 
 > [!NOTE]

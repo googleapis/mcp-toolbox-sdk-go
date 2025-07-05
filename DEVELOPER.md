@@ -37,6 +37,7 @@ These steps will guide you through setting up the monorepo and this specific pac
     If you need to test changes in `mcp-toolbox-sdk-go` against another package that consumes `mcp-toolbox-sdk-go`, you can use:
 
     * Replace Directives
+
         In the go.mod of the consuming project, add the line
         ```go
         replace github.com/googleapis/mcp-toolbox-sdk-go => ../path/to/your/local/mcp-toolbox-sdk-go
@@ -49,6 +50,7 @@ These steps will guide you through setting up the monorepo and this specific pac
       Remember to remove the replace directive before committing your changes!
 
     * Use a Go Workspace
+
       Clone the `mcp-toolbox-sdk-go` and your package in the same directory
       (ex. /development).
 

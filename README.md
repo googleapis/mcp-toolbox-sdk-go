@@ -66,7 +66,7 @@ To get started using Toolbox tools with an application, follow these general ste
 
 1. **Set up and Run the Toolbox Service:**
 
-    Before using the SDKs, you need the main MCP Toolbox service running. Follow
+    Before using the SDKs, you need the MCP Toolbox server running. Follow
     the instructions here: [**Toolbox Getting Started
     Guide**](https://github.com/googleapis/genai-toolbox?tab=readme-ov-file#getting-started)
 
