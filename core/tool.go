@@ -63,7 +63,7 @@ func (tt *ToolboxTool) Parameters() []ParameterSchema {
 	return paramsCopy
 }
 
-// InputSchema generates a JSON Schema for the tool's input parameters and returns it as raw bytes.
+// InputSchema generates an OpenAPI JSON Schema for the tool's input parameters and returns it as raw bytes.
 func (tt *ToolboxTool) InputSchema() ([]byte, error) {
 	properties := make(map[string]any)
 	required := make([]string, 0)
