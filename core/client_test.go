@@ -1,3 +1,5 @@
+//go:build unit
+
 // Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -332,7 +334,16 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 			t.Fatal("Expected an error for unused auth token in strict mode, but got nil")
 		}
 		// In strict mode, the error is reported for the first tool it doesn't apply to
-		if !strings.Contains(err.Error(), "validation failed for tool") {
+		// Since the order of tools in a map is non deterministic
+		// we will check for errors fro both tools.
+		errStr := err.Error()
+		isToolAError := strings.Contains(errStr, "validation failed for tool 'toolA'") &&
+			strings.Contains(errStr, "unused-auth") &&
+			strings.Contains(errStr, "github")
+
+		isToolBError := strings.Contains(errStr, "no parameter named 'param1' found on tool 'toolB'")
+
+		if !(isToolAError || isToolBError) {
 			t.Errorf("Incorrect error for unused auth token in strict mode. Got: %v", err)
 		}
 	})
