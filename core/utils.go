@@ -229,7 +229,7 @@ func loadManifest(ctx context.Context, url string, httpClient *http.Client,
 	return &manifest, nil
 }
 
-// schemaToMap recursively converts a ParameterSchema to a map for JSON serialization.
+// schemaToMap recursively converts a ParameterSchema to a map with it's type and description.
 func schemaToMap(p *ParameterSchema) map[string]any {
 	// Basic schema with type and description
 	schema := map[string]any{
