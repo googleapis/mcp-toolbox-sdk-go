@@ -318,8 +318,8 @@ func getAuthToken() string {
 
 #### Option A: Add Default Authentication to a Client
 
-You can add default tool level authentication to a client. Every tool / toolset  
-loaded by the client will contain the auth token.
+You can add default tool level authentication to a client.
+Every tool / toolset loaded by the client will contain the auth token.
 
 ```go
 
@@ -430,7 +430,7 @@ fixed and will not be requested or modified by the LLM during tool use.
 > You do not need to modify the tool's configuration in the Toolbox service to
 > bind parameter values using the SDK.
 
-#### Option A: Add Default Binding Parameters to a Client
+#### Option A: Add Default Bound Parameters to a Client
 
 You can add default tool level bound parameters to a client. Every tool / toolset  
 loaded by the client will contain the auth token.
