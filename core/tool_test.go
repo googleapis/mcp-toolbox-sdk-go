@@ -757,3 +757,119 @@ func TestToolboxTool_Invoke(t *testing.T) {
 	})
 
 }
+
+// TestInputSchema tests the JSON output of the InputSchema method.
+func TestInputSchema(t *testing.T) {
+	testCases := []struct {
+		name         string
+		tool         *ToolboxTool
+		expectedJSON string
+	}{
+		{
+			name: "Tool with simple and required parameters",
+			tool: &ToolboxTool{
+				parameters: []ParameterSchema{
+					{Name: "location", Type: "string", Description: "City and state", Required: true},
+					{Name: "days", Type: "integer", Description: "Number of days", Required: false},
+				},
+			},
+			expectedJSON: `{
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "City and state"
+                    },
+                    "days": {
+                        "type": "integer",
+                        "description": "Number of days"
+                    }
+                },
+                "required": ["location"]
+            }`,
+		},
+		{
+			name: "Tool with a nested array parameter",
+			tool: &ToolboxTool{
+				parameters: []ParameterSchema{
+					{
+						Name:        "items",
+						Type:        "array",
+						Description: "A list of items",
+						Required:    true,
+						Items: &ParameterSchema{
+							Type:        "string",
+							Description: "An item name",
+						},
+					},
+				},
+			},
+			expectedJSON: `{
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "description": "A list of items",
+                        "items": {
+                            "type": "string",
+                            "description": "An item name"
+                        }
+                    }
+                },
+                "required": ["items"]
+            }`,
+		},
+		{
+			name: "Tool with no required parameters",
+			tool: &ToolboxTool{
+				parameters: []ParameterSchema{
+					{Name: "query", Type: "string", Description: "A search query", Required: false},
+				},
+			},
+			expectedJSON: `{
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "A search query"
+                    }
+                }
+            }`,
+		},
+		{
+			name: "Tool with no parameters",
+			tool: &ToolboxTool{
+				parameters: []ParameterSchema{},
+			},
+			expectedJSON: `{
+                "type": "object",
+                "properties": {}
+            }`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Get the actual JSON from the method
+			actualBytes, err := tc.tool.InputSchema()
+			if err != nil {
+				t.Fatalf("InputSchema() returned an unexpected error: %v", err)
+			}
+
+			// Unmarshal both actual and expected into maps for a robust comparison
+			var actualMap, expectedMap map[string]interface{}
+
+			if err := json.Unmarshal(actualBytes, &actualMap); err != nil {
+				t.Fatalf("Failed to unmarshal actual JSON: %v", err)
+			}
+			if err := json.Unmarshal([]byte(tc.expectedJSON), &expectedMap); err != nil {
+				t.Fatalf("Failed to unmarshal expected JSON: %v", err)
+			}
+
+			// Compare the resulting maps
+			if !reflect.DeepEqual(actualMap, expectedMap) {
+				t.Errorf("Mismatched JSON output.\nGot:\n%s\n\nWant:\n%s", string(actualBytes), tc.expectedJSON)
+			}
+		})
+	}
+}

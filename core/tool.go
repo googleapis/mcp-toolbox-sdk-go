@@ -63,6 +63,34 @@ func (tt *ToolboxTool) Parameters() []ParameterSchema {
 	return paramsCopy
 }
 
+func (tt *ToolboxTool) InputSchema() ([]byte, error) {
+	properties := make(map[string]any)
+	required := make([]string, 0)
+
+	for _, p := range tt.parameters {
+		// Convert each parameter to its map representation and add to properties.
+		properties[p.Name] = schemaToMap(&p)
+
+		// Collect the names of required parameters.
+		if p.Required {
+			required = append(required, p.Name)
+		}
+	}
+
+	// Assemble the final object structure required by the LLM.
+	finalSchema := map[string]any{
+		"type":       "object",
+		"properties": properties,
+	}
+	// Only add the 'required' field if there are required parameters.
+	if len(required) > 0 {
+		finalSchema["required"] = required
+	}
+
+	// Marshal the final map into an indented JSON string.
+	return json.MarshalIndent(finalSchema, "", "  ")
+}
+
 // DescribeParameters returns a single, human-readable string that describes all
 // of the tool's unbound parameters, including their names, types, and
 // descriptions.

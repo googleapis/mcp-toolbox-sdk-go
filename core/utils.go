@@ -121,6 +121,7 @@ func findUnusedKeys(provided, used map[string]struct{}) []string {
 	}
 	return unused
 }
+
 // stringTokenSource is a custom type that implements the oauth2.TokenSource interface.
 type customTokenSource struct {
 	provider func() string
@@ -226,4 +227,20 @@ func loadManifest(ctx context.Context, url string, httpClient *http.Client,
 		return nil, fmt.Errorf("unable to parse manifest correctly: %w", err)
 	}
 	return &manifest, nil
+}
+
+// schemaToMap recursively converts a ParameterSchema to a map for JSON serialization.
+func schemaToMap(p *ParameterSchema) map[string]any {
+	// Basic schema with type and description
+	schema := map[string]any{
+		"type":        p.Type,
+		"description": p.Description,
+	}
+
+	// If the type is "array", recursively define what's in the array.
+	if p.Type == "array" && p.Items != nil {
+		schema["items"] = schemaToMap(p.Items)
+	}
+
+	return schema
 }
