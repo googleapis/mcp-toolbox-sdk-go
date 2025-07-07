@@ -1,3 +1,6 @@
+This sample contains a complete example on how to integrate MCP Toolbox Go Core SDK with the OpenAI Go SDK.
+
+```go
 package main
 
 import (
@@ -118,3 +121,4 @@ func main() {
 
 	fmt.Println(completion.Choices[0].Message.Content)
 }
+```

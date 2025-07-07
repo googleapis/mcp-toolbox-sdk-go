@@ -1,3 +1,6 @@
+This sample contains a complete example on how to integrate MCP Toolbox Go Core SDK with the Go GenAI SDK.
+
+```go
 package main
 
 import (
@@ -135,3 +138,4 @@ func main() {
 	printResponse(finalResponse)
 
 }
+```

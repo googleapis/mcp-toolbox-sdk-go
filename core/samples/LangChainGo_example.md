@@ -1,3 +1,6 @@
+This sample contains a complete example on how to integrate MCP Toolbox Go Core SDK with LangChain Go.
+
+```go
 package main
 
 import (
@@ -129,3 +132,4 @@ func main() {
 	fmt.Println(finalResp.Choices[0].Content)
 	fmt.Println("======================================")
 }
+```

@@ -1,3 +1,6 @@
+This sample contains a complete example on how to integrate MCP Toolbox Go Core SDK with Genkit Go.
+
+```go
 package main
 
 import (
@@ -80,3 +83,4 @@ func main() {
 	}
 	fmt.Println(resp.Text())
 }
+```
