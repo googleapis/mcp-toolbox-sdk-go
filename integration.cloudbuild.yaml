@@ -24,7 +24,7 @@ steps:
     script: |
       go get -d ./...
 
-  - id: "run-tests"
+  - id: "run-unit-tests"
     name: golang:1
     waitFor: ["install-dependencies"]
     env:
