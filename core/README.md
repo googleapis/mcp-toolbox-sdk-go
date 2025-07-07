@@ -316,7 +316,25 @@ func getAuthToken() string {
 > tokens with longer validity periods or if the retrieval process is
 > resource-intensive.
 
-#### Option A: Add Authentication to a Loaded Tool
+#### Option A: Add Default Authentication to a Client
+
+You can add default tool level authentication to a client. Every tool / toolset  
+loaded by the client will contain the auth token.
+
+```go
+
+ctx := context.Background()
+
+client, err := core.NewToolboxClient("http://127.0.0.1:5000",
+	core.WithDefaultToolOptions(
+		core.WithAuthTokenString("my-auth-1", "auth-value"),
+	),
+)
+
+AuthTool, err := client.LoadTool("my-tool", ctx)
+```
+
+#### Option B: Add Authentication to a Loaded Tool
 
 You can add the token retriever function to a tool object *after* it has been
 loaded. This modifies the specific tool instance.
@@ -335,7 +353,7 @@ AuthTool, err := tool.ToolFrom(
   )
 ```
 
-#### Option B: Add Authentication While Loading Tools
+#### Option C: Add Authentication While Loading Tools
 
 You can provide the token retriever(s) directly during the `LoadTool` or
 `LoadToolset` calls. This applies the authentication configuration only to the
@@ -412,7 +430,25 @@ fixed and will not be requested or modified by the LLM during tool use.
 > You do not need to modify the tool's configuration in the Toolbox service to
 > bind parameter values using the SDK.
 
-### Option A: Binding Parameters to a Loaded Tool
+#### Option A: Add Default Binding Parameters to a Client
+
+You can add default tool level bound parameters to a client. Every tool / toolset  
+loaded by the client will contain the auth token.
+
+```go
+
+ctx := context.Background()
+
+client, err := core.NewToolboxClient("http://127.0.0.1:5000",
+	core.WithDefaultToolOptions(
+		core.WithBindParamString("param1", "value"),
+	),
+)
+
+boundTool, err := client.LoadTool("my-tool", ctx)
+```
+
+### Option B: Binding Parameters to a Loaded Tool
 
 Bind values to a tool object *after* it has been loaded. This modifies the
 specific tool instance.
@@ -428,7 +464,7 @@ boundTool, err := tool.ToolFrom(
   )
 ```
 
-### Option B: Binding Parameters While Loading Tools
+### Option C: Binding Parameters While Loading Tools
 
 Specify bound parameters directly when loading tools. This applies the binding
 only to the tools loaded in that specific call.
