@@ -433,7 +433,7 @@ fixed and will not be requested or modified by the LLM during tool use.
 #### Option A: Add Default Bound Parameters to a Client
 
 You can add default tool level bound parameters to a client. Every tool / toolset  
-loaded by the client will contain the auth token.
+loaded by the client will have the bound parameter.
 
 ```go
 
