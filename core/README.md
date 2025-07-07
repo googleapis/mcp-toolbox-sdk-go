@@ -509,6 +509,11 @@ dynamicBoundTool, err := tool.ToolFrom(core.WithBindParamStringFunc("param", get
 > [!IMPORTANT]
 > You don't need to modify tool configurations to bind parameter values.
 
+
+# Using with Orchestration Frameworks
+
+To see how the MCP Toolbox Go SDK works with orchestration frameworks, check out the end-to-end examples in the [/samples/](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/core/samples) folder.
+
 # Contributing
 
 Contributions are welcome! Please refer to the [DEVELOPER.md](./DEVELOPER.md)
