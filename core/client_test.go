@@ -332,8 +332,16 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 			t.Fatal("Expected an error for unused auth token in strict mode, but got nil")
 		}
 		// In strict mode, the error is reported for the first tool it doesn't apply to
+		// Since the order of tools in a map is non deterministic
+		// we will check for errors fro both tools.
 		errStr := err.Error()
-		if !strings.Contains(errStr, "validation failed for tool") || !strings.Contains(errStr, "unused auth tokens: unused-auth") {
+		isToolAError := strings.Contains(errStr, "validation failed for tool 'toolA'") &&
+			strings.Contains(errStr, "unused-auth") &&
+			strings.Contains(errStr, "github")
+
+		isToolBError := strings.Contains(errStr, "no parameter named 'param1' found on tool 'toolB'")
+
+		if !(isToolAError || isToolBError) {
 			t.Errorf("Incorrect error for unused auth token in strict mode. Got: %v", err)
 		}
 	})
