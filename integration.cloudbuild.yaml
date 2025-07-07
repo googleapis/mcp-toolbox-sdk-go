@@ -24,7 +24,18 @@ steps:
     script: |
       go get -d ./...
 
-  - id: "run-tests"
+  - id: "run-unit-tests"
+    name: golang:1
+    waitFor: ["install-dependencies"]
+    env:
+      - "GOPATH=/gopath"
+    volumes:
+      - name: "go"
+        path: "/gopath"
+    script: |
+      go test -tags=unit ./... -v -race
+
+  - id: "run-e2e-tests"
     name: golang:1
     waitFor: ["install-dependencies"]
     env:
@@ -35,7 +46,8 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test ./... -v -race
+      go test -tags=e2e ./... -v -race
+  
 
 options:
   logging: CLOUD_LOGGING_ONLY
