@@ -316,3 +316,76 @@ func TestCustomTokenSource(t *testing.T) {
 		}
 	})
 }
+
+func TestSchemaToMap(t *testing.T) {
+	// Define test cases
+	testCases := []struct {
+		name     string
+		input    *ParameterSchema
+		expected map[string]any
+	}{
+		{
+			name: "Simple String Parameter",
+			input: &ParameterSchema{
+				Type:        "string",
+				Description: "A simple string input.",
+			},
+			expected: map[string]any{
+				"type":        "string",
+				"description": "A simple string input.",
+			},
+		},
+		{
+			name: "Array of Integers Parameter",
+			input: &ParameterSchema{
+				Type:        "array",
+				Description: "A list of numbers.",
+				Items: &ParameterSchema{
+					Type:        "integer",
+					Description: "A single number.",
+				},
+			},
+			expected: map[string]any{
+				"type":        "array",
+				"description": "A list of numbers.",
+				"items": map[string]any{
+					"type":        "integer",
+					"description": "A single number.",
+				},
+			},
+		},
+		{
+			name: "Array with nil Items",
+			input: &ParameterSchema{
+				Type:        "array",
+				Description: "An array with no defined item type.",
+				Items:       nil,
+			},
+			expected: map[string]any{
+				"type":        "array",
+				"description": "An array with no defined item type.",
+			},
+		},
+		{
+			name: "Parameter with Empty Description",
+			input: &ParameterSchema{
+				Type:        "boolean",
+				Description: "",
+			},
+			expected: map[string]any{
+				"type":        "boolean",
+				"description": "",
+			},
+		},
+	}
+
+	// Run test cases
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := schemaToMap(tc.input)
+			if !reflect.DeepEqual(actual, tc.expected) {
+				t.Errorf("schemaToMap() = %v, want %v", actual, tc.expected)
+			}
+		})
+	}
+}
