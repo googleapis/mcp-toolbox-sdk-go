@@ -56,24 +56,28 @@ func main() {
 	}
 
 	// Load the tool using the MCP Toolbox SDK.
-	searchHotelTool, err := toolboxClient.LoadTool("search-hotels-by-name", ctx)
+	tools, err := toolboxClient.LoadToolset("my-toolset", ctx)
 	if err != nil {
 		log.Fatalf("Failed to load tools: %v\nMake sure your Toolbox server is running and the tool is configured.", err)
 	}
-	log.Printf("Successfully loaded tool: %s\n", searchHotelTool.Name())
 
-	// Convert the loaded ToolboxTool into the format LangChainGo requires.
-	langchainFormattedTool := ConvertToLangchainTool(searchHotelTool)
+	toolsMap := make(map[string]*core.ToolboxTool, len(tools))
+
+	langchainTools := make([]llms.Tool, len(tools))
+	for i, tool := range tools {
+    // Convert the loaded ToolboxTools into the format LangChainGo requires.
+		langchainTools[i] = ConvertToLangchainTool(tool)
+    // Add tool to a map for lookup later
+		toolsMap[tool.Name()] = tool
+	}
 
 	// Start the conversation history.
 	messageHistory := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeHuman, "Find hotels in Basel with Basel in it's name."),
 	}
 
-	log.Println("Asking the LLM with the provided tool...")
-
 	// Make the first call to the LLM, making it aware of the tool.
-	resp, err := llm.GenerateContent(ctx, messageHistory, llms.WithTools([]llms.Tool{langchainFormattedTool}))
+	resp, err := llm.GenerateContent(ctx, messageHistory, llms.WithTools(langchainTools))
 	if err != nil {
 		log.Fatalf("LLM call failed: %v", err)
 	}
@@ -96,7 +100,8 @@ func main() {
 			if err := json.Unmarshal([]byte(tc.FunctionCall.Arguments), &args); err != nil {
 				log.Fatalf("Failed to unmarshal arguments for tool '%s': %v", toolName, err)
 			}
-			toolResult, err := searchHotelTool.Invoke(ctx, args)
+			tool := toolsMap["search-hotels-by-name"]
+			toolResult, err := tool.Invoke(ctx, args)
 			if err != nil {
 				log.Fatalf("Failed to execute tool '%s': %v", toolName, err)
 			}

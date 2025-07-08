@@ -14,17 +14,17 @@ import (
 )
 
 // ConvertToOpenAITool converts a ToolboxTool into the go-openai library's Tool format.
-func ConvertToOpenAITool(toolboxTool *core.ToolboxTool) (openai.ChatCompletionToolParam, error) {
+func ConvertToOpenAITool(toolboxTool *core.ToolboxTool) openai.ChatCompletionToolParam {
 	// Get the input schema
 	jsonSchemaBytes, err := toolboxTool.InputSchema()
 	if err != nil {
-		return openai.ChatCompletionToolParam{}, err
+		return openai.ChatCompletionToolParam{}
 	}
 
 	// Unmarshal the JSON bytes into FunctionParameters
 	var paramsSchema openai.FunctionParameters
 	if err := json.Unmarshal(jsonSchemaBytes, &paramsSchema); err != nil {
-		return openai.ChatCompletionToolParam{}, err
+		return openai.ChatCompletionToolParam{}
 	}
 
 	// Create and return the final tool parameter struct.
@@ -34,7 +34,7 @@ func ConvertToOpenAITool(toolboxTool *core.ToolboxTool) (openai.ChatCompletionTo
 			Description: openai.String(toolboxTool.Description()),
 			Parameters:  paramsSchema,
 		},
-	}, nil
+	}
 }
 
 func main() {
@@ -49,42 +49,39 @@ func main() {
 		log.Fatalf("Failed to create Toolbox client: %v", err)
 	}
 
-	// --- 2. Load and Convert the Tool ---
-	toolToLoad := "search-hotels-by-name"
-	log.Printf("Attempting to load tool '%s' from Toolbox at %s...\n", toolToLoad, toolboxURL)
-
-	// Load the tool using the MCP Toolbox SDK.
-	searchHotelTool, err := toolboxClient.LoadTool(toolToLoad, ctx)
+	// Load the tools using the MCP Toolbox SDK.
+	tools, err := toolboxClient.LoadToolset("my-toolset", ctx)
 	if err != nil {
-		log.Fatalf("Failed to load tool '%s': %v\nMake sure your Toolbox server is running and the tool is configured.", toolToLoad, err)
-	}
-	log.Printf("Successfully loaded tool: %s\n", searchHotelTool.Name())
-
-	// Convert the Toolbox tool into the OpenAI FunctionDeclaration format.
-	openAITool, err := ConvertToOpenAITool(searchHotelTool)
-	if err != nil {
-		log.Fatal("Unable to convert to OpenAI tool", err)
+		log.Fatalf("Failed to load tool : %v\nMake sure your Toolbox server is running and the tool is configured.", err)
 	}
 
+	openAITools := make([]openai.ChatCompletionToolParam, len(tools))
+	toolsMap := make(map[string]*core.ToolboxTool, len(tools))
+
+	for i, tool := range tools {
+		// Convert the Toolbox tool into the openAI FunctionDeclaration format.
+		openAITools[i] = ConvertToOpenAITool(tool)
+		// Add tool to a map for lookup later
+		toolsMap[tool.Name()] = tool
+
+	}
 	question := "Find hotels in Basel with Basel in it's name "
 
 	params := openai.ChatCompletionNewParams{
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.UserMessage(question),
 		},
-		Tools: []openai.ChatCompletionToolParam{openAITool},
+		Tools: openAITools,
 		Seed:  openai.Int(0),
 		Model: openai.ChatModelGPT4o,
 	}
 
-	log.Println("start")
 	// Make initial chat completion request
 	completion, err := openAIClient.Chat.Completions.New(ctx, params)
 	if err != nil {
 		panic(err)
 	}
 
-	log.Println("start1")
 	toolCalls := completion.Choices[0].Message.ToolCalls
 
 	// Return early if there are no tool calls
@@ -99,13 +96,13 @@ func main() {
 		if toolCall.Function.Name == "search-hotels-by-name" {
 			// Extract the location from the function call arguments
 			var args map[string]interface{}
+			tool := toolsMap["search-hotels-by-name"]
 			err := json.Unmarshal([]byte(toolCall.Function.Arguments), &args)
 			if err != nil {
 				panic(err)
 			}
 
-			// Invoke the tool
-			result, err := searchHotelTool.Invoke(ctx, args)
+			result, err := tool.Invoke(ctx, args)
 			if err != nil {
 				log.Fatal("Could not invoke tool", err)
 			}

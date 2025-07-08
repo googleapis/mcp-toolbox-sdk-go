@@ -68,23 +68,24 @@ func main() {
 		log.Fatalf("Failed to create Toolbox client: %v", err)
 	}
 
-	toolToLoad := "search-hotels-by-name"
-
 	// Load the tool using the MCP Toolbox SDK.
-	searchHotelTool, err := toolboxClient.LoadTool(toolToLoad, ctx)
+	tools, err := toolboxClient.LoadToolset("my-toolset", ctx)
 	if err != nil {
-		log.Fatalf("Failed to load tool '%s': %v\nMake sure your Toolbox server is running and the tool is configured.", toolToLoad, err)
+		log.Fatalf("Failed to load tools: %v\nMake sure your Toolbox server is running and the tool is configured.", err)
 	}
-	log.Printf("Successfully loaded tool: %s\n", searchHotelTool.Name())
 
-	// Convert the Toolbox tool into the genai.FunctionDeclaration format.
-	genaiFormattedTool := ConvertToGenaiTool(searchHotelTool)
+  genAITools := make([]*genai.Tool, len(tools))
+	toolsMap := make(map[string]*core.ToolboxTool, len(tools))
+
+	for i, tool := range tools {
+    // Convert the tools into usable format
+		genAITools[i] = ConvertToGenaiTool(tool)
+    // Add tool to a map for lookup later
+		toolsMap[tool.Name()] = tool
+	}
 
 	// Set up the generative model with the available tool.
 	modelName := "gemini-2.0-flash"
-	tools := []*genai.Tool{
-		genaiFormattedTool,
-	}
 
 	query := "Find hotels in Basel with Basel in it's name and share the names with me"
 
@@ -93,7 +94,7 @@ func main() {
 		genai.NewContentFromText(query, genai.RoleUser),
 	}
 	config := &genai.GenerateContentConfig{
-		Tools: tools,
+		Tools: genAITools,
 		ToolConfig: &genai.ToolConfig{
 			FunctionCallingConfig: &genai.FunctionCallingConfig{
 				Mode: genai.FunctionCallingConfigModeAny,
@@ -118,7 +119,8 @@ func main() {
 	var toolResultString string
 
 	if fc.Name == "search-hotels-by-name" {
-		toolResult, err := searchHotelTool.Invoke(ctx, fc.Args)
+		tool := toolsMap["search-hotels-by-name"]
+		toolResult, err := tool.Invoke(ctx, fc.Args)
 		toolResultString = fmt.Sprintf("%v", toolResult)
 		if err != nil {
 			log.Fatalf("Failed to execute tool '%s': %v", fc.Name, err)

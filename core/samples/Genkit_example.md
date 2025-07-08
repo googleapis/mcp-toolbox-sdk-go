@@ -57,7 +57,7 @@ func main() {
 	}
 
 	// Load the tool using the MCP Toolbox SDK.
-	searchHotelTool, err := toolboxClient.LoadTool("search-hotels-by-name", ctx)
+	tools, err := toolboxClient.LoadToolset("my-toolset", ctx)
 	if err != nil {
 		log.Fatalf("Failed to load tools: %v\nMake sure your Toolbox server is running and the tool is configured.", err)
 	}
@@ -71,16 +71,26 @@ func main() {
 	}
 
 	// Convert your tool to a Genkit tool.
-	genkitTool := NewGenkitToolFromToolbox(searchHotelTool, g)
+	genkitTools := make([]ai.Tool, len(tools))
+	for i, tool := range tools {
+		genkitTools[i] = NewGenkitToolFromToolbox(tool, g)
+	}
+
+	toolRefs := make([]ai.ToolRef, len(genkitTools))
+
+	for i, tool := range genkitTools {
+		toolRefs[i] = tool
+	}
 
 	// Generate llm response using prompts and tools.
 	resp, err := genkit.Generate(ctx, g,
 		ai.WithPrompt("Find hotels in Basel with Basel in it's name."),
-		ai.WithTools(genkitTool),
+		ai.WithTools(toolRefs...),
 	)
 	if err != nil {
 		log.Fatalf("%v\n", err)
 	}
 	fmt.Println(resp.Text())
 }
+
 ```
