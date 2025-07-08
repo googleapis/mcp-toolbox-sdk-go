@@ -68,7 +68,7 @@ func main() {
 		log.Fatalf("Failed to create Toolbox client: %v", err)
 	}
 
-	// Load the tool using the MCP Toolbox SDK.
+	// Load the tools using the MCP Toolbox SDK.
 	tools, err := toolboxClient.LoadToolset("my-toolset", ctx)
 	if err != nil {
 		log.Fatalf("Failed to load tools: %v\nMake sure your Toolbox server is running and the tool is configured.", err)
