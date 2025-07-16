@@ -164,7 +164,6 @@ func TestToGenkitTool(t *testing.T) {
 	t.Run("NilGenkit", func(t *testing.T) {
 		client := newClient(t)
 		tool := getNRowsTool(t, client)
-		g := newGenkit(t)
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, nil)
 		if err == nil {
 			t.Fatal("Expected error when Genkit instance is nil, got nil")
