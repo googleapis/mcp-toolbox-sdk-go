@@ -19,6 +19,8 @@ package tbgenkit_test
 import (
 	"context"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"testing"
 
@@ -45,6 +47,47 @@ type mockTokenSource struct {
 
 func (m *mockTokenSource) Token() (*oauth2.Token, error) {
 	return m.token, nil
+}
+
+func TestMain(m *testing.M) {
+	ctx := context.Background()
+	log.Println("Starting E2E test setup...")
+
+	// Get secrets and auth tokens
+	log.Println("Fetching secrets and auth tokens...")
+	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools")
+	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1")
+	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2")
+	authToken1 = getAuthToken(ctx, clientID1)
+	authToken2 = getAuthToken(ctx, clientID2)
+
+	// Create a temporary file for the tools manifest
+	toolsFile, err := os.CreateTemp("", "tools-*.json")
+	if err != nil {
+		log.Fatalf("Failed to create temp file for tools: %v", err)
+	}
+	if _, err := toolsFile.WriteString(toolsManifestContent); err != nil {
+		log.Fatalf("Failed to write to temp file: %v", err)
+	}
+	toolsFile.Close()
+	toolsFilePath := toolsFile.Name()
+	defer os.Remove(toolsFilePath) // Ensure cleanup
+
+	// Download and start the toolbox server
+	cmd := setupAndStartToolboxServer(ctx, toolboxVersion, toolsFilePath)
+
+	// --- 2. Run Tests ---
+	log.Println("Setup complete. Running tests...")
+	exitCode := m.Run()
+
+	// --- 3. Teardown Phase ---
+	log.Println("Tearing down toolbox server...")
+	if err := cmd.Process.Kill(); err != nil {
+		log.Printf("Failed to kill toolbox server process: %v", err)
+	}
+	_ = cmd.Wait() // Clean up the process resources
+
+	os.Exit(exitCode)
 }
 
 func TestToGenkitTool(t *testing.T) {
