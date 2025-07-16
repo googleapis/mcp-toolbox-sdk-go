@@ -99,7 +99,11 @@ func TestToGenkitTool(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	g, _ := genkit.Init(ctx)
+
+	newGenkit := func(t *testing.T) *genkit.Genkit {
+		g, _ := genkit.Init(ctx)
+		return g
+	}
 
 	// Helper to load the get-n-rows tool
 	getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
@@ -112,6 +116,7 @@ func TestToGenkitTool(t *testing.T) {
 	t.Run("SuccessfulConversionAndExecution", func(t *testing.T) {
 		client := newClient(t)
 		tool := getNRowsTool(t, client)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -141,6 +146,7 @@ func TestToGenkitTool(t *testing.T) {
 
 	// --- Test Case 2: tool is nil ---
 	t.Run("NilTool", func(t *testing.T) {
+		g := newGenkit(t)
 		genkitTool, err := tbgenkit.ToGenkitTool(nil, g)
 		if err == nil {
 			t.Fatal("Expected error when tool is nil, got nil")
@@ -148,7 +154,7 @@ func TestToGenkitTool(t *testing.T) {
 		if genkitTool != nil {
 			t.Error("Expected nil tool when tool is nil, got non-nil")
 		}
-		expectedErrStr := "Error: ToGenkitTool received a nil core.ToolboxTool pointer."
+		expectedErrStr := "error: ToGenkitTool received a nil core.ToolboxTool pointer"
 		if err.Error() != expectedErrStr {
 			t.Errorf("Unexpected error message for nil tool: got %q, want %q", err.Error(), expectedErrStr)
 		}
@@ -158,6 +164,7 @@ func TestToGenkitTool(t *testing.T) {
 	t.Run("NilGenkit", func(t *testing.T) {
 		client := newClient(t)
 		tool := getNRowsTool(t, client)
+		g := newGenkit(t)
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, nil)
 		if err == nil {
 			t.Fatal("Expected error when Genkit instance is nil, got nil")
@@ -165,7 +172,7 @@ func TestToGenkitTool(t *testing.T) {
 		if genkitTool != nil {
 			t.Error("Expected nil tool when Genkit instance is nil, got non-nil")
 		}
-		expectedErrStr := "Error: ToGenkitTool received a nil genkit.Genkit pointer."
+		expectedErrStr := "error: ToGenkitTool received a nil genkit.Genkit pointer"
 		if err.Error() != expectedErrStr {
 			t.Errorf("Unexpected error message for nil Genkit: got %q, want %q", err.Error(), expectedErrStr)
 		}
@@ -175,6 +182,7 @@ func TestToGenkitTool(t *testing.T) {
 	t.Run("ExecuteFnNonMapInput", func(t *testing.T) {
 		client := newClient(t)
 		tool := getNRowsTool(t, client)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -196,6 +204,7 @@ func TestToGenkitTool(t *testing.T) {
 	t.Run("InvokeErrorPropagation", func(t *testing.T) {
 		client := newClient(t)
 		tool := getNRowsTool(t, client)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -223,7 +232,10 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 		return client
 	}
 	ctx := context.Background()
-	g, _ := genkit.Init(ctx)
+	newGenkit := func(t *testing.T) *genkit.Genkit {
+		g, _ := genkit.Init(ctx)
+		return g
+	}
 
 	// Helper to load the get-n-rows tool
 	getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
@@ -236,6 +248,7 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 	t.Run("WithBoundParams", func(t *testing.T) {
 		client := newClient(t)
 		tool := getNRowsTool(t, client)
+		g := newGenkit(t)
 
 		boundTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "3"))
 		require.NoError(t, err)
@@ -273,6 +286,7 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 		callable := func() (string, error) {
 			return "3", nil
 		}
+		g := newGenkit(t)
 
 		boundTool, err := tool.ToolFrom(core.WithBindParamStringFunc("num_rows", callable))
 		require.NoError(t, err)
@@ -319,12 +333,16 @@ func TestToGenkitTool_Auth(t *testing.T) {
 		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	}
 	ctx := context.Background()
-	g, _ := genkit.Init(ctx)
+	newGenkit := func(t *testing.T) *genkit.Genkit {
+		g, _ := genkit.Init(ctx)
+		return g
+	}
 
 	t.Run("test_run_tool_no_auth", func(t *testing.T) {
 		client := newClient(t)
 		tool, err := client.LoadTool("get-row-by-id-auth", ctx)
 		require.NoError(t, err)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -340,6 +358,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 		client := newClient(t)
 		tool, err := client.LoadTool("get-row-by-id-auth", ctx)
 		require.NoError(t, err)
+		g := newGenkit(t)
 
 		authedTool, err := tool.ToolFrom(
 			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken2)),
@@ -362,6 +381,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
 		)
 		require.NoError(t, err)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -380,6 +400,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 		client := newClient(t)
 		tool, err := client.LoadTool("get-row-by-email-auth", ctx)
 		require.NoError(t, err)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -397,6 +418,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
 		)
 		require.NoError(t, err)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -422,7 +444,10 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 		return client
 	}
 	ctx := context.Background()
-	g, _ := genkit.Init(ctx)
+	newGenkit := func(t *testing.T) *genkit.Genkit {
+		g, _ := genkit.Init(ctx)
+		return g
+	}
 
 	// Helper to load the search-rows tool
 	searchRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
@@ -434,6 +459,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 	t.Run("test_tool_schema_is_correct", func(t *testing.T) {
 		client := newClient(t)
 		tool := searchRowsTool(t, client)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -466,6 +492,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 	t.Run("test_run_tool_omitting_optionals", func(t *testing.T) {
 		client := newClient(t)
 		tool := searchRowsTool(t, client)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -499,6 +526,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 	t.Run("test_run_tool_with_all_params_provided", func(t *testing.T) {
 		client := newClient(t)
 		tool := searchRowsTool(t, client)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -521,6 +549,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 	t.Run("test_run_tool_missing_required_param", func(t *testing.T) {
 		client := newClient(t)
 		tool := searchRowsTool(t, client)
+		g := newGenkit(t)
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
