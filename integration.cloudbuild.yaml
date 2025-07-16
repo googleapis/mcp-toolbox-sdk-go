@@ -35,7 +35,7 @@ steps:
     script: |
       go test -tags=unit ./... -v -race
 
-  - id: "run-e2e-tests"
+  - id: "run-core-e2e-tests"
     name: golang:1
     waitFor: ["install-dependencies"]
     env:
@@ -47,7 +47,19 @@ steps:
         path: "/gopath"
     script: |
       go test -tags=e2e ./... -v -race
-  
+
+  - id: "run-tbgenkit-tests"
+    name: golang:1
+    waitFor: ["install-dependencies"]
+    env:
+      - "GOPATH=/gopath"
+      - TOOLBOX_VERSION=$_TOOLBOX_VERSION
+      - GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+    volumes:
+      - name: "go"
+        path: "/gopath"
+    script: |
+      go test -tags=tbgenkit ./... -v -race
 
 options:
   logging: CLOUD_LOGGING_ONLY
