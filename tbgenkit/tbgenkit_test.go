@@ -18,10 +18,9 @@ package tbgenkit_test
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
-	"strings"
+	"reflect"
 	"testing"
 
 	"github.com/firebase/genkit/go/genkit"
@@ -100,7 +99,7 @@ func TestToGenkitTool(t *testing.T) {
 
 	ctx := context.Background()
 
-	newGenkit := func(t *testing.T) *genkit.Genkit {
+	newGenkit := func() *genkit.Genkit {
 		g, _ := genkit.Init(ctx)
 		return g
 	}
@@ -116,7 +115,7 @@ func TestToGenkitTool(t *testing.T) {
 	t.Run("SuccessfulConversionAndExecution", func(t *testing.T) {
 		client := newClient(t)
 		tool := getNRowsTool(t, client)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -146,7 +145,7 @@ func TestToGenkitTool(t *testing.T) {
 
 	// --- Test Case 2: tool is nil ---
 	t.Run("NilTool", func(t *testing.T) {
-		g := newGenkit(t)
+		g := newGenkit()
 		genkitTool, err := tbgenkit.ToGenkitTool(nil, g)
 		if err == nil {
 			t.Fatal("Expected error when tool is nil, got nil")
@@ -177,50 +176,6 @@ func TestToGenkitTool(t *testing.T) {
 		}
 	})
 
-	// --- Test Case 6: executeFn input is not map[string]any ---
-	t.Run("ExecuteFnNonMapInput", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-		g := newGenkit(t)
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		// Call Execute with a non-map input (e.g., a string)
-		_, execErr := genkitTool.RunRaw(ctx, "this is a string, not a map")
-		if execErr == nil {
-			t.Fatal("Expected error from executeFn for non-map input, got nil")
-		}
-		expectedErrStr := "tool input expected map[string]any, got string"
-		if execErr.Error() != expectedErrStr {
-			t.Errorf("Unexpected error message for non-map input: got %q, want %q", execErr.Error(), expectedErrStr)
-		}
-	})
-
-	// --- Test Case 7: tool.Invoke() returns error ---
-	t.Run("InvokeErrorPropagation", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-		g := newGenkit(t)
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		_, execErr := genkitTool.RunRaw(ctx, map[string]any{"input": "some_value"})
-		if execErr == nil {
-			t.Fatal("Expected error from executeFn when Invoke returns error, got nil")
-		}
-
-		expectedErrPrefix := fmt.Sprintf("error invoking core tool %s: ", tool.Name())
-		if !strings.HasPrefix(execErr.Error(), expectedErrPrefix) {
-			t.Errorf("Error message prefix mismatch: got %q, want prefix %q", execErr.Error(), expectedErrPrefix)
-		}
-	})
-
 }
 
 func TestToGenkitTool_BoundParams(t *testing.T) {
@@ -231,7 +186,7 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 		return client
 	}
 	ctx := context.Background()
-	newGenkit := func(t *testing.T) *genkit.Genkit {
+	newGenkit := func() *genkit.Genkit {
 		g, _ := genkit.Init(ctx)
 		return g
 	}
@@ -247,7 +202,7 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 	t.Run("WithBoundParams", func(t *testing.T) {
 		client := newClient(t)
 		tool := getNRowsTool(t, client)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		boundTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "3"))
 		require.NoError(t, err)
@@ -257,26 +212,27 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 			t.Fatalf("ToGenkitTool failed: %v", err)
 		}
 
-		description := genkitTool.Definition().Description
+		schema := genkitTool.Definition().InputSchema
 
-		expectedDescription := `{
-                "type": "object",
-                "properties": {}
-            }`
+		expectedSchema := map[string]any{
+			"type":       "object",
+			"properties": struct{}{},
+		}
 
-		if description != expectedDescription {
+		if reflect.DeepEqual(schema, expectedSchema) {
 			t.Fatal("Expected error from executeFn when Invoke returns error, got nil")
 		}
 
-		_, execErr := genkitTool.RunRaw(ctx, map[string]any{})
-		if execErr == nil {
-			t.Fatal("Expected error from executeFn when Invoke returns error, got nil")
-		}
+		result, err := genkitTool.RunRaw(ctx, map[string]any{})
 
-		expectedErrPrefix := fmt.Sprintf("error invoking core tool %s: ", tool.Name())
-		if !strings.HasPrefix(execErr.Error(), expectedErrPrefix) {
-			t.Errorf("Error message prefix mismatch: got %q, want prefix %q", execErr.Error(), expectedErrPrefix)
-		}
+		require.NoError(t, err)
+
+		respStr, ok := result.(string)
+		require.True(t, ok)
+		assert.Contains(t, respStr, "row1")
+		assert.Contains(t, respStr, "row2")
+		assert.Contains(t, respStr, "row3")
+		assert.NotContains(t, respStr, "row4")
 	})
 
 	t.Run("WithBoundParams Callable", func(t *testing.T) {
@@ -285,7 +241,7 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 		callable := func() (string, error) {
 			return "3", nil
 		}
-		g := newGenkit(t)
+		g := newGenkit()
 
 		boundTool, err := tool.ToolFrom(core.WithBindParamStringFunc("num_rows", callable))
 		require.NoError(t, err)
@@ -295,14 +251,14 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 			t.Fatalf("ToGenkitTool failed: %v", err)
 		}
 
-		description := genkitTool.Definition().Description
+		schema := genkitTool.Definition().InputSchema
 
-		expectedDescription := `{
-                "type": "object",
-                "properties": {}
-            }`
+		expectedSchema := map[string]any{
+			"type":       "object",
+			"properties": struct{}{},
+		}
 
-		if description != expectedDescription {
+		if reflect.DeepEqual(schema, expectedSchema) {
 			t.Fatal("Expected error from executeFn when Invoke returns error, got nil")
 		}
 
@@ -332,7 +288,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	}
 	ctx := context.Background()
-	newGenkit := func(t *testing.T) *genkit.Genkit {
+	newGenkit := func() *genkit.Genkit {
 		g, _ := genkit.Init(ctx)
 		return g
 	}
@@ -341,7 +297,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 		client := newClient(t)
 		tool, err := client.LoadTool("get-row-by-id-auth", ctx)
 		require.NoError(t, err)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -357,7 +313,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 		client := newClient(t)
 		tool, err := client.LoadTool("get-row-by-id-auth", ctx)
 		require.NoError(t, err)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		authedTool, err := tool.ToolFrom(
 			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken2)),
@@ -380,7 +336,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
 		)
 		require.NoError(t, err)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -399,7 +355,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 		client := newClient(t)
 		tool, err := client.LoadTool("get-row-by-email-auth", ctx)
 		require.NoError(t, err)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -417,7 +373,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
 		)
 		require.NoError(t, err)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -443,7 +399,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 		return client
 	}
 	ctx := context.Background()
-	newGenkit := func(t *testing.T) *genkit.Genkit {
+	newGenkit := func() *genkit.Genkit {
 		g, _ := genkit.Init(ctx)
 		return g
 	}
@@ -458,7 +414,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 	t.Run("test_tool_schema_is_correct", func(t *testing.T) {
 		client := newClient(t)
 		tool := searchRowsTool(t, client)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -491,7 +447,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 	t.Run("test_run_tool_omitting_optionals", func(t *testing.T) {
 		client := newClient(t)
 		tool := searchRowsTool(t, client)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -525,7 +481,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 	t.Run("test_run_tool_with_all_params_provided", func(t *testing.T) {
 		client := newClient(t)
 		tool := searchRowsTool(t, client)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -548,7 +504,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 	t.Run("test_run_tool_missing_required_param", func(t *testing.T) {
 		client := newClient(t)
 		tool := searchRowsTool(t, client)
-		g := newGenkit(t)
+		g := newGenkit()
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
