@@ -6,7 +6,7 @@ Logo](https://raw.githubusercontent.com/googleapis/genai-toolbox/main/logo.png)
 [![License: Apache
 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-This repository contains Go SDK designed to seamlessly integrate the
+This repository contains the Go SDK designed to seamlessly integrate the
 functionalities of the [MCP
 Toolbox](https://github.com/googleapis/genai-toolbox) into your Gen AI
 applications. The SDK allow you to load tools defined in Toolbox and use them
@@ -33,7 +33,7 @@ Databases or APIs) managed by Toolbox into your GenAI applications.
 The MCP Toolbox service provides a centralized way to manage and expose tools
 (like API connectors, database query tools, etc.) for use by GenAI applications.
 
-These Go SDK act as clients for that service. They handle the communication needed to:
+The Go SDK act as clients for that service. They handle the communication needed to:
 
 * Fetch tool definitions from your running Toolbox instance.
 * Provide convenient Go structs representing those tools.
