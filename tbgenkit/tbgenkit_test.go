@@ -220,7 +220,7 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 		}
 
 		if reflect.DeepEqual(schema, expectedSchema) {
-			t.Fatal("Expected error from executeFn when Invoke returns error, got nil")
+			t.Fatal("Input schema does not match")
 		}
 
 		result, err := genkitTool.RunRaw(ctx, map[string]any{})
@@ -259,7 +259,7 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 		}
 
 		if reflect.DeepEqual(schema, expectedSchema) {
-			t.Fatal("Expected error from executeFn when Invoke returns error, got nil")
+			t.Fatal("Input schema does not match")
 		}
 
 		result, err := genkitTool.RunRaw(ctx, map[string]any{})
@@ -421,24 +421,24 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 			t.Fatalf("ToGenkitTool failed: %v", err)
 		}
 
-		expectedSchema := `{
-                "type": "object",
-                "properties": {
-                    "email": {
-                        "type": "string",
-                        "description": "City and state"
-                    },
-										"data": {
-                        "type": "string",
-                        "description": "City and state"
-                    },
-                    "id": {
-                        "type": "integer",
-                        "description": "Number of days"
-                    }
-                },
-                "required": ["email"]
-            }`
+		expectedSchema := map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"data": map[string]any{
+					"description": "The row to narrow down the search.",
+					"type":        "string",
+				},
+				"email": map[string]any{
+					"description": "The email to search for.",
+					"type":        "string",
+				},
+				"id": map[string]any{
+					"description": "The id to narrow down the search.",
+					"type":        "integer",
+				}},
+			"required": []any{"email"},
+		}
+
 		schema := genkitTool.Definition().InputSchema
 
 		assert.Equal(t, schema, expectedSchema)
