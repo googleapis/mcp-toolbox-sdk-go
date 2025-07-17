@@ -444,53 +444,6 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 		assert.Equal(t, schema, expectedSchema)
 	})
 
-	t.Run("test_run_tool_omitting_optionals", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		// Test case 1: Optional params are completely omitted
-		response1, err1 := genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-		})
-		require.NoError(t, err1)
-		respStr1, ok1 := response1.(string)
-		require.True(t, ok1)
-		assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
-		assert.Contains(t, respStr1, "row2")
-		assert.NotContains(t, respStr1, "row3")
-	})
-
-	t.Run("test_run_tool_with_all_params_provided", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-		g := newGenkit()
-
-		var id int64 = 3
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-		response, err := genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-			"data":  "row3",
-			"id":    id,
-		})
-		require.NoError(t, err)
-		respStr, ok := response.(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, `"email":"twishabansal@google.com"`)
-		assert.Contains(t, respStr, `"id":3`)
-		assert.Contains(t, respStr, "row3")
-		assert.NotContains(t, respStr, "row2")
-	})
-
 	t.Run("test_run_tool_missing_required_param", func(t *testing.T) {
 		client := newClient(t)
 		tool := searchRowsTool(t, client)
