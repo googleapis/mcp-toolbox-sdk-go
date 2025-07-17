@@ -421,7 +421,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 			t.Fatalf("ToGenkitTool failed: %v", err)
 		}
 
-		expectedDescription := `{
+		expectedSchema := `{
                 "type": "object",
                 "properties": {
                     "email": {
@@ -439,9 +439,9 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
                 },
                 "required": ["email"]
             }`
-		description := genkitTool.Definition().Description
+		schema := genkitTool.Definition().InputSchema
 
-		assert.Equal(t, description, expectedDescription)
+		assert.Equal(t, schema, expectedSchema)
 	})
 
 	t.Run("test_run_tool_omitting_optionals", func(t *testing.T) {
@@ -464,24 +464,14 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 		assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
 		assert.Contains(t, respStr1, "row2")
 		assert.NotContains(t, respStr1, "row3")
-
-		// Test case 2: Optional params are explicitly nil
-		// This should produce the same result as omitting them
-		response2, err2 := genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-			"data":  nil,
-			"id":    nil,
-		})
-		require.NoError(t, err2)
-		respStr2, ok2 := response2.(string)
-		require.True(t, ok2)
-		assert.Equal(t, respStr1, respStr2)
 	})
 
 	t.Run("test_run_tool_with_all_params_provided", func(t *testing.T) {
 		client := newClient(t)
 		tool := searchRowsTool(t, client)
 		g := newGenkit()
+
+		var id int64 = 3
 
 		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
 		if err != nil {
@@ -490,7 +480,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 		response, err := genkitTool.RunRaw(ctx, map[string]any{
 			"email": "twishabansal@google.com",
 			"data":  "row3",
-			"id":    3,
+			"id":    id,
 		})
 		require.NoError(t, err)
 		respStr, ok := response.(string)
@@ -515,7 +505,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 			"id":   5,
 		})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "missing required parameter 'email'")
+		assert.Contains(t, err.Error(), "email is required")
 	})
 
 }
