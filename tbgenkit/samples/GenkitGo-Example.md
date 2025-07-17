@@ -5,49 +5,16 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core"
+	"github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit"
 
 	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
 	"github.com/firebase/genkit/go/plugins/googlegenai"
-	"github.com/invopop/jsonschema"
 )
-
-// NewGenkitToolFromToolbox converts a custom ToolboxTool into a genkit ai.Tool
-func NewGenkitToolFromToolbox(tool *core.ToolboxTool, g *genkit.Genkit) ai.Tool {
-	jsonBytes, err := tool.InputSchema()
-	if err != nil {
-		return nil
-	}
-	var schema *jsonschema.Schema
-	if err := json.Unmarshal(jsonBytes, &schema); err != nil {
-		return nil
-	}
-
-	// Create a wrapper execution function with the necessary signature
-	executeFn := func(ctx *ai.ToolContext, input any) (string, error) {
-		result, err := tool.Invoke(ctx, input.(map[string]any))
-		if err != nil {
-			// Propagate errors from the tool invocation.
-			return "", err
-		}
-
-		return result.(string), nil
-	}
-
-	// Create a Genkit Tool
-	return genkit.DefineToolWithInputSchema(
-		g,
-		tool.Name(),
-		tool.Description(),
-		schema,
-		executeFn,
-	)
-}
 
 func main() {
 	ctx := context.Background()
@@ -62,9 +29,10 @@ func main() {
 		log.Fatalf("Failed to load tools: %v\nMake sure your Toolbox server is running and the tool is configured.", err)
 	}
 
-	g, err := genkit.Init(ctx,
+	// Initialize genkit
+  g, err := genkit.Init(ctx,
 		genkit.WithPlugins(&googlegenai.GoogleAI{}),
-		genkit.WithDefaultModel("googleai/gemini-1.5-flash"), // Updated model name
+		genkit.WithDefaultModel("googleai/gemini-1.5-flash"),
 	)
 	if err != nil {
 		log.Fatalf("Failed to init genkit: %v\n", err)
@@ -73,7 +41,11 @@ func main() {
 	// Convert your tool to a Genkit tool.
 	genkitTools := make([]ai.Tool, len(tools))
 	for i, tool := range tools {
-		genkitTools[i] = NewGenkitToolFromToolbox(tool, g)
+		newTool, err := tbgenkit.ToGenkitTool(tool, g)
+		if err != nil {
+			log.Fatalf("Failed to convert tool: %v\n", err)
+		}
+		genkitTools[i] = newTool
 	}
 
 	toolRefs := make([]ai.ToolRef, len(genkitTools))
@@ -92,5 +64,4 @@ func main() {
 	}
 	fmt.Println(resp.Text())
 }
-
 ```

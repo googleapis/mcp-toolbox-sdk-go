@@ -514,6 +514,8 @@ dynamicBoundTool, err := tool.ToolFrom(core.WithBindParamStringFunc("param", get
 
 To see how the MCP Toolbox Go SDK works with orchestration frameworks, check out the end-to-end examples in the [/samples/](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/core/samples) folder.
 
+Use the [tbgenkit package](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/tbgenkit) to convert Toolbox Tools into Genkit compatible tools.
+
 # Contributing
 
 Contributions are welcome! Please refer to the [DEVELOPER.md](./DEVELOPER.md)
