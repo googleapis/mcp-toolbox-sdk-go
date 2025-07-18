@@ -33,10 +33,6 @@ go get github.com/googleapis/mcp-toolbox-sdk-go
 ```
 This SDK is supported on Go version 1.24.2 and higher.
 
-> [!NOTE]
->
-> - While the SDK itself is synchronous, you can execute its functions within goroutines to achieve asynchronous behavior.
-
 ## Quickstart
 
 For more information on how to load a ToolboxTool, see [the core package](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/core)
