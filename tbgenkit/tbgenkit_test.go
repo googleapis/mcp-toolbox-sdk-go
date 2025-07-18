@@ -37,15 +37,6 @@ var (
 	authToken2     string
 )
 
-// mockTokenSource is a simple implementation of oauth2.TokenSource for testing.
-type mockTokenSource struct {
-	token *oauth2.Token
-}
-
-func (m *mockTokenSource) Token() (*oauth2.Token, error) {
-	return m.token, nil
-}
-
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	log.Println("Starting E2E test setup...")
