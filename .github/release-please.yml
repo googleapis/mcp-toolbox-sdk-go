@@ -13,5 +13,5 @@
 # limitations under the License.
 
 handleGHRelease: true
-packageName: core
+packageName: mcp-toolbox-sdk-go
 releaseType: go
