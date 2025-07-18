@@ -1,5 +1,3 @@
-//go:build tbgenkit
-
 // Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,15 +36,6 @@ var (
 	authToken1     string
 	authToken2     string
 )
-
-// mockTokenSource is a simple implementation of oauth2.TokenSource for testing.
-type mockTokenSource struct {
-	token *oauth2.Token
-}
-
-func (m *mockTokenSource) Token() (*oauth2.Token, error) {
-	return m.token, nil
-}
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()

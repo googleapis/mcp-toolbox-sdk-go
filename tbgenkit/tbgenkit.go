@@ -48,13 +48,13 @@ func ToGenkitTool(tool *core.ToolboxTool, g *genkit.Genkit) (ai.Tool, error) {
 	// Retrieve the JSON schema bytes from the custom tool.
 	jsonBytes, err := tool.InputSchema()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error fetching input schema for tool '%s': %w", tool.Name(), err)
 	}
 
 	// Unmarshal the JSON schema bytes into a jsonschema.Schema object.
 	var schema *jsonschema.Schema
 	if err := json.Unmarshal(jsonBytes, &schema); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error converting input schema into json schema for tool '%s': %w", tool.Name(), err)
 	}
 
 	// Define the execution function for the Genkit tool.
