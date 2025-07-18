@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.1.0...v0.2.0) (2025-07-18)
+
+
+### Features
+
+* **tbgenkit:** Add tbgenkit - a new package for Genkit Go ([#39](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/39)) ([c72be21](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/c72be21c67b0aea1ca95aa30d038d9a97afeb8b9))
+
 ## 0.1.0 (2025-07-08)
 
 
