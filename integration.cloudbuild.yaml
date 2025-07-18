@@ -33,7 +33,7 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test -tags=unit ./... -v -race
+      go test -tags=unit ./core/... -v -race
 
   - id: "run-core-e2e-tests"
     name: golang:1
@@ -46,7 +46,7 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test -tags=e2e ./... -v -race
+      go test -tags=e2e ./core/... -v -race
 
   - id: "run-tbgenkit-tests"
     name: golang:1
@@ -59,7 +59,7 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test -tags=tbgenkit ./... -v -race
+      go test ./tbgenkit/... -v -race
 
 options:
   logging: CLOUD_LOGGING_ONLY
