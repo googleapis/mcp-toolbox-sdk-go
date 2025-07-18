@@ -45,6 +45,7 @@ involving Large Language Models (LLMs).
     - [Option A: Binding Parameters to a Loaded Tool](#option-a-binding-parameters-to-a-loaded-tool)
     - [Option B: Binding Parameters While Loading Tools](#option-b-binding-parameters-while-loading-tools)
     - [Binding Dynamic Values](#binding-dynamic-values)
+- [Using with Orchestration Frameworks](#using-with-orchestration-frameworks)
 - [Contributing](#contributing)
 - [License](#license)
 - [Support](#support)
@@ -513,6 +514,8 @@ dynamicBoundTool, err := tool.ToolFrom(core.WithBindParamStringFunc("param", get
 # Using with Orchestration Frameworks
 
 To see how the MCP Toolbox Go SDK works with orchestration frameworks, check out the end-to-end examples in the [/samples/](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/core/samples) folder.
+
+Use the [tbgenkit package](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/tbgenkit) to convert Toolbox Tools into Genkit compatible tools.
 
 # Contributing
 
