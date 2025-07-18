@@ -53,6 +53,8 @@ func main() {
 }
 ```
 
+For end-to-end example on how to use Toolbox with Genkit Go, check out the [/samples/](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/tbgenkit/samples) folder
+
 # Contributing
 
 Contributions are welcome! Please refer to the [DEVELOPER.md](./DEVELOPER.md)
