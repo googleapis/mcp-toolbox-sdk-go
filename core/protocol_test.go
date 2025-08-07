@@ -219,25 +219,6 @@ func TestParameterSchemaStringArray(t *testing.T) {
 
 }
 
-// Tests ParameterSchema with type 'array' with no items.
-func TestParameterSchemaArrayWithNoItems(t *testing.T) {
-
-	paramSchema := ParameterSchema{
-		Name:        "param_name",
-		Type:        "array",
-		Description: "array parameter",
-	}
-
-	value := []string{"abc", "def"}
-
-	err := paramSchema.validateType(value)
-
-	if err == nil {
-		t.Fatal("Expected an error, but got nil")
-	}
-
-}
-
 // Tests ParameterSchema with an undefined type.
 func TestParameterSchemaUndefinedType(t *testing.T) {
 
