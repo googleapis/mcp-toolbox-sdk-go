@@ -552,8 +552,8 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected an error for array with nil items, but got nil")
 		}
-		if !strings.Contains(err.Error(), "'items' property is missing") {
-			t.Errorf("error message should mention 'items' property is missing', but was: %s", err)
+		if !strings.Contains(err.Error(), "missing item type definition") {
+			t.Errorf("error message should mention 'missing item type definition', but was: %s", err)
 		}
 	})
 
