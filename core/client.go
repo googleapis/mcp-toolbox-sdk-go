@@ -99,6 +99,11 @@ func (tc *ToolboxClient) newToolboxTool(
 
 	// Iterate over the tool's parameters from the schema to categorize them.
 	for _, p := range schema.Parameters {
+		// Validate parameter schema
+		if err := p.ValidateDefinition(); err != nil {
+			// Return a detailed error indicating which tool failed validation.
+			return nil, nil, nil, fmt.Errorf("invalid schema for tool '%s': %w", name, err)
+		}
 		paramSchema[p.Name] = struct{}{}
 
 		if len(p.AuthSources) > 0 {

@@ -451,3 +451,176 @@ func TestValidateTypeObject(t *testing.T) {
 		}
 	})
 }
+
+func TestParameterSchema_ValidateDefinition(t *testing.T) {
+	t.Run("should succeed for simple valid types", func(t *testing.T) {
+		testCases := []struct {
+			name   string
+			schema *ParameterSchema
+		}{
+			{"String", &ParameterSchema{Name: "p_string", Type: "string"}},
+			{"Integer", &ParameterSchema{Name: "p_int", Type: "integer"}},
+			{"Float", &ParameterSchema{Name: "p_float", Type: "float"}},
+			{"Boolean", &ParameterSchema{Name: "p_bool", Type: "boolean"}},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				if err := tc.schema.ValidateDefinition(); err != nil {
+					t.Errorf("expected no error, but got: %v", err)
+				}
+			})
+		}
+	})
+
+	t.Run("should succeed for a valid array schema", func(t *testing.T) {
+		schema := &ParameterSchema{
+			Name:  "p_array",
+			Type:  "array",
+			Items: &ParameterSchema{Type: "string"},
+		}
+		if err := schema.ValidateDefinition(); err != nil {
+			t.Errorf("expected no error for valid array, but got: %v", err)
+		}
+	})
+
+	t.Run("should succeed for valid object schemas", func(t *testing.T) {
+		testCases := []struct {
+			name   string
+			schema *ParameterSchema
+		}{
+			{
+				"Typed Object",
+				&ParameterSchema{
+					Name:                 "p_obj_typed",
+					Type:                 "object",
+					AdditionalProperties: &ParameterSchema{Type: "integer"},
+				},
+			},
+			{
+				"Generic Object (bool)",
+				&ParameterSchema{
+					Name:                 "p_obj_bool",
+					Type:                 "object",
+					AdditionalProperties: true,
+				},
+			},
+			{
+				"Generic Object (nil)",
+				&ParameterSchema{
+					Name:                 "p_obj_nil",
+					Type:                 "object",
+					AdditionalProperties: nil,
+				},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				if err := tc.schema.ValidateDefinition(); err != nil {
+					t.Errorf("expected no error, but got: %v", err)
+				}
+			})
+		}
+	})
+
+	t.Run("should succeed for a valid deeply nested schema", func(t *testing.T) {
+		schema := &ParameterSchema{
+			Name: "p_nested",
+			Type: "array",
+			Items: &ParameterSchema{
+				Type: "object",
+				AdditionalProperties: &ParameterSchema{
+					Type: "array",
+					Items: &ParameterSchema{
+						Type: "integer",
+					},
+				},
+			},
+		}
+		if err := schema.ValidateDefinition(); err != nil {
+			t.Errorf("expected no error for deeply nested schema, but got: %v", err)
+		}
+	})
+
+	t.Run("should fail when type is missing", func(t *testing.T) {
+		schema := &ParameterSchema{Name: "p_missing_type", Type: ""}
+		err := schema.ValidateDefinition()
+		if err == nil {
+			t.Fatal("expected an error for missing type, but got nil")
+		}
+		if !strings.Contains(err.Error(), "type is missing") {
+			t.Errorf("error message should mention 'type is missing', but was: %s", err)
+		}
+	})
+
+	t.Run("should fail when type is unknown", func(t *testing.T) {
+		schema := &ParameterSchema{Name: "p_unknown", Type: "some-custom-type"}
+		err := schema.ValidateDefinition()
+		if err == nil {
+			t.Fatal("expected an error for unknown type, but got nil")
+		}
+		if !strings.Contains(err.Error(), "unknown schema type") {
+			t.Errorf("error message should mention 'unknown schema type', but was: %s", err)
+		}
+	})
+
+	t.Run("should fail for array with missing items property", func(t *testing.T) {
+		schema := &ParameterSchema{Name: "p_bad_array", Type: "array", Items: nil}
+		err := schema.ValidateDefinition()
+		if err == nil {
+			t.Fatal("expected an error for array with nil items, but got nil")
+		}
+		if !strings.Contains(err.Error(), "'items' property is missing") {
+			t.Errorf("error message should mention 'items' property is missing', but was: %s", err)
+		}
+	})
+
+	t.Run("should fail for non-object with invalid AdditionalProperties", func(t *testing.T) {
+		schema := &ParameterSchema{
+			Name:                 "p_string_bad_ap",
+			Type:                 "string",
+			AdditionalProperties: 123,
+		}
+		err := schema.ValidateDefinition()
+		if err == nil {
+			t.Fatal("expected an error, but got nil")
+		}
+		if !strings.Contains(err.Error(), "must be a boolean or a schema") {
+			t.Errorf("error message should mention 'must be a boolean or a schema', but was: %s", err)
+		}
+	})
+
+	t.Run("should fail for object with invalid AdditionalProperties type", func(t *testing.T) {
+		schema := &ParameterSchema{
+			Name:                 "p_bad_object",
+			Type:                 "object",
+			AdditionalProperties: "a-string-is-not-valid",
+		}
+		err := schema.ValidateDefinition()
+		if err == nil {
+			t.Fatal("expected an error for invalid AdditionalProperties, but got nil")
+		}
+		if !strings.Contains(err.Error(), "must be a boolean or a schema") {
+			t.Errorf("error message should mention 'must be a boolean or a schema', but was: %s", err)
+		}
+	})
+
+	t.Run("should fail for a nested invalid schema", func(t *testing.T) {
+		schema := &ParameterSchema{
+			Name: "p_nested_bad",
+			Type: "array",
+			Items: &ParameterSchema{ // The nested schema is invalid
+				Type:                 "string",
+				AdditionalProperties: 12345, // Invalid type
+			},
+		}
+		err := schema.ValidateDefinition()
+		if err == nil {
+			t.Fatal("expected an error for nested invalid schema, but got nil")
+		}
+		if !strings.Contains(err.Error(), "must be a boolean or a schema") {
+			t.Errorf("error should originate from the nested schema, but was: %s", err)
+		}
+	})
+}

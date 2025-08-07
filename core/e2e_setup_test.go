@@ -51,7 +51,7 @@ func accessSecretVersion(ctx context.Context, projectID, secretID string) string
 	defer client.Close()
 
 	req := &secretmanagerpb.AccessSecretVersionRequest{
-		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/latest", projectID, secretID),
+		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/34", projectID, secretID),
 	}
 
 	result, err := client.AccessSecretVersion(ctx, req)

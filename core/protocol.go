@@ -65,9 +65,6 @@ func (p *ParameterSchema) validateType(value any) error {
 		if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
 			return fmt.Errorf("parameter '%s' expects an array/slice, but got %T", p.Name, value)
 		}
-		if p.Items == nil {
-			return fmt.Errorf("parameter '%s' is an array but is missing item type definition", p.Name)
-		}
 		for i := range v.Len() {
 			item := v.Index(i).Interface()
 
@@ -76,24 +73,83 @@ func (p *ParameterSchema) validateType(value any) error {
 			}
 		}
 	case "object":
-		// Check that the value is a map with string keys.
+		// First, check that the value is a map with string keys.
 		valMap, ok := value.(map[string]any)
 		if !ok {
 			return fmt.Errorf("parameter '%s' expects an map, but got %T", p.Name, value)
 		}
 		// Check if AdditionalProperties defines a sub-schema for the map's values.
-		apSchema, isSchema := p.AdditionalProperties.(*ParameterSchema)
-		if !isSchema {
-			return nil
-		}
-		for key, val := range valMap {
-			if err := apSchema.validateType(val); err != nil {
-				return fmt.Errorf("error in object '%s' for key '%s': %w", p.Name, key, err)
+		switch ap := p.AdditionalProperties.(type) {
+		case *ParameterSchema:
+			for key, val := range valMap {
+				if err := ap.validateType(val); err != nil {
+					return fmt.Errorf("error in object '%s' for key '%s': %w", p.Name, key, err)
+				}
 			}
+
+		case bool, nil:
+			break
+
+		default:
+			// This is a schema / manifest error.
+			return fmt.Errorf(
+				"invalid schema for parameter '%s': AdditionalProperties must be a boolean or a schema, but got %T",
+				p.Name,
+				ap,
+			)
 		}
 	default:
 		return fmt.Errorf("unknown type '%s' in schema for parameter '%s'", p.Type, p.Name)
 	}
+	return nil
+}
+
+// ValidateDefinition checks if the schema itself is well-formed.
+func (p *ParameterSchema) ValidateDefinition() error {
+	if p.Type == "" {
+		return fmt.Errorf("schema validation failed for '%s': type is missing", p.Name)
+	}
+
+	switch ap := p.AdditionalProperties.(type) {
+	case *ParameterSchema, bool, nil:
+		// Valid types
+		break
+	default:
+		// Any other type is an invalid schema definition.
+		return fmt.Errorf(
+			"invalid schema for parameter '%s': AdditionalProperties must be a boolean or a schema, but got %T",
+			p.Name,
+			ap,
+		)
+	}
+
+	switch p.Type {
+	case "array":
+		if p.Items == nil {
+			return fmt.Errorf("parameter '%s' is an array but is missing item type definition", p.Name)
+		}
+		// Recursively validate the nested schema's definition.
+		if err := p.Items.ValidateDefinition(); err != nil {
+			return err
+		}
+
+	case "object":
+		// The type of AdditionalProperties was already checked globally.
+		// Now we only need to recursively validate its definition if it's a schema.
+		if apSchema, ok := p.AdditionalProperties.(*ParameterSchema); ok {
+			if err := apSchema.ValidateDefinition(); err != nil {
+				return err
+			}
+		}
+
+	case "string", "integer", "float", "boolean":
+		// No type-specific rules for these.
+		break
+
+	default:
+		return fmt.Errorf("unknown schema type '%s' for parameter '%s'", p.Type, p.Name)
+	}
+
 	return nil
 }
 
