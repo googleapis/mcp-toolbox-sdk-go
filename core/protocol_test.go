@@ -17,6 +17,8 @@
 package core
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -330,6 +332,122 @@ func TestOptionalArrayParameter(t *testing.T) {
 		err := schema.validateType([]string{"not", "an", "int"})
 		if err == nil {
 			t.Errorf("validateType() should have returned an error for a slice with incorrect item types, but it didn't")
+		}
+	})
+}
+
+func TestValidateTypeObject(t *testing.T) {
+	t.Run("generic object allows any value types", func(t *testing.T) {
+		schema := ParameterSchema{
+			Name:                 "metadata",
+			Type:                 "object",
+			AdditionalProperties: true, // or nil
+		}
+
+		// A map with mixed value types should be valid.
+		validInput := map[string]any{
+			"key_string": "a string",
+			"key_int":    123,
+			"key_bool":   true,
+		}
+		if err := schema.validateType(validInput); err != nil {
+			t.Errorf("Expected no error for generic object, but got: %v", err)
+		}
+
+		// A value that is not a map should be invalid.
+		invalidInput := "I am a string, not an object"
+		if err := schema.validateType(invalidInput); err == nil {
+			t.Errorf("Expected an error for non-map input, but got nil")
+		}
+	})
+
+	t.Run("typed object validation", func(t *testing.T) {
+		testCases := []struct {
+			name         string
+			valueType    string
+			validInput   map[string]any
+			invalidInput map[string]any
+		}{
+			{
+				name:         "string values",
+				valueType:    "string",
+				validInput:   map[string]any{"header": "application/json"},
+				invalidInput: map[string]any{"bad_header": 123},
+			},
+			{
+				name:         "integer values",
+				valueType:    "integer",
+				validInput:   map[string]any{"user_score": 100},
+				invalidInput: map[string]any{"bad_score": "100"},
+			},
+			{
+				name:         "float values",
+				valueType:    "float",
+				validInput:   map[string]any{"item_price": 99.99},
+				invalidInput: map[string]any{"bad_price": 99},
+			},
+			{
+				name:         "boolean values",
+				valueType:    "boolean",
+				validInput:   map[string]any{"feature_flag": true},
+				invalidInput: map[string]any{"bad_flag": "true"},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				schema := ParameterSchema{
+					Name:                 "test_map",
+					Type:                 "object",
+					AdditionalProperties: &ParameterSchema{Type: tc.valueType},
+				}
+
+				// Test that valid input passes
+				if err := schema.validateType(tc.validInput); err != nil {
+					t.Errorf("Expected no error for valid input, got: %v", err)
+				}
+
+				// Test that invalid input fails
+				if err := schema.validateType(tc.invalidInput); err == nil {
+					t.Errorf("Expected an error for invalid input, but got nil")
+				}
+			})
+		}
+	})
+
+	t.Run("optional and required objects", func(t *testing.T) {
+		// An optional object can be nil
+		optionalSchema := ParameterSchema{Name: "optional_metadata", Type: "object", Required: false}
+		if err := optionalSchema.validateType(nil); err != nil {
+			t.Errorf("Expected no error for nil on optional object, but got: %v", err)
+		}
+
+		// A required object cannot be nil
+		requiredSchema := ParameterSchema{Name: "required_metadata", Type: "object", Required: true}
+		if err := requiredSchema.validateType(nil); err == nil {
+			t.Error("Expected an error for nil on required object, but got nil")
+		}
+	})
+
+	t.Run("object with unsupported value type in schema", func(t *testing.T) {
+		unsupportedType := "custom_object"
+		schema := ParameterSchema{
+			Name:                 "custom_data",
+			Type:                 "object",
+			AdditionalProperties: &ParameterSchema{Type: unsupportedType},
+		}
+
+		input := map[string]any{"key": "some value"}
+		err := schema.validateType(input)
+
+		if err == nil {
+			t.Fatal("Expected an error for unsupported sub-schema type, but got nil")
+		}
+
+		// Check if the error message contains the expected text.
+		expectedErrorMsg := fmt.Sprintf("unknown type '%s'", unsupportedType)
+		if !strings.Contains(err.Error(), expectedErrorMsg) {
+			t.Errorf("Expected error to contain '%s', but got '%v'", expectedErrorMsg, err)
 		}
 	})
 }

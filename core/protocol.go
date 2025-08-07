@@ -21,12 +21,13 @@ import (
 
 // Schema for a tool parameter.
 type ParameterSchema struct {
-	Name        string           `json:"name"`
-	Type        string           `json:"type"`
-	Required    bool             `json:"required,omitempty"`
-	Description string           `json:"description"`
-	AuthSources []string         `json:"authSources,omitempty"`
-	Items       *ParameterSchema `json:"items,omitempty"`
+	Name                 string           `json:"name"`
+	Type                 string           `json:"type"`
+	Required             bool             `json:"required,omitempty"`
+	Description          string           `json:"description"`
+	AuthSources          []string         `json:"authSources,omitempty"`
+	Items                *ParameterSchema `json:"items,omitempty"`
+	AdditionalProperties any              `json:"AdditionalProperties,omitempty"`
 }
 
 // validateType is a helper for manual type checking.
@@ -72,6 +73,22 @@ func (p *ParameterSchema) validateType(value any) error {
 
 			if err := p.Items.validateType(item); err != nil {
 				return fmt.Errorf("error in array '%s' at index %d: %w", p.Name, i, err)
+			}
+		}
+	case "object":
+		// Check that the value is a map with string keys.
+		valMap, ok := value.(map[string]any)
+		if !ok {
+			return fmt.Errorf("parameter '%s' expects an map, but got %T", p.Name, value)
+		}
+		// Check if AdditionalProperties defines a sub-schema for the map's values.
+		apSchema, isSchema := p.AdditionalProperties.(*ParameterSchema)
+		if !isSchema {
+			return nil
+		}
+		for key, val := range valMap {
+			if err := apSchema.validateType(val); err != nil {
+				return fmt.Errorf("error in object '%s' for key '%s': %w", p.Name, key, err)
 			}
 		}
 	default:

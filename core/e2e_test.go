@@ -78,7 +78,6 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-// TestE2E_Basic maps to the TestBasicE2E class
 func TestE2E_Basic(t *testing.T) {
 	// Helper to create a new client for each sub-test, like a function-scoped fixture
 	newClient := func(t *testing.T) *core.ToolboxClient {
@@ -132,7 +131,7 @@ func TestE2E_Basic(t *testing.T) {
 		toolset, err := client.LoadToolset("", context.Background())
 		require.NoError(t, err)
 
-		assert.Len(t, toolset, 6)
+		assert.Len(t, toolset, 7)
 		toolNames := make(map[string]struct{})
 		for _, tool := range toolset {
 			toolNames[tool.Name()] = struct{}{}
@@ -144,6 +143,7 @@ func TestE2E_Basic(t *testing.T) {
 			"get-row-by-id":           {},
 			"get-n-rows":              {},
 			"search-rows":             {},
+			"process-data":            {},
 		}
 		assert.Equal(t, expectedTools, toolNames)
 	})
@@ -182,7 +182,6 @@ func TestE2E_Basic(t *testing.T) {
 	})
 }
 
-// TestE2E_BindParams maps to the TestBindParams class
 func TestE2E_BindParams(t *testing.T) {
 	newClient := func(t *testing.T) *core.ToolboxClient {
 		client, err := core.NewToolboxClient("http://localhost:5000")
@@ -236,7 +235,6 @@ func TestE2E_BindParams(t *testing.T) {
 	})
 }
 
-// TestE2E_Auth maps to the TestAuth class
 func TestE2E_Auth(t *testing.T) {
 	newClient := func(t *testing.T) *core.ToolboxClient {
 		client, err := core.NewToolboxClient("http://localhost:5000")
@@ -338,7 +336,6 @@ func TestE2E_Auth(t *testing.T) {
 	})
 }
 
-// TestE2E_OptionalParams maps to the TestOptionalParams class
 func TestE2E_OptionalParams(t *testing.T) {
 	// Helper to create a new client
 	newClient := func(t *testing.T) *core.ToolboxClient {
@@ -473,5 +470,114 @@ func TestE2E_OptionalParams(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "null", response, "Response should be null for non-matching data")
+	})
+}
+
+func TestE2E_MapParams(t *testing.T) {
+	// Helper to create a new client
+	newClient := func(t *testing.T) *core.ToolboxClient {
+		client, err := core.NewToolboxClient("http://localhost:5000")
+		require.NoError(t, err, "Failed to create ToolboxClient")
+		return client
+	}
+
+	// Helper to load the process-data tool
+	processDataTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
+		tool, err := client.LoadTool("process-data", context.Background())
+		require.NoError(t, err, "Failed to load tool 'process-data'")
+		return tool
+	}
+
+	t.Run("test_tool_schema_is_correct", func(t *testing.T) {
+		client := newClient(t)
+		tool := processDataTool(t, client)
+		params := tool.Parameters()
+
+		// Convert slice to map for easy lookup
+		paramMap := make(map[string]core.ParameterSchema)
+		for _, p := range params {
+			paramMap[p.Name] = p
+		}
+
+		// Verify 'execution_context' parameter.
+		execCtxParam, ok := paramMap["execution_context"]
+		require.True(t, ok, "'execution_context' parameter should exist")
+		assert.True(t, execCtxParam.Required, "'execution_context' should be required")
+		assert.Equal(t, "object", execCtxParam.Type, "'execution_context' type should be object")
+
+		// Verify 'user_scores' parameter.
+		userScoresParam, ok := paramMap["user_scores"]
+		require.True(t, ok, "'user_scores' parameter should exist")
+		assert.True(t, userScoresParam.Required, "'user_scores' should be required")
+		assert.Equal(t, "object", userScoresParam.Type, "'user_scores' type should be object")
+
+		// Verify 'feature_flags' parameter.
+		featureFlagsParam, ok := paramMap["feature_flags"]
+		require.True(t, ok, "'feature_flags' parameter should exist")
+		assert.False(t, featureFlagsParam.Required, "'feature_flags' should be optional")
+		assert.Equal(t, "object", featureFlagsParam.Type, "'feature_flags' type should be object")
+	})
+
+	t.Run("test_run_tool_with_all_map_params", func(t *testing.T) {
+		client := newClient(t)
+		tool := processDataTool(t, client)
+
+		// Invoke the tool with valid map parameters.
+		response, err := tool.Invoke(context.Background(), map[string]any{
+			"execution_context": map[string]any{
+				"env":  "prod",
+				"id":   1234,
+				"user": 1234.5,
+			},
+			"user_scores": map[string]any{
+				"user1": 100,
+				"user2": 200,
+			},
+			"feature_flags": map[string]any{
+				"new_feature": true,
+			},
+		})
+		require.NoError(t, err)
+		respStr, ok := response.(string)
+		require.True(t, ok, "Response should be a string")
+
+		assert.Contains(t, respStr, `"execution_context":{"env":"prod","id":1234,"user":1234.5}`)
+		assert.Contains(t, respStr, `"user_scores":{"user1":100,"user2":200}`)
+		assert.Contains(t, respStr, `"feature_flags":{"new_feature":true}`)
+	})
+
+	t.Run("test_run_tool_omitting_optional_map", func(t *testing.T) {
+		client := newClient(t)
+		tool := processDataTool(t, client)
+
+		// Invoke the tool without the optional 'feature_flags' parameter.
+		response, err := tool.Invoke(context.Background(), map[string]any{
+			"execution_context": map[string]any{"env": "dev"},
+			"user_scores":       map[string]any{"user3": 300},
+		})
+		require.NoError(t, err)
+		respStr, ok := response.(string)
+		require.True(t, ok, "Response should be a string")
+
+		assert.Contains(t, respStr, `"execution_context":{"env":"dev"}`)
+		assert.Contains(t, respStr, `"user_scores":{"user3":300}`)
+		assert.Contains(t, respStr, `"feature_flags":null`)
+	})
+
+	t.Run("test_run_tool_with_wrong_map_value_type", func(t *testing.T) {
+		client := newClient(t)
+		tool := processDataTool(t, client)
+
+		// Attempt to invoke the tool with an incorrect type in a map value.
+		_, err := tool.Invoke(context.Background(), map[string]any{
+			"execution_context": map[string]any{"env": "staging"},
+			"user_scores": map[string]any{
+				"user4": "not-an-integer", // This should cause a validation error.
+			},
+		})
+
+		// Assert that an error was returned.
+		require.Error(t, err, "Expected an error for wrong map value type")
+		assert.Contains(t, err.Error(), "validation failed", "Error message should indicate a validation failure")
 	})
 }
