@@ -15,6 +15,7 @@
 package core
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 )
@@ -111,9 +112,22 @@ func (p *ParameterSchema) ValidateDefinition() error {
 	}
 
 	switch ap := p.AdditionalProperties.(type) {
-	case *ParameterSchema, bool, nil:
+	case bool, nil:
 		// Valid types
-		break
+	case map[string]any:
+		jsonBytes, err := json.Marshal(ap)
+		if err != nil {
+			return fmt.Errorf("internal error processing schema for '%s': %w", p.Name, err)
+		}
+		var tempSchema ParameterSchema
+		if err := json.Unmarshal(jsonBytes, &tempSchema); err != nil {
+			// The map's structure is invalid.
+			return fmt.Errorf(
+				"invalid schema for parameter '%s': additionalProperties map is not a valid schema: %w",
+				p.Name,
+				err,
+			)
+		}
 	default:
 		// Any other type is an invalid schema definition.
 		return fmt.Errorf(
