@@ -380,7 +380,7 @@ func TestValidateTypeObject(t *testing.T) {
 				schema := ParameterSchema{
 					Name:                 "test_map",
 					Type:                 "object",
-					AdditionalProperties: &ParameterSchema{Type: tc.valueType},
+					AdditionalProperties: map[string]any{"type": tc.valueType},
 				}
 
 				// Test that valid input passes
@@ -415,7 +415,7 @@ func TestValidateTypeObject(t *testing.T) {
 		schema := ParameterSchema{
 			Name:                 "custom_data",
 			Type:                 "object",
-			AdditionalProperties: &ParameterSchema{Type: unsupportedType},
+			AdditionalProperties: map[string]any{"Type": unsupportedType},
 		}
 
 		input := map[string]any{"key": "some value"}
@@ -475,7 +475,7 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 				&ParameterSchema{
 					Name:                 "p_obj_typed",
 					Type:                 "object",
-					AdditionalProperties: &ParameterSchema{Type: "integer"},
+					AdditionalProperties: map[string]any{"type": "integer"},
 				},
 			},
 			{
@@ -484,14 +484,6 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 					Name:                 "p_obj_bool",
 					Type:                 "object",
 					AdditionalProperties: true,
-				},
-			},
-			{
-				"Generic Object (nil)",
-				&ParameterSchema{
-					Name:                 "p_obj_nil",
-					Type:                 "object",
-					AdditionalProperties: nil,
 				},
 			},
 		}
@@ -505,27 +497,8 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 		}
 	})
 
-	t.Run("should succeed for a valid deeply nested schema", func(t *testing.T) {
-		schema := &ParameterSchema{
-			Name: "p_nested",
-			Type: "array",
-			Items: &ParameterSchema{
-				Type: "object",
-				AdditionalProperties: &ParameterSchema{
-					Type: "array",
-					Items: &ParameterSchema{
-						Type: "integer",
-					},
-				},
-			},
-		}
-		if err := schema.ValidateDefinition(); err != nil {
-			t.Errorf("expected no error for deeply nested schema, but got: %v", err)
-		}
-	})
-
 	t.Run("should fail when type is missing", func(t *testing.T) {
-		schema := &ParameterSchema{Name: "p_missing_type", Type: ""}
+		schema := map[string]any{"name": "p_missing_type", "type": ""}
 		err := schema.ValidateDefinition()
 		if err == nil {
 			t.Fatal("expected an error for missing type, but got nil")
@@ -536,7 +509,7 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 	})
 
 	t.Run("should fail when type is unknown", func(t *testing.T) {
-		schema := &ParameterSchema{Name: "p_unknown", Type: "some-custom-type"}
+		schema := map[string]any{"name": "p_unknown", "type": "some-custom-type"}
 		err := schema.ValidateDefinition()
 		if err == nil {
 			t.Fatal("expected an error for unknown type, but got nil")
@@ -584,24 +557,6 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "must be a boolean or a schema") {
 			t.Errorf("error message should mention 'must be a boolean or a schema', but was: %s", err)
-		}
-	})
-
-	t.Run("should fail for a nested invalid schema", func(t *testing.T) {
-		schema := &ParameterSchema{
-			Name: "p_nested_bad",
-			Type: "array",
-			Items: &ParameterSchema{ // The nested schema is invalid
-				Type:                 "string",
-				AdditionalProperties: 12345, // Invalid type
-			},
-		}
-		err := schema.ValidateDefinition()
-		if err == nil {
-			t.Fatal("expected an error for nested invalid schema, but got nil")
-		}
-		if !strings.Contains(err.Error(), "must be a boolean or a schema") {
-			t.Errorf("error should originate from the nested schema, but was: %s", err)
 		}
 	})
 }

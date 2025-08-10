@@ -79,22 +79,27 @@ func (p *ParameterSchema) validateType(value any) error {
 		if !ok {
 			return fmt.Errorf("parameter '%s' expects an map, but got %T", p.Name, value)
 		}
-		// Check if AdditionalProperties defines a sub-schema for the map's values.
 		switch ap := p.AdditionalProperties.(type) {
-		case *ParameterSchema:
+
+		// No validation of values
+		case bool:
+
+		// Validate type (if it exists in AdditionalProperties) for each value
+		case map[string]any:
+			schema, err := mapToSchema(ap)
+			if err != nil {
+				return fmt.Errorf("invalid schema for parameter '%s'", p.Name)
+			}
 			for key, val := range valMap {
-				if err := ap.validateType(val); err != nil {
+				if err := schema.validateType(val); err != nil {
 					return fmt.Errorf("error in object '%s' for key '%s': %w", p.Name, key, err)
 				}
 			}
 
-		case bool, nil:
-			break
-
 		default:
 			// This is a schema / manifest error.
 			return fmt.Errorf(
-				"invalid schema for parameter '%s': AdditionalProperties must be a boolean or a schema, but got %T",
+				"invalid schema for parameter '%s': AdditionalProperties must be a boolean or a map[string]any, but got %T",
 				p.Name,
 				ap,
 			)
@@ -112,7 +117,7 @@ func (p *ParameterSchema) ValidateDefinition() error {
 	}
 
 	switch ap := p.AdditionalProperties.(type) {
-	case *ParameterSchema, bool, nil:
+	case bool, nil:
 		// Valid types
 	case map[string]any:
 		jsonBytes, err := json.Marshal(ap)
