@@ -112,13 +112,14 @@ func (p *ParameterSchema) ValidateDefinition() error {
 	}
 
 	switch ap := p.AdditionalProperties.(type) {
-	case bool, nil:
+	case *ParameterSchema, bool, nil:
 		// Valid types
 	case map[string]any:
 		jsonBytes, err := json.Marshal(ap)
 		if err != nil {
 			return fmt.Errorf("internal error processing schema for '%s': %w", p.Name, err)
 		}
+
 		var tempSchema ParameterSchema
 		if err := json.Unmarshal(jsonBytes, &tempSchema); err != nil {
 			// The map's structure is invalid.
