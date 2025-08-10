@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-run:
-  fix: true
-  timeout: 5m
-
+version: "3"
 linters:
   enable:
     - errcheck
@@ -23,14 +20,18 @@ linters:
     - ineffassign
     - staticcheck
     - unused
-    - goimports
-
-linters-settings:
-  gofmt:
-    rewrite-rules:
-      - pattern: 'interface{}'
-        replacement: 'any'
-      - pattern: 'a[b:len(a)]'
-        replacement: 'a[b:]'
-
+  exclusions:
+    presets:
+      - std-error-handling
 issues:
+  fix: true
+formatters:
+  enable:
+    - goimports
+  settings:
+    gofmt:
+      rewrite-rules:
+        - pattern: interface{}
+          replacement: any
+        - pattern: a[b:len(a)]
+          replacement: a[b:]
