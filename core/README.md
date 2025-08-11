@@ -234,7 +234,7 @@ client, err := core.NewToolboxClient(
 
 For Toolbox servers hosted on Google Cloud (e.g., Cloud Run) and requiring
 `Google ID token` authentication, the helper module
-[auth_methods](/core/auth_methods.go) provides utility functions.
+[auth_methods](/core/auth.go) provides utility functions.
 
 ### Step by Step Guide for Cloud Run
 
