@@ -43,9 +43,9 @@ func TestMain(m *testing.M) {
 
 	// Get secrets and auth tokens
 	log.Println("Fetching secrets and auth tokens...")
-	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools")
-	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1")
-	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2")
+	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools", "34")
+	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1", "latest")
+	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2", "latest")
 	authToken1 = getAuthToken(ctx, clientID1)
 	authToken2 = getAuthToken(ctx, clientID2)
 
