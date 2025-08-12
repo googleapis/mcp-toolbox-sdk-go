@@ -486,23 +486,16 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 			"type": "object",
 			"properties": map[string]any{
 				"execution_context": map[string]any{
-					"description":          "A map containing context about the execution environment.",
-					"type":                 "object",
-					"additionalProperties": true,
+					"description": "A flexible set of key-value pairs for the execution environment.",
+					"type":        "object",
 				},
 				"user_scores": map[string]any{
-					"description": "A map of user IDs to their integer scores.",
+					"description": "Optional feature flags.",
 					"type":        "object",
-					"additionalProperties": map[string]any{
-						"type": "integer",
-					},
 				},
 				"feature_flags": map[string]any{
-					"description": "An optional map of feature flags.",
+					"description": "A map of user IDs to their scores.",
 					"type":        "object",
-					"additionalProperties": map[string]any{
-						"type": "boolean",
-					},
 				}},
 			"required": []any{"execution_context", "user_scores"},
 		}
@@ -530,8 +523,8 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 				"user": 1234.5,
 			},
 			"user_scores": map[string]any{
-				"user1": 100,
-				"user2": 200,
+				"user1": int(100),
+				"user2": int(200),
 			},
 			"feature_flags": map[string]any{
 				"new_feature": true,
