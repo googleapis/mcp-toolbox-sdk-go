@@ -15,7 +15,6 @@
 package core
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 )
@@ -79,19 +78,15 @@ func (p *ParameterSchema) validateType(value any) error {
 		if !ok {
 			return fmt.Errorf("parameter '%s' expects an map, but got %T", p.Name, value)
 		}
-		switch ap := p.AdditionalProperties.(type) {
 
+		switch ap := p.AdditionalProperties.(type) {
 		// No validation of values
 		case bool:
 
-		// Validate type (if it exists in AdditionalProperties) for each value
-		case map[string]any:
-			schema, err := mapToSchema(ap)
-			if err != nil {
-				return fmt.Errorf("invalid schema for parameter '%s'", p.Name)
-			}
+		// Validate type for each value in map
+		case *ParameterSchema:
 			for key, val := range valMap {
-				if err := schema.validateType(val); err != nil {
+				if err := ap.validateType(val); err != nil {
 					return fmt.Errorf("error in object '%s' for key '%s': %w", p.Name, key, err)
 				}
 			}
@@ -117,23 +112,8 @@ func (p *ParameterSchema) ValidateDefinition() error {
 	}
 
 	switch ap := p.AdditionalProperties.(type) {
-	case bool, nil:
+	case bool, nil, *ParameterSchema:
 		// Valid types
-	case map[string]any:
-		jsonBytes, err := json.Marshal(ap)
-		if err != nil {
-			return fmt.Errorf("internal error processing schema for '%s': %w", p.Name, err)
-		}
-
-		var tempSchema ParameterSchema
-		if err := json.Unmarshal(jsonBytes, &tempSchema); err != nil {
-			// The map's structure is invalid.
-			return fmt.Errorf(
-				"invalid schema for parameter '%s': additionalProperties map is not a valid schema: %w",
-				p.Name,
-				err,
-			)
-		}
 	default:
 		// Any other type is an invalid schema definition.
 		return fmt.Errorf(
@@ -154,8 +134,6 @@ func (p *ParameterSchema) ValidateDefinition() error {
 		}
 
 	case "object":
-		// The type of AdditionalProperties was already checked globally.
-		// Now we only need to recursively validate its definition if it's a schema.
 		if apSchema, ok := p.AdditionalProperties.(*ParameterSchema); ok {
 			if err := apSchema.ValidateDefinition(); err != nil {
 				return err

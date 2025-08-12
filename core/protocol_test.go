@@ -380,7 +380,7 @@ func TestValidateTypeObject(t *testing.T) {
 				schema := ParameterSchema{
 					Name:                 "test_map",
 					Type:                 "object",
-					AdditionalProperties: map[string]any{"type": tc.valueType},
+					AdditionalProperties: &ParameterSchema{Type: tc.valueType},
 				}
 
 				// Test that valid input passes
@@ -415,7 +415,7 @@ func TestValidateTypeObject(t *testing.T) {
 		schema := ParameterSchema{
 			Name:                 "custom_data",
 			Type:                 "object",
-			AdditionalProperties: map[string]any{"Type": unsupportedType},
+			AdditionalProperties: &ParameterSchema{Type: unsupportedType},
 		}
 
 		input := map[string]any{"key": "some value"}
@@ -475,7 +475,7 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 				&ParameterSchema{
 					Name:                 "p_obj_typed",
 					Type:                 "object",
-					AdditionalProperties: map[string]any{"type": "integer"},
+					AdditionalProperties: &ParameterSchema{Type: "integer"},
 				},
 			},
 			{
@@ -498,7 +498,7 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 	})
 
 	t.Run("should fail when type is missing", func(t *testing.T) {
-		schema := map[string]any{"name": "p_missing_type", "type": ""}
+		schema := &ParameterSchema{Name: "p_missing_type", Type: "object", AdditionalProperties: &ParameterSchema{Name: "", Type: ""}}
 		err := schema.ValidateDefinition()
 		if err == nil {
 			t.Fatal("expected an error for missing type, but got nil")
@@ -509,7 +509,7 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 	})
 
 	t.Run("should fail when type is unknown", func(t *testing.T) {
-		schema := map[string]any{"name": "p_unknown", "type": "some-custom-type"}
+		schema := &ParameterSchema{Name: "p_unknown", Type: "object", AdditionalProperties: &ParameterSchema{Name: "", Type: "some-custom-type"}}
 		err := schema.ValidateDefinition()
 		if err == nil {
 			t.Fatal("expected an error for unknown type, but got nil")

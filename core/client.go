@@ -99,6 +99,14 @@ func (tc *ToolboxClient) newToolboxTool(
 
 	// Iterate over the tool's parameters from the schema to categorize them.
 	for _, p := range schema.Parameters {
+
+		if ap, ok := p.AdditionalProperties.(map[string]any); ok {
+			apParam, err := mapToSchema(ap)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			p.AdditionalProperties = apParam
+		}
 		// Validate parameter schema
 		if err := p.ValidateDefinition(); err != nil {
 			// Return a detailed error indicating which tool failed validation.
