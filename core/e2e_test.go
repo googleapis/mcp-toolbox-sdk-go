@@ -572,12 +572,12 @@ func TestE2E_MapParams(t *testing.T) {
 		_, err := tool.Invoke(context.Background(), map[string]any{
 			"execution_context": map[string]any{"env": "staging"},
 			"user_scores": map[string]any{
-				"user4": "not-an-integer", // This should cause a validation error.
+				"user4": "not-an-integer",
 			},
 		})
 
 		// Assert that an error was returned.
 		require.Error(t, err, "Expected an error for wrong map value type")
-		assert.Contains(t, err.Error(), "validation failed", "Error message should indicate a validation failure")
+		assert.Contains(t, err.Error(), "expects an integer, but got string", "Error message should indicate a validation failure")
 	})
 }
