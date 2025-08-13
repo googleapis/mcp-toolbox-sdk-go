@@ -9,6 +9,7 @@ Logo](https://raw.githubusercontent.com/googleapis/genai-toolbox/main/logo.png)
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=flat&logo=discord&logoColor=white)](https://discord.gg/Dmm69peqjh)
 [![Medium](https://img.shields.io/badge/Medium-12100E?style=flat&logo=medium&logoColor=white)](https://medium.com/@mcp_toolbox)
 [![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/mcp-toolbox-sdk-go)](https://goreportcard.com/report/github.com/googleapis/mcp-toolbox-sdk-go)
+![Module Version](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go)
 
 This repository contains the Go SDK designed to seamlessly integrate the
 functionalities of the [MCP
