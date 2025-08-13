@@ -490,12 +490,14 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 					"type":        "object",
 				},
 				"user_scores": map[string]any{
-					"description": "A map of user IDs to their scores.",
-					"type":        "object",
+					"description":          "A map of user IDs to their scores.",
+					"type":                 "object",
+					"additionalProperties": map[string]any{"type": "integer"},
 				},
 				"feature_flags": map[string]any{
-					"description": "Optional feature flags.",
-					"type":        "object",
+					"description":          "Optional feature flags.",
+					"type":                 "object",
+					"additionalProperties": map[string]any{"type": "boolean"},
 				}},
 			"required": []any{"execution_context", "user_scores"},
 		}
@@ -503,5 +505,40 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 		schema := genkitTool.Definition().InputSchema
 
 		assert.Equal(t, schema, expectedSchema)
+	})
+
+	t.Run("test_run_tool_with_all_map_params", func(t *testing.T) {
+		t.Skip()
+		client := newClient(t)
+		tool := processDataTool(t, client)
+		g := newGenkit()
+
+		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+		if err != nil {
+			t.Fatalf("ToGenkitTool failed: %v", err)
+		}
+
+		// Invoke the tool with valid map parameters.
+		response, err := genkitTool.RunRaw(context.Background(), map[string]any{
+			"execution_context": map[string]any{
+				"env":  "prod",
+				"id":   1234,
+				"user": 1234.5,
+			},
+			"user_scores": map[string]any{
+				"user1": int(100),
+				"user2": int(200),
+			},
+			"feature_flags": map[string]any{
+				"new_feature": true,
+			},
+		})
+		require.NoError(t, err)
+		respStr, ok := response.(string)
+		require.True(t, ok, "Response should be a string")
+
+		assert.Contains(t, respStr, `"execution_context":{"env":"prod","id":1234,"user":1234.5}`)
+		assert.Contains(t, respStr, `"user_scores":{"user1":100,"user2":200}`)
+		assert.Contains(t, respStr, `"feature_flags":{"new_feature":true}`)
 	})
 }
