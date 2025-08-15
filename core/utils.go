@@ -242,5 +242,28 @@ func schemaToMap(p *ParameterSchema) map[string]any {
 		schema["items"] = schemaToMap(p.Items)
 	}
 
+	if val, ok := p.AdditionalProperties.(*ParameterSchema); ok && p.Type == "object" {
+		schema["additionalProperties"] = schemaToMap(val)
+	}
+
 	return schema
+}
+
+// schemaToMap converts a map to the type ParameterSchema
+func mapToSchema(m map[string]any) (*ParameterSchema, error) {
+	jsonBytes, err := json.Marshal(m)
+	if err != nil {
+		return nil, fmt.Errorf("internal error processing schema")
+	}
+
+	var tempSchema ParameterSchema
+	if err := json.Unmarshal(jsonBytes, &tempSchema); err != nil {
+		// The map's structure is invalid.
+		return nil, fmt.Errorf(
+			"additionalProperties map is not a valid schema: %w",
+			err,
+		)
+	}
+
+	return &tempSchema, nil
 }

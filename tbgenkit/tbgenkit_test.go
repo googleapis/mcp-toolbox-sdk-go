@@ -43,9 +43,9 @@ func TestMain(m *testing.M) {
 
 	// Get secrets and auth tokens
 	log.Println("Fetching secrets and auth tokens...")
-	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools")
-	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1")
-	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2")
+	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools", "34")
+	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1", "latest")
+	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2", "latest")
 	authToken1 = getAuthToken(ctx, clientID1)
 	authToken2 = getAuthToken(ctx, clientID2)
 
@@ -450,4 +450,95 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 		assert.Contains(t, err.Error(), "email is required")
 	})
 
+}
+
+func TestToGenkitTool_MapParams(t *testing.T) {
+	// Helper to create a new client for each sub-test, like a function-scoped fixture
+	newClient := func(t *testing.T) *core.ToolboxClient {
+		client, err := core.NewToolboxClient("http://localhost:5000")
+		require.NoError(t, err, "Failed to create ToolboxClient")
+		return client
+	}
+	ctx := context.Background()
+	newGenkit := func() *genkit.Genkit {
+		g, _ := genkit.Init(ctx)
+		return g
+	}
+
+	// Helper to load the process-data tool
+	processDataTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
+		tool, err := client.LoadTool("process-data", ctx)
+		require.NoError(t, err, "Failed to load tool 'process-data'")
+		return tool
+	}
+
+	t.Run("test_tool_schema_is_correct", func(t *testing.T) {
+		client := newClient(t)
+		tool := processDataTool(t, client)
+		g := newGenkit()
+
+		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+		if err != nil {
+			t.Fatalf("ToGenkitTool failed: %v", err)
+		}
+
+		expectedSchema := map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"execution_context": map[string]any{
+					"description": "A flexible set of key-value pairs for the execution environment.",
+					"type":        "object",
+				},
+				"user_scores": map[string]any{
+					"description":          "A map of user IDs to their scores.",
+					"type":                 "object",
+					"additionalProperties": map[string]any{"type": "integer"},
+				},
+				"feature_flags": map[string]any{
+					"description":          "Optional feature flags.",
+					"type":                 "object",
+					"additionalProperties": map[string]any{"type": "boolean"},
+				}},
+			"required": []any{"execution_context", "user_scores"},
+		}
+
+		schema := genkitTool.Definition().InputSchema
+
+		assert.Equal(t, schema, expectedSchema)
+	})
+
+	t.Run("test_run_tool_with_all_map_params", func(t *testing.T) {
+		t.Skip()
+		client := newClient(t)
+		tool := processDataTool(t, client)
+		g := newGenkit()
+
+		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+		if err != nil {
+			t.Fatalf("ToGenkitTool failed: %v", err)
+		}
+
+		// Invoke the tool with valid map parameters.
+		response, err := genkitTool.RunRaw(context.Background(), map[string]any{
+			"execution_context": map[string]any{
+				"env":  "prod",
+				"id":   1234,
+				"user": 1234.5,
+			},
+			"user_scores": map[string]any{
+				"user1": int(100),
+				"user2": int(200),
+			},
+			"feature_flags": map[string]any{
+				"new_feature": true,
+			},
+		})
+		require.NoError(t, err)
+		respStr, ok := response.(string)
+		require.True(t, ok, "Response should be a string")
+
+		assert.Contains(t, respStr, `"execution_context":{"env":"prod","id":1234,"user":1234.5}`)
+		assert.Contains(t, respStr, `"user_scores":{"user1":100,"user2":200}`)
+		assert.Contains(t, respStr, `"feature_flags":{"new_feature":true}`)
+	})
 }

@@ -389,3 +389,92 @@ func TestSchemaToMap(t *testing.T) {
 		})
 	}
 }
+
+func TestMapToSchema(t *testing.T) {
+	testCases := []struct {
+		name           string
+		input          map[string]any
+		expectedSchema *ParameterSchema
+		expectErr      bool
+	}{
+		{
+			name: "Success - Simple valid map",
+			input: map[string]any{
+				"name":        "location",
+				"type":        "string",
+				"description": "The city name.",
+				"required":    true,
+			},
+			expectedSchema: &ParameterSchema{
+				Name:        "location",
+				Type:        "string",
+				Description: "The city name.",
+				Required:    true,
+			},
+			expectErr: false,
+		},
+		{
+			name: "Success - Map with extra fields",
+			input: map[string]any{
+				"name":        "query",
+				"type":        "string",
+				"extra_field": "should be ignored",
+			},
+			expectedSchema: &ParameterSchema{
+				Name: "query",
+				Type: "string",
+			},
+			expectErr: false,
+		},
+		{
+			name:           "Success - Empty map",
+			input:          map[string]any{},
+			expectedSchema: &ParameterSchema{},
+			expectErr:      false,
+		},
+		{
+			name:           "Success - Nil map",
+			input:          nil,
+			expectedSchema: &ParameterSchema{},
+			expectErr:      false,
+		},
+		{
+			name: "Failure - Invalid data type for field",
+			input: map[string]any{
+				"name":     "toggle",
+				"type":     "boolean",
+				"required": "yes",
+			},
+			expectedSchema: nil,
+			expectErr:      true,
+		},
+		{
+			name: "Failure - Unmarshallable map value",
+			input: map[string]any{
+				"name": "bad_map",
+				"type": make(chan int),
+			},
+			expectedSchema: nil,
+			expectErr:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actualSchema, err := mapToSchema(tc.input)
+
+			if tc.expectErr {
+				if err == nil {
+					t.Errorf("expected an error, but got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("did not expect an error, but got: %v", err)
+				}
+				if !reflect.DeepEqual(actualSchema, tc.expectedSchema) {
+					t.Errorf("expected schema:\n%+v\nbut got:\n%+v", tc.expectedSchema, actualSchema)
+				}
+			}
+		})
+	}
+}

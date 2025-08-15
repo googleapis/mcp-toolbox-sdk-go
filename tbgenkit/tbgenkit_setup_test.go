@@ -41,7 +41,7 @@ func getEnvVar(key string) string {
 	return value
 }
 
-func accessSecretVersion(ctx context.Context, projectID, secretID string) string {
+func accessSecretVersion(ctx context.Context, projectID, secretID string, version string) string {
 	client, err := secretmanager.NewClient(ctx)
 	if err != nil {
 		log.Fatalf("Failed to create secretmanager client: %v", err)
@@ -49,7 +49,7 @@ func accessSecretVersion(ctx context.Context, projectID, secretID string) string
 	defer client.Close()
 
 	req := &secretmanagerpb.AccessSecretVersionRequest{
-		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/latest", projectID, secretID),
+		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/%s", projectID, secretID, version),
 	}
 
 	result, err := client.AccessSecretVersion(ctx, req)

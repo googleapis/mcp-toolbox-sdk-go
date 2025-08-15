@@ -21,12 +21,13 @@ import (
 
 // Schema for a tool parameter.
 type ParameterSchema struct {
-	Name        string           `json:"name"`
-	Type        string           `json:"type"`
-	Required    bool             `json:"required,omitempty"`
-	Description string           `json:"description"`
-	AuthSources []string         `json:"authSources,omitempty"`
-	Items       *ParameterSchema `json:"items,omitempty"`
+	Name                 string           `json:"name"`
+	Type                 string           `json:"type"`
+	Required             bool             `json:"required,omitempty"`
+	Description          string           `json:"description"`
+	AuthSources          []string         `json:"authSources,omitempty"`
+	Items                *ParameterSchema `json:"items,omitempty"`
+	AdditionalProperties any              `json:"AdditionalProperties,omitempty"`
 }
 
 // validateType is a helper for manual type checking.
@@ -64,9 +65,6 @@ func (p *ParameterSchema) validateType(value any) error {
 		if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
 			return fmt.Errorf("parameter '%s' expects an array/slice, but got %T", p.Name, value)
 		}
-		if p.Items == nil {
-			return fmt.Errorf("parameter '%s' is an array but is missing item type definition", p.Name)
-		}
 		for i := range v.Len() {
 			item := v.Index(i).Interface()
 
@@ -74,9 +72,82 @@ func (p *ParameterSchema) validateType(value any) error {
 				return fmt.Errorf("error in array '%s' at index %d: %w", p.Name, i, err)
 			}
 		}
+	case "object":
+		// First, check that the value is a map with string keys.
+		valMap, ok := value.(map[string]any)
+		if !ok {
+			return fmt.Errorf("parameter '%s' expects an map, but got %T", p.Name, value)
+		}
+
+		switch ap := p.AdditionalProperties.(type) {
+		// No validation of values
+		case bool:
+
+		// Validate type for each value in map
+		case *ParameterSchema:
+			for key, val := range valMap {
+				if err := ap.validateType(val); err != nil {
+					return fmt.Errorf("error in object '%s' for key '%s': %w", p.Name, key, err)
+				}
+			}
+
+		default:
+			// This is a schema / manifest error.
+			return fmt.Errorf(
+				"invalid schema for parameter '%s': AdditionalProperties must be a boolean or a map[string]any, but got %T",
+				p.Name,
+				ap,
+			)
+		}
 	default:
 		return fmt.Errorf("unknown type '%s' in schema for parameter '%s'", p.Type, p.Name)
 	}
+	return nil
+}
+
+// ValidateDefinition checks if the schema itself is well-formed.
+func (p *ParameterSchema) ValidateDefinition() error {
+	if p.Type == "" {
+		return fmt.Errorf("schema validation failed for '%s': type is missing", p.Name)
+	}
+
+	switch ap := p.AdditionalProperties.(type) {
+	case bool, nil, *ParameterSchema:
+		// Valid types
+	default:
+		// Any other type is an invalid schema definition.
+		return fmt.Errorf(
+			"invalid schema for parameter '%s': AdditionalProperties must be a boolean or a schema, but got %T",
+			p.Name,
+			ap,
+		)
+	}
+
+	switch p.Type {
+	case "array":
+		if p.Items == nil {
+			return fmt.Errorf("parameter '%s' is an array but is missing item type definition", p.Name)
+		}
+		// Recursively validate the nested schema's definition.
+		if err := p.Items.ValidateDefinition(); err != nil {
+			return err
+		}
+
+	case "object":
+		if apSchema, ok := p.AdditionalProperties.(*ParameterSchema); ok {
+			if err := apSchema.ValidateDefinition(); err != nil {
+				return err
+			}
+		}
+
+	case "string", "integer", "float", "boolean":
+		// No type-specific rules for these.
+		break
+
+	default:
+		return fmt.Errorf("unknown schema type '%s' for parameter '%s'", p.Type, p.Name)
+	}
+
 	return nil
 }
 
