@@ -27,7 +27,7 @@ type ParameterSchema struct {
 	Description          string           `json:"description"`
 	AuthSources          []string         `json:"authSources,omitempty"`
 	Items                *ParameterSchema `json:"items,omitempty"`
-	AdditionalProperties any              `json:"AdditionalProperties,omitempty"`
+	AdditionalProperties any              `json:"additionalProperties,omitempty"`
 }
 
 // validateType is a helper for manual type checking.
@@ -111,18 +111,6 @@ func (p *ParameterSchema) ValidateDefinition() error {
 		return fmt.Errorf("schema validation failed for '%s': type is missing", p.Name)
 	}
 
-	switch ap := p.AdditionalProperties.(type) {
-	case bool, nil, *ParameterSchema:
-		// Valid types
-	default:
-		// Any other type is an invalid schema definition.
-		return fmt.Errorf(
-			"invalid schema for parameter '%s': AdditionalProperties must be a boolean or a schema, but got %T",
-			p.Name,
-			ap,
-		)
-	}
-
 	switch p.Type {
 	case "array":
 		if p.Items == nil {
@@ -134,10 +122,20 @@ func (p *ParameterSchema) ValidateDefinition() error {
 		}
 
 	case "object":
-		if apSchema, ok := p.AdditionalProperties.(*ParameterSchema); ok {
-			if err := apSchema.ValidateDefinition(); err != nil {
+		switch ap := p.AdditionalProperties.(type) {
+		case bool:
+			// Valid scenario
+		case *ParameterSchema:
+			if err := ap.ValidateDefinition(); err != nil {
 				return err
 			}
+		default:
+			// Any other type is an invalid schema definition.
+			return fmt.Errorf(
+				"invalid schema for parameter '%s': AdditionalProperties must be a boolean or a schema, but got %T",
+				p.Name,
+				ap,
+			)
 		}
 
 	case "string", "integer", "float", "boolean":

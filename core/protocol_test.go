@@ -498,7 +498,7 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 	})
 
 	t.Run("should fail when type is missing", func(t *testing.T) {
-		schema := &ParameterSchema{Name: "p_missing_type", Type: "object", AdditionalProperties: &ParameterSchema{Name: "", Type: ""}}
+		schema := &ParameterSchema{Name: "p_missing_type", Type: "object", AdditionalProperties: &ParameterSchema{Type: ""}}
 		err := schema.ValidateDefinition()
 		if err == nil {
 			t.Fatal("expected an error for missing type, but got nil")
@@ -509,7 +509,7 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 	})
 
 	t.Run("should fail when type is unknown", func(t *testing.T) {
-		schema := &ParameterSchema{Name: "p_unknown", Type: "object", AdditionalProperties: &ParameterSchema{Name: "", Type: "some-custom-type"}}
+		schema := &ParameterSchema{Name: "p_unknown", Type: "object", AdditionalProperties: &ParameterSchema{Type: "some-custom-type"}}
 		err := schema.ValidateDefinition()
 		if err == nil {
 			t.Fatal("expected an error for unknown type, but got nil")
