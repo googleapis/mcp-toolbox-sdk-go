@@ -17,9 +17,11 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -557,6 +559,28 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 		}
 	}))
 	defer server.Close()
+
+	// Buffer to capture logs
+	var buf bytes.Buffer
+
+	originalOutput := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(originalOutput)
+
+	t.Run("logs warning for HTTP with headers", func(t *testing.T) {
+		buf.Reset()
+
+		client, _ := NewToolboxClient(server.URL,
+			WithHTTPClient(server.Client()),
+		)
+
+		_, _ = client.LoadTool("toolA", context.Background())
+
+		expectedLog := "WARNING: Sending ID token over HTTP"
+		if !strings.Contains(buf.String(), expectedLog) {
+			t.Errorf("expected log message '%s' not found in output: '%s'", expectedLog, buf.String())
+		}
+	})
 
 	t.Run("LoadTool fails when a default option is invalid", func(t *testing.T) {
 		// Setup client with duplicate default options

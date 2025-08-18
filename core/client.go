@@ -17,6 +17,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -149,6 +150,10 @@ func (tc *ToolboxClient) newToolboxTool(
 		schema.AuthRequired,
 		finalConfig.AuthTokenSources,
 	)
+
+	if (len(remainingAuthnParams) > 0 || len(remainingAuthzTokens) > 0 || len(tc.clientHeaderSources) > 0) && !strings.HasPrefix(tc.baseURL, "https://") {
+		log.Println("WARNING: Sending ID token over HTTP. User data may be exposed. Use HTTPS for secure communication.")
+	}
 
 	// Construct the final tool object.
 	tt := &ToolboxTool{
