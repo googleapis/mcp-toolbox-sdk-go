@@ -76,7 +76,7 @@ func (p *ParameterSchema) validateType(value any) error {
 		// First, check that the value is a map with string keys.
 		valMap, ok := value.(map[string]any)
 		if !ok {
-			return fmt.Errorf("parameter '%s' expects an map, but got %T", p.Name, value)
+			return fmt.Errorf("parameter '%s' expects a map, but got %T", p.Name, value)
 		}
 
 		switch ap := p.AdditionalProperties.(type) {
