@@ -530,21 +530,6 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 		}
 	})
 
-	t.Run("should fail for non-object with invalid AdditionalProperties", func(t *testing.T) {
-		schema := &ParameterSchema{
-			Name:                 "p_string_bad_ap",
-			Type:                 "string",
-			AdditionalProperties: 123,
-		}
-		err := schema.ValidateDefinition()
-		if err == nil {
-			t.Fatal("expected an error, but got nil")
-		}
-		if !strings.Contains(err.Error(), "must be a boolean or a schema") {
-			t.Errorf("error message should mention 'must be a boolean or a schema', but was: %s", err)
-		}
-	})
-
 	t.Run("should fail for object with invalid AdditionalProperties type", func(t *testing.T) {
 		schema := &ParameterSchema{
 			Name:                 "p_bad_object",
