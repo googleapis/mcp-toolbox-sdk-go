@@ -434,6 +434,22 @@ func TestValidateTypeObject(t *testing.T) {
 		}
 	})
 
+	t.Run("Fail for array valueType maps", func(t *testing.T) {
+
+		// This schema itself is invalid so there is no valid test case
+		schema := ParameterSchema{
+			Name:                 "test_map",
+			Type:                 "object",
+			AdditionalProperties: &ParameterSchema{Type: "array"},
+		}
+
+		invalidInput := map[string]any{"feature_flag": []string{"id", "number"}}
+		// Test that invalid input fails
+		if err := schema.validateType(invalidInput); err == nil {
+			t.Errorf("Expected an error for invalid input, but got nil")
+		}
+	})
+
 	t.Run("optional and required objects", func(t *testing.T) {
 		// An optional object can be nil
 		optionalSchema := ParameterSchema{Name: "optional_metadata", Type: "object", Required: false}
