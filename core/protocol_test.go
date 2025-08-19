@@ -345,7 +345,7 @@ func TestValidateTypeObject(t *testing.T) {
 		nestedMapInput := map[string]any {
 			"key_map": map[string]any{"id": 1},
 		}
-		if err := schema.validateType(invalidInput); err == nil {
+		if err := schema.validateType(nestedMapInput); err == nil {
 			t.Errorf("Expected an error for nested map input, but got nil")
 		}
 
@@ -353,7 +353,7 @@ func TestValidateTypeObject(t *testing.T) {
 		nestedArrayInput := map[string]any {
 			"key_map": []string{"id", "number"},
 		}
-		if err := schema.validateType(invalidInput); err == nil {
+		if err := schema.validateType(nestedArrayInput); err == nil {
 			t.Errorf("Expected an error for array in map input, but got nil")
 		}
 	})
