@@ -95,7 +95,7 @@ func (p *ParameterSchema) validateType(value any) error {
 
 		// Validate type for each value in map
 		case *ParameterSchema:
-			// Raise error if the input is a  nested map / array
+			// Raise error if the input is a nested map / array
 			if ap.Type == "object" || ap.Type == "array" {
 				return fmt.Errorf("invalid schema for object '%s': values cannot be of type '%s'", p.Name, ap.Type)
 			}
