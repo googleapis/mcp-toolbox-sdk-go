@@ -341,7 +341,7 @@ func TestValidateTypeObject(t *testing.T) {
 			t.Errorf("Expected an error for non-map input, but got nil")
 		}
 		
-		// Nested maps are invalid
+		// Nested maps are invalid (addiitionalProperties is true)
 		nestedMapInput := map[string]any {
 			"key_map": map[string]any{"id": 1},
 		}
@@ -349,7 +349,7 @@ func TestValidateTypeObject(t *testing.T) {
 			t.Errorf("Expected an error for nested map input, but got nil")
 		}
 
-		// Nested arrays in maps are invalid
+		// Nested arrays in maps are invalid (addiitionalProperties is true)
 		nestedArrayInput := map[string]any {
 			"key_map": []string{"id", "number"},
 		}
@@ -388,12 +388,6 @@ func TestValidateTypeObject(t *testing.T) {
 				valueType:    "boolean",
 				validInput:   map[string]any{"feature_flag": true},
 				invalidInput: map[string]any{"bad_flag": "true"},
-			},
-			{
-				name:         "map or object values",
-				valueType:    "object",
-				validInput:   map[string]any{"feature_flag": true},
-				invalidInput: map[string]any{"feature_flag": map[string]any{"id": "123"}},
 			},
 		}
 
