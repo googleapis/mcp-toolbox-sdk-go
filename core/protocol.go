@@ -80,18 +80,8 @@ func (p *ParameterSchema) validateType(value any) error {
 		}
 
 		switch ap := p.AdditionalProperties.(type) {
+		// No validation required, allows any type
 		case bool:
-			// Raise error if the input is a nested map / array
-			for key, val := range valMap {
-				if val == nil {
-					continue
-				}
-				v := reflect.ValueOf(val)
-				kind := v.Kind()
-				if kind == reflect.Map || kind == reflect.Slice || kind == reflect.Array {
-					return fmt.Errorf("error in object '%s' for key '%s': values must be primitive types, not maps or arrays", p.Name, key)
-				}
-			}
 
 		// Validate type for each value in map
 		case *ParameterSchema:
