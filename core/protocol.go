@@ -81,7 +81,7 @@ func (p *ParameterSchema) validateType(value any) error {
 
 		switch ap := p.AdditionalProperties.(type) {
 		case bool:
-			// Raise error if the input is a  nested map / array
+			// Raise error if the input is a nested map / array
 			for key, val := range valMap {
 				if val == nil {
 					continue
