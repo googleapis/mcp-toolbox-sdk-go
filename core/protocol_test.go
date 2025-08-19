@@ -343,7 +343,7 @@ func TestValidateTypeObject(t *testing.T) {
 		
 		// Nested maps are invalid
 		nestedMapInput := map[string]any {
-			"key_map": map[string]any{"id": 1}
+			"key_map": map[string]any{"id": 1},
 		}
 		if err := schema.validateType(invalidInput); err == nil {
 			t.Errorf("Expected an error for nested map input, but got nil")
@@ -351,7 +351,7 @@ func TestValidateTypeObject(t *testing.T) {
 
 		// Nested arrays in maps are invalid
 		nestedArrayInput := map[string]any {
-			"key_map": []string{"id", "number"}
+			"key_map": []string{"id", "number"},
 		}
 		if err := schema.validateType(invalidInput); err == nil {
 			t.Errorf("Expected an error for array in map input, but got nil")
@@ -427,7 +427,7 @@ func TestValidateTypeObject(t *testing.T) {
 			AdditionalProperties: &ParameterSchema{Type: "object"},
 		}
 
-		invalidInput := map[string]any{"feature_flag": map[string]any{"id": "123"}}
+		invalidInput := map[string]any{"feature_flag": map[string]any{"id": "123"},}
 		// Test that invalid input fails
 		if err := schema.validateType(invalidInput); err == nil {
 			t.Errorf("Expected an error for invalid input, but got nil")
@@ -443,7 +443,7 @@ func TestValidateTypeObject(t *testing.T) {
 			AdditionalProperties: &ParameterSchema{Type: "array"},
 		}
 
-		invalidInput := map[string]any{"feature_flag": []string{"id", "number"}}
+		invalidInput := map[string]any{"feature_flag": []string{"id", "number"},}
 		// Test that invalid input fails
 		if err := schema.validateType(invalidInput); err == nil {
 			t.Errorf("Expected an error for invalid input, but got nil")
