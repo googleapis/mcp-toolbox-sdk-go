@@ -373,6 +373,12 @@ func TestValidateTypeObject(t *testing.T) {
 				validInput:   map[string]any{"feature_flag": true},
 				invalidInput: map[string]any{"bad_flag": "true"},
 			},
+			{
+				name:         "map or object values",
+				valueType:    "object",
+				validInput:   map[string]any{"feature_flag": true},
+				invalidInput: map[string]any{"feature_flag": map[string]any{"id": "123"}},
+			},
 		}
 
 		for _, tc := range testCases {
@@ -393,6 +399,27 @@ func TestValidateTypeObject(t *testing.T) {
 					t.Errorf("Expected an error for invalid input, but got nil")
 				}
 			})
+		}
+	})
+
+	t.Run("Fail for nested maps", func(t *testing.T) {
+
+		schema := ParameterSchema{
+			Name:                 "test_map",
+			Type:                 "object",
+			AdditionalProperties: true,
+		}
+
+		validInput := map[string]any{"feature_flag": true}
+		invalidInput := map[string]any{"feature_flag": map[string]any{"id": "123"}}
+		// Test that valid input passes
+		if err := schema.validateType(validInput); err != nil {
+			t.Errorf("Expected no error for valid input, got: %v", err)
+		}
+
+		// Test that invalid input fails
+		if err := schema.validateType(invalidInput); err == nil {
+			t.Errorf("Expected an error for invalid input, but got nil")
 		}
 	})
 
