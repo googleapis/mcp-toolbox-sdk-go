@@ -1,0 +1,8 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "go",
+      "package-name": "mcp-toolbox-sdk-go"
+    }
+  }
+}
