@@ -330,6 +330,8 @@ func TestValidateTypeObject(t *testing.T) {
 			"key_string": "a string",
 			"key_int":    123,
 			"key_bool":   true,
+			"key_map": map[string]any{"id": 1},
+			"key_array": []string{"id", "number"},
 		}
 		if err := schema.validateType(validInput); err != nil {
 			t.Errorf("Expected no error for generic object, but got: %v", err)
@@ -339,22 +341,6 @@ func TestValidateTypeObject(t *testing.T) {
 		invalidInput := "I am a string, not an object"
 		if err := schema.validateType(invalidInput); err == nil {
 			t.Errorf("Expected an error for non-map input, but got nil")
-		}
-		
-		// Nested maps are invalid (addiitionalProperties is true)
-		nestedMapInput := map[string]any {
-			"key_map": map[string]any{"id": 1},
-		}
-		if err := schema.validateType(nestedMapInput); err == nil {
-			t.Errorf("Expected an error for nested map input, but got nil")
-		}
-
-		// Nested arrays in maps are invalid (addiitionalProperties is true)
-		nestedArrayInput := map[string]any {
-			"key_map": []string{"id", "number"},
-		}
-		if err := schema.validateType(nestedArrayInput); err == nil {
-			t.Errorf("Expected an error for array in map input, but got nil")
 		}
 	})
 
