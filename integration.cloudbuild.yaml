@@ -42,6 +42,7 @@ steps:
       - "GOPATH=/gopath"
       - TOOLBOX_VERSION=$_TOOLBOX_VERSION
       - GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+      - TOOLBOX_MANIFEST_VERSION=$_TOOLBOX_MANIFEST_VERSION
     volumes:
       - name: "go"
         path: "/gopath"
@@ -55,6 +56,7 @@ steps:
       - "GOPATH=/gopath"
       - TOOLBOX_VERSION=$_TOOLBOX_VERSION
       - GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+      - TOOLBOX_MANIFEST_VERSION=$_TOOLBOX_MANIFEST_VERSION
     volumes:
       - name: "go"
         path: "/gopath"
@@ -65,3 +67,4 @@ options:
   logging: CLOUD_LOGGING_ONLY
 substitutions:
   _TOOLBOX_VERSION: '0.12.0'
+  _TOOLBOX_MANIFEST_VERSION: '34'
