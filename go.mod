@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/storage v1.56.1
 	github.com/firebase/genkit/go v0.6.2
 	github.com/invopop/jsonschema v0.13.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	golang.org/x/oauth2 v0.30.0
 	google.golang.org/api v0.248.0
 )
