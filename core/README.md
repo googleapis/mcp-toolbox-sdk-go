@@ -37,10 +37,8 @@ involving Large Language Models (LLMs).
     - [Step 1: Configure Tools in Toolbox Service](#step-1-configure-tools-in-toolbox-service)
     - [Step 2: Configure SDK Client](#step-2-configure-sdk-client)
         - [Provide an ID Token Retriever Function](#provide-an-id-token-retriever-function)
-        - [Option A: Add Default Authentication to a Client](#option-a-add-default-authentication-to-a-client)
-        - [Option B: Add Authentication to a Loaded Tool](#option-b-add-authentication-to-a-loaded-tool)
-        - [Option C: Add Authentication While Loading Tools](#option-c-add-authentication-while-loading-tools)
-
+        - [Option A: Add Authentication to a Loaded Tool](#option-a-add-authentication-to-a-loaded-tool)
+        - [Option B: Add Authentication While Loading Tools](#option-b-add-authentication-while-loading-tools)
     - [Complete Authentication Example](#complete-authentication-example)
 - [Binding Parameter Values](#binding-parameter-values)
     - [Why Bind Parameters?](#why-bind-parameters)
