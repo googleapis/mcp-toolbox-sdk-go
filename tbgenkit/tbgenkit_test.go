@@ -31,10 +31,11 @@ import (
 
 // Global variables to hold session-scoped "fixtures"
 var (
-	projectID      string = getEnvVar("GOOGLE_CLOUD_PROJECT")
-	toolboxVersion string = getEnvVar("TOOLBOX_VERSION")
-	authToken1     string
-	authToken2     string
+	projectID      	string = getEnvVar("GOOGLE_CLOUD_PROJECT")
+	toolboxVersion 	string = getEnvVar("TOOLBOX_VERSION")
+	authToken1     	string
+	authToken2     	string
+	manifestVersion string = getEnvVar("TOOLBOX_MANIFEST_VERSION")
 )
 
 func TestMain(m *testing.M) {
@@ -43,7 +44,7 @@ func TestMain(m *testing.M) {
 
 	// Get secrets and auth tokens
 	log.Println("Fetching secrets and auth tokens...")
-	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools", "34")
+	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools", manifestVersion)
 	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1", "latest")
 	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2", "latest")
 	authToken1 = getAuthToken(ctx, clientID1)
