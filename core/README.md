@@ -15,7 +15,6 @@ involving Large Language Models (LLMs).
 
 <!-- TOC ignore:true -->
 <!-- TOC -->
-
 - [Installation](#installation)
 - [Quickstart](#quickstart)
 - [Usage](#usage)
