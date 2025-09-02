@@ -25,5 +25,15 @@
       ],
       pinDigests: true,
     },
+    {
+      matchPackageNames: [
+        'github.com/firebase/genkit/go',
+      ],
+      "groupName": null,
+      matchUpdateTypes: [
+        'minor',
+        'major',
+      ],
+    },
   ],
 }
