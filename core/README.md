@@ -24,7 +24,6 @@ involving Large Language Models (LLMs).
     - [Load a single tool](#load-a-single-tool)
 - [Invoking Tools](#invoking-tools)
 - [Synchronous Usage](#synchronous-usage)
-- [Use with LangGraph](#use-with-langgraph)
 - [Client to Server Authentication](#client-to-server-authentication)
     - [When is Client-to-Server Authentication Needed?](#when-is-client-to-server-authentication-needed)
     - [How it works](#how-it-works)
