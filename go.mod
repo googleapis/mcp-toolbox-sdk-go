@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	cloud.google.com/go/secretmanager v1.15.0
 	cloud.google.com/go/storage v1.56.2
-	github.com/firebase/genkit/go v0.7.0
+	github.com/firebase/genkit/go v0.6.2
 	github.com/invopop/jsonschema v0.13.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.31.0
