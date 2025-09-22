@@ -22,7 +22,7 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go get -d ./...
+      go mod tidy
 
   - id: "run-unit-tests"
     name: golang:1
@@ -33,7 +33,7 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test -tags=unit ./core/... -v -race
+      go test -tags=unit -coverprofile=coverage-unit.out -covermode=atomic ./core/... -v -race
 
   - id: "run-core-e2e-tests"
     name: golang:1
@@ -47,7 +47,7 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test -tags=e2e ./core/... -v -race
+      go test -tags=e2e -coverprofile=coverage-e2e.out -covermode=atomic ./core/... -v -race
 
   - id: "run-tbgenkit-tests"
     name: golang:1
@@ -61,7 +61,7 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test ./tbgenkit/... -v -race
+      go test -coverprofile=coverage-tbgenkit.out -covermode=atomic ./tbgenkit/... -v -race
 
 options:
   logging: CLOUD_LOGGING_ONLY
