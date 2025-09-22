@@ -6,7 +6,6 @@ require (
 	cloud.google.com/go/secretmanager v1.15.0
 	cloud.google.com/go/storage v1.56.1
 	github.com/firebase/genkit/go v1.0.4
-	github.com/invopop/jsonschema v0.13.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.31.0
 	google.golang.org/api v0.249.0
@@ -40,6 +39,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
+	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mbleigh/raymond v0.0.0-20250414171441-6b3a58ab9e0a // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
