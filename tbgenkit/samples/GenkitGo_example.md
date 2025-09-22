@@ -30,13 +30,10 @@ func main() {
 	}
 
 	// Initialize genkit
-  g, err := genkit.Init(ctx,
+  g := genkit.Init(ctx,
 		genkit.WithPlugins(&googlegenai.GoogleAI{}),
 		genkit.WithDefaultModel("googleai/gemini-1.5-flash"),
 	)
-	if err != nil {
-		log.Fatalf("Failed to init genkit: %v\n", err)
-	}
 
 	// Convert your tool to a Genkit tool.
 	genkitTools := make([]ai.Tool, len(tools))
