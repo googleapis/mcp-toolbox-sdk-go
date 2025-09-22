@@ -31,10 +31,10 @@ import (
 
 // Global variables to hold session-scoped "fixtures"
 var (
-	projectID      	string = getEnvVar("GOOGLE_CLOUD_PROJECT")
-	toolboxVersion 	string = getEnvVar("TOOLBOX_VERSION")
-	authToken1     	string
-	authToken2     	string
+	projectID       string = getEnvVar("GOOGLE_CLOUD_PROJECT")
+	toolboxVersion  string = getEnvVar("TOOLBOX_VERSION")
+	authToken1      string
+	authToken2      string
 	manifestVersion string = getEnvVar("TOOLBOX_MANIFEST_VERSION")
 )
 
@@ -90,7 +90,7 @@ func TestToGenkitTool(t *testing.T) {
 	ctx := context.Background()
 
 	newGenkit := func() *genkit.Genkit {
-		g, _ := genkit.Init(ctx)
+		g := genkit.Init(ctx)
 		return g
 	}
 
@@ -177,7 +177,7 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 	}
 	ctx := context.Background()
 	newGenkit := func() *genkit.Genkit {
-		g, _ := genkit.Init(ctx)
+		g := genkit.Init(ctx)
 		return g
 	}
 
@@ -279,7 +279,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 	}
 	ctx := context.Background()
 	newGenkit := func() *genkit.Genkit {
-		g, _ := genkit.Init(ctx)
+		g := genkit.Init(ctx)
 		return g
 	}
 
@@ -390,7 +390,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 	}
 	ctx := context.Background()
 	newGenkit := func() *genkit.Genkit {
-		g, _ := genkit.Init(ctx)
+		g := genkit.Init(ctx)
 		return g
 	}
 
@@ -462,7 +462,7 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 	}
 	ctx := context.Background()
 	newGenkit := func() *genkit.Genkit {
-		g, _ := genkit.Init(ctx)
+		g := genkit.Init(ctx)
 		return g
 	}
 
@@ -491,14 +491,20 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 					"type":        "object",
 				},
 				"user_scores": map[string]any{
-					"description":          "A map of user IDs to their scores.",
-					"type":                 "object",
-					"additionalProperties": map[string]any{"type": "integer"},
+					"description": "A map of user IDs to their scores.",
+					"type":        "object",
+					"additionalProperties": map[string]any{
+						"description": "",
+						"type":        "integer",
+					},
 				},
 				"feature_flags": map[string]any{
-					"description":          "Optional feature flags.",
-					"type":                 "object",
-					"additionalProperties": map[string]any{"type": "boolean"},
+					"description": "Optional feature flags.",
+					"type":        "object",
+					"additionalProperties": map[string]any{
+						"description": "",
+						"type":        "boolean",
+					},
 				}},
 			"required": []any{"execution_context", "user_scores"},
 		}

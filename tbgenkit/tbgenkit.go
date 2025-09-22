@@ -21,7 +21,6 @@ import (
 	"github.com/firebase/genkit/go/ai"
 	"github.com/firebase/genkit/go/genkit"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core"
-	"github.com/invopop/jsonschema"
 )
 
 // ToGenkitTool converts a custom ToolboxTool into a genkit ai.Tool
@@ -51,8 +50,9 @@ func ToGenkitTool(tool *core.ToolboxTool, g *genkit.Genkit) (ai.Tool, error) {
 		return nil, fmt.Errorf("error fetching input schema for tool '%s': %w", tool.Name(), err)
 	}
 
-	// Unmarshal the JSON schema bytes into a jsonschema.Schema object.
-	var schema *jsonschema.Schema
+	// Unmarshal the JSON schema bytes into a map.
+	var schema map[string]any
+
 	if err := json.Unmarshal(jsonBytes, &schema); err != nil {
 		return nil, fmt.Errorf("error converting input schema into json schema for tool '%s': %w", tool.Name(), err)
 	}
