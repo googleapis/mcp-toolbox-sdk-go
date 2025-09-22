@@ -491,14 +491,20 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 					"type":        "object",
 				},
 				"user_scores": map[string]any{
-					"description":          "A map of user IDs to their scores.",
-					"type":                 "object",
-					"additionalProperties": map[string]any{"type": "integer"},
+					"description": "A map of user IDs to their scores.",
+					"type":        "object",
+					"additionalProperties": map[string]any{
+						"description": "",
+						"type":        "integer",
+					},
 				},
 				"feature_flags": map[string]any{
-					"description":          "Optional feature flags.",
-					"type":                 "object",
-					"additionalProperties": map[string]any{"type": "boolean"},
+					"description": "Optional feature flags.",
+					"type":        "object",
+					"additionalProperties": map[string]any{
+						"description": "",
+						"type":        "boolean",
+					},
 				}},
 			"required": []any{"execution_context", "user_scores"},
 		}
