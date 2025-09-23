@@ -1,29 +1,57 @@
 {
-  extends: [
-    'config:recommended',
-    ':semanticCommitTypeAll(chore)',
-    ':ignoreUnstable',
-    'group:allNonMajor',
-    ':separateMajorReleases',
-    ':prConcurrentLimitNone',
-    ':prHourlyLimitNone',
-    ':preserveSemverRanges',
+  "extends": [
+    "config:recommended",
+    ":semanticCommitTypeAll(chore)",
+    ":ignoreUnstable",
+    "group:allNonMajor",
+    ":separateMajorReleases",
+    ":prConcurrentLimitNone",
+    ":prHourlyLimitNone",
+    ":preserveSemverRanges"
   ],
-  minimumReleaseAge: '3',
-  rebaseWhen: 'conflicted',
-  dependencyDashboardLabels: [
-    'type: process',
+  "minimumReleaseAge": "3",
+  "rebaseWhen": "conflicted",
+  "dependencyDashboardLabels": [
+    "type: process"
   ],
   "postUpdateOptions": [
     "gomodTidy"
   ],
-  packageRules: [
+  "packageRules": [
     {
-      groupName: 'GitHub Actions',
-      matchManagers: [
-        'github-actions',
+      "groupName": "GitHub Actions",
+      "matchManagers": [
+        "github-actions"
       ],
-      pinDigests: true,
+      "pinDigests": true
     },
+    {
+      "groupName": "Toolbox Server Version",
+      "matchPackageNames": [
+        "googleapis/genai-toolbox"
+      ],
+      "matchManagers": [
+        "regex"
+      ],
+      "branchName": "auto-update/toolbox-server-v{{newValue}}",
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ]
+    }
   ],
+  "regexManagers": [
+    {
+      "fileMatch": [
+        "integration.cloudbuild.yaml"
+      ],
+      "matchStrings": [
+        "_TOOLBOX_VERSION: ['|\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['|\"]?"
+      ],
+      "datasourceTemplate": "github-releases",
+      "depNameTemplate": "googleapis/genai-toolbox",
+      "versioningTemplate": "semver",
+      "packageNameTemplate": "googleapis/genai-toolbox"
+    }
+  ]
 }
