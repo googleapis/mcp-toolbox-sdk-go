@@ -62,32 +62,53 @@ steps:
         path: "/gopath"
     script: |
       go test -coverprofile=coverage-tbgenkit.out -covermode=atomic ./tbgenkit/... -v -race
-  
-  - id: "check-coverage-threshold"
+
+  - id: "check-individual-coverage"
     name: golang:1
     waitFor: ["run-unit-tests", "run-core-e2e-tests", "run-tbgenkit-tests"]
     script: |
-      echo "mode: set" > coverage.out
-      tail -n +2 coverage-unit.out >> coverage.out
-      tail -n +2 coverage-e2e.out >> coverage.out
-      tail -n +2 coverage-tbgenkit.out >> coverage.out
+      #!/bin/bash
+      set -e 
 
-      # Use awk to calculate total coverage and check against the threshold.
-      # awk is used here because 'bc' is not available in the golang:1 image.
-      go tool cover -func=coverage.out | awk '
-        BEGIN {
-          threshold = 90.0;
-        }
-        /total:/ {
-          coverage = $3;
-          sub(/%/, "", coverage);
-          print "Total code coverage: " $3;
-          if (coverage < threshold) {
-            print "Error: Total code coverage is " $3 ", which is below the " threshold "% threshold.";
-            exit 1;
+      check_coverage() {
+        local file=$1
+        local test_name=$2
+        local threshold=90.0
+
+        if [ ! -f "$file" ]; then
+          echo "Error: Coverage file $file not found for $test_name."
+          exit 1
+        fi
+
+        echo "Checking coverage for $test_name from $file..."
+        go tool cover -func="$file" | awk -v test_name="$test_name" -v threshold="$threshold" '
+          BEGIN {
+            found_total = 0;
           }
-        }
-      '
+          /total:/ {
+            found_total = 1;
+            coverage = $3;
+            sub(/%/, "", coverage);
+            print test_name " code coverage: " $3;
+            if (coverage < threshold) {
+              print "Error: " test_name " code coverage is " $3 ", which is below the " threshold "% threshold.";
+              exit 1;
+            }
+          }
+          END {
+            if (found_total == 0) {
+              print "Error: Could not find total coverage line in " ARGV[1] " for " test_name;
+              exit 1;
+            }
+          }
+        '
+      }
+
+      check_coverage "coverage-unit.out" "Unit Tests (core)"
+      check_coverage "coverage-e2e.out" "E2E Tests (core)"
+      check_coverage "coverage-tbgenkit.out" "TBGenKit Tests"
+
+      echo "All individual coverage checks passed."
 
 options:
   logging: CLOUD_LOGGING_ONLY
