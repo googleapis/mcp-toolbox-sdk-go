@@ -68,18 +68,26 @@ steps:
     waitFor: ["run-unit-tests", "run-core-e2e-tests", "run-tbgenkit-tests"]
     script: |
       echo "mode: set" > coverage.out
-      cat coverage-unit.out | grep -v "mode: set" >> coverage.out
-      cat coverage-e2e.out | grep -v "mode: set" >> coverage.out
-      cat coverage-tbgenkit.out | grep -v "mode: set" >> coverage.out
+      tail -n +2 coverage-unit.out >> coverage.out
+      tail -n +2 coverage-e2e.out >> coverage.out
+      tail -n +2 coverage-tbgenkit.out >> coverage.out
 
-      total_coverage=$(go tool cover -func=coverage.out | grep "total:" | awk '{print $3}')
-      echo "Total code coverage: $total_coverage"
-      
-      coverage_numeric=$(echo "$total_coverage" | sed 's/%//')
-      if (( $(echo "$coverage_numeric < 90.0" | bc -l) )); then
-        echo "Error: Total code coverage is $total_coverage, which is below the 90% threshold."
-        exit 1
-      fi
+      # Use awk to calculate total coverage and check against the threshold.
+      # awk is used here because 'bc' is not available in the golang:1 image.
+      go tool cover -func=coverage.out | awk '
+        BEGIN {
+          threshold = 90.0;
+        }
+        /total:/ {
+          coverage = $3;
+          sub(/%/, "", coverage);
+          print "Total code coverage: " $3;
+          if (coverage < threshold) {
+            print "Error: Total code coverage is " $3 ", which is below the " threshold "% threshold.";
+            exit 1;
+          }
+        }
+      '
 
 options:
   logging: CLOUD_LOGGING_ONLY
