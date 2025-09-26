@@ -20,6 +20,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,10 +32,10 @@ import (
 
 // Global variables to hold session-scoped "fixtures"
 var (
-	projectID      	string = getEnvVar("GOOGLE_CLOUD_PROJECT")
-	toolboxVersion 	string = getEnvVar("TOOLBOX_VERSION")
-	authToken1     	string
-	authToken2     	string
+	projectID       string = getEnvVar("GOOGLE_CLOUD_PROJECT")
+	toolboxVersion  string = getEnvVar("TOOLBOX_VERSION")
+	authToken1      string
+	authToken2      string
 	manifestVersion string = getEnvVar("TOOLBOX_MANIFEST_VERSION")
 )
 
@@ -180,6 +181,116 @@ func TestE2E_Basic(t *testing.T) {
 		_, err := tool.Invoke(context.Background(), map[string]any{"num_rows": 2}) // Pass int instead of string
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "parameter 'num_rows' expects a string, but got int")
+	})
+
+	t.Run("test_invalid_tool_name", func(t *testing.T) {
+		client := newClient(t)
+		_, err := client.LoadTool("non-existent-tool", context.Background())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "tool 'non-existent-tool' not found")
+	})
+
+	t.Run("test_invalid_toolset_name", func(t *testing.T) {
+		client := newClient(t)
+		_, err := client.LoadToolset("non-existent-toolset", context.Background())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "toolset 'non-existent-toolset' not found")
+	})
+}
+
+func TestE2E_Auth(t *testing.T) {
+	newClient := func(t *testing.T) *core.ToolboxClient {
+		client, err := core.NewToolboxClient("http://localhost:5000")
+		require.NoError(t, err)
+		return client
+	}
+
+	t.Run("test_invalid_auth_token", func(t *testing.T) {
+		client := newClient(t)
+		tool, err := client.LoadTool("get-row-by-id-auth", context.Background(),
+			core.WithAuthTokenSource("my-test-auth",
+				oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "invalid-token"})),
+		)
+		require.NoError(t, err)
+
+		_, err = tool.Invoke(context.Background(), map[string]any{"id": "2"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unauthorized")
+	})
+}
+
+func TestE2E_Concurrency(t *testing.T) {
+	newClient := func(t *testing.T) *core.ToolboxClient {
+		client, err := core.NewToolboxClient("http://localhost:5000")
+		require.NoError(t, err)
+		return client
+	}
+
+	getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
+		tool, err := client.LoadTool("get-n-rows", context.Background())
+		require.NoError(t, err)
+		return tool
+	}
+
+	t.Run("test_concurrent_invocations", func(t *testing.T) {
+		client := newClient(t)
+		tool := getNRowsTool(t, client)
+
+		var wg sync.WaitGroup
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				response, err := tool.Invoke(context.Background(), map[string]any{"num_rows": "2"})
+				require.NoError(t, err)
+				respStr, ok := response.(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, "row1")
+			}()
+		}
+		wg.Wait()
+	})
+}
+
+func TestE2E_MapParams(t *testing.T) {
+	newClient := func(t *testing.T) *core.ToolboxClient {
+		client, err := core.NewToolboxClient("http://localhost:5000")
+		require.NoError(t, err)
+		return client
+	}
+
+	processDataTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
+		tool, err := client.LoadTool("process-data", context.Background())
+		require.NoError(t, err)
+		return tool
+	}
+
+	t.Run("test_invalid_map_key_type", func(t *testing.T) {
+		client := newClient(t)
+		tool := processDataTool(t, client)
+
+		_, err := tool.Invoke(context.Background(), map[string]any{
+			"execution_context": map[int]any{
+				123: "value",
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid map key type")
+	})
+
+	t.Run("test_nested_map_validation", func(t *testing.T) {
+		client := newClient(t)
+		tool := processDataTool(t, client)
+
+		_, err := tool.Invoke(context.Background(), map[string]any{
+			"execution_context": map[string]any{
+				"env": map[string]any{
+					"nested": map[int]string{1: "invalid"},
+				},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid value type")
 	})
 }
 
