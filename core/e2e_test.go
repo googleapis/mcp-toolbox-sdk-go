@@ -31,10 +31,10 @@ import (
 
 // Global variables to hold session-scoped "fixtures"
 var (
-	projectID      	string = getEnvVar("GOOGLE_CLOUD_PROJECT")
-	toolboxVersion 	string = getEnvVar("TOOLBOX_VERSION")
-	authToken1     	string
-	authToken2     	string
+	projectID       string = getEnvVar("GOOGLE_CLOUD_PROJECT")
+	toolboxVersion  string = getEnvVar("TOOLBOX_VERSION")
+	authToken1      string
+	authToken2      string
 	manifestVersion string = getEnvVar("TOOLBOX_MANIFEST_VERSION")
 )
 
@@ -183,6 +183,41 @@ func TestE2E_Basic(t *testing.T) {
 	})
 }
 
+func TestE2E_LoadErrors(t *testing.T) {
+	newClient := func(t *testing.T) *core.ToolboxClient {
+		client, err := core.NewToolboxClient("http://localhost:5000")
+		require.NoError(t, err, "Failed to create ToolboxClient")
+		return client
+	}
+
+	t.Run("test_load_non_existent_tool", func(t *testing.T) {
+		client := newClient(t)
+		_, err := client.LoadTool("non-existent-tool", context.Background())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "server returned non-OK status: 404")
+	})
+
+	t.Run("test_load_non_existent_toolset", func(t *testing.T) {
+		client := newClient(t)
+		_, err := client.LoadToolset("non-existent-toolset", context.Background())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "server returned non-OK status: 404")
+	})
+
+	t.Run("test_new_client_with_nil_option", func(t *testing.T) {
+		_, err := core.NewToolboxClient("http://localhost:5000", nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "received a nil ClientOption")
+	})
+
+	t.Run("test_load_tool_with_nil_option", func(t *testing.T) {
+		client := newClient(t)
+		_, err := client.LoadTool("get-n-rows", context.Background(), nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "received a nil ToolOption")
+	})
+}
+
 func TestE2E_BindParams(t *testing.T) {
 	newClient := func(t *testing.T) *core.ToolboxClient {
 		client, err := core.NewToolboxClient("http://localhost:5000")
@@ -233,6 +268,28 @@ func TestE2E_BindParams(t *testing.T) {
 		assert.Contains(t, respStr, "row2")
 		assert.Contains(t, respStr, "row3")
 		assert.NotContains(t, respStr, "row4")
+	})
+}
+
+func TestE2E_BindParamErrors(t *testing.T) {
+	client, err := core.NewToolboxClient("http://localhost:5000")
+	require.NoError(t, err)
+	tool, err := client.LoadTool("get-n-rows", context.Background())
+	require.NoError(t, err)
+
+	t.Run("test_bind_non_existent_param", func(t *testing.T) {
+		_, err := tool.ToolFrom(core.WithBindParamString("non-existent-param", "3"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unable to bind parameter: no parameter named 'non-existent-param' on the tool")
+	})
+
+	t.Run("test_override_bound_param", func(t *testing.T) {
+		newTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "2"))
+		require.NoError(t, err)
+
+		_, err = newTool.ToolFrom(core.WithBindParamString("num_rows", "3"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot override existing bound parameter: 'num_rows'")
 	})
 }
 
@@ -471,6 +528,18 @@ func TestE2E_OptionalParams(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "null", response, "Response should be null for non-matching data")
+	})
+
+	t.Run("test_run_tool_wrong_type_for_integer", func(t *testing.T) {
+		client := newClient(t)
+		tool := searchRowsTool(t, client)
+
+		_, err := tool.Invoke(context.Background(), map[string]any{
+			"email": "twishabansal@google.com",
+			"id":    "not-an-integer",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "parameter 'id' expects an integer, but got string")
 	})
 }
 
