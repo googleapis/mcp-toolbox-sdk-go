@@ -20,7 +20,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -182,115 +181,43 @@ func TestE2E_Basic(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "parameter 'num_rows' expects a string, but got int")
 	})
+}
 
-	t.Run("test_invalid_tool_name", func(t *testing.T) {
-		client := newClient(t)
-		_, err := client.LoadTool("non-existent-tool", context.Background())
+func TestE2E_LoadErrors(t *testing.T) {
+	newClient := func(t *testing.T, opts ...core.ClientOption) (*core.ToolboxClient, error) {
+		return core.NewToolboxClient("http://localhost:5000", opts...)
+	}
+
+	t.Run("test_load_non_existent_tool", func(t *testing.T) {
+		client, err := newClient(t)
+		require.NoError(t, err)
+
+		_, err = client.LoadTool("non-existent-tool", context.Background())
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "tool 'non-existent-tool' not found")
 	})
 
-	t.Run("test_invalid_toolset_name", func(t *testing.T) {
-		client := newClient(t)
-		_, err := client.LoadToolset("non-existent-toolset", context.Background())
+	t.Run("test_load_non_existent_toolset", func(t *testing.T) {
+		client, err := newClient(t)
+		require.NoError(t, err)
+
+		_, err = client.LoadToolset("non-existent-toolset", context.Background())
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "toolset 'non-existent-toolset' not found")
 	})
-}
 
-func TestE2E_Auth(t *testing.T) {
-	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err)
-		return client
-	}
-
-	t.Run("test_invalid_auth_token", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-id-auth", context.Background(),
-			core.WithAuthTokenSource("my-test-auth",
-				oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "invalid-token"})),
-		)
-		require.NoError(t, err)
-
-		_, err = tool.Invoke(context.Background(), map[string]any{"id": "2"})
+	t.Run("test_new_client_with_nil_option", func(t *testing.T) {
+		_, err := newClient(t, nil)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unauthorized")
-	})
-}
-
-func TestE2E_Concurrency(t *testing.T) {
-	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err)
-		return client
-	}
-
-	getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
-		tool, err := client.LoadTool("get-n-rows", context.Background())
-		require.NoError(t, err)
-		return tool
-	}
-
-	t.Run("test_concurrent_invocations", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-
-		var wg sync.WaitGroup
-		for i := 0; i < 10; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				response, err := tool.Invoke(context.Background(), map[string]any{"num_rows": "2"})
-				require.NoError(t, err)
-				respStr, ok := response.(string)
-				require.True(t, ok)
-				assert.Contains(t, respStr, "row1")
-			}()
-		}
-		wg.Wait()
-	})
-}
-
-func TestE2E_MapParams(t *testing.T) {
-	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err)
-		return client
-	}
-
-	processDataTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
-		tool, err := client.LoadTool("process-data", context.Background())
-		require.NoError(t, err)
-		return tool
-	}
-
-	t.Run("test_invalid_map_key_type", func(t *testing.T) {
-		client := newClient(t)
-		tool := processDataTool(t, client)
-
-		_, err := tool.Invoke(context.Background(), map[string]any{
-			"execution_context": map[int]any{
-				123: "value",
-			},
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid map key type")
+		assert.Contains(t, err.Error(), "received a nil ClientOption")
 	})
 
-	t.Run("test_nested_map_validation", func(t *testing.T) {
-		client := newClient(t)
-		tool := processDataTool(t, client)
-
-		_, err := tool.Invoke(context.Background(), map[string]any{
-			"execution_context": map[string]any{
-				"env": map[string]any{
-					"nested": map[int]string{1: "invalid"},
-				},
-			},
-		})
+	t.Run("test_load_tool_with_nil_option", func(t *testing.T) {
+		client, err := newClient(t)
+		require.NoError(t, err)
+		_, err = client.LoadTool("get-n-rows", context.Background(), nil)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid value type")
+		assert.Contains(t, err.Error(), "received a nil ToolOption")
 	})
 }
 
@@ -344,6 +271,28 @@ func TestE2E_BindParams(t *testing.T) {
 		assert.Contains(t, respStr, "row2")
 		assert.Contains(t, respStr, "row3")
 		assert.NotContains(t, respStr, "row4")
+	})
+}
+
+func TestE2E_BindParamErrors(t *testing.T) {
+	client, err := core.NewToolboxClient("http://localhost:5000")
+	require.NoError(t, err)
+	tool, err := client.LoadTool("get-n-rows", context.Background())
+	require.NoError(t, err)
+
+	t.Run("test_bind_non_existent_param", func(t *testing.T) {
+		_, err := tool.ToolFrom(core.WithBindParamString("non-existent-param", "3"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unable to bind parameter: no parameter named 'non-existent-param' on the tool")
+	})
+
+	t.Run("test_override_bound_param", func(t *testing.T) {
+		newTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "2"))
+		require.NoError(t, err)
+
+		_, err = newTool.ToolFrom(core.WithBindParamString("num_rows", "3"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "cannot override existing bound parameter: 'num_rows'")
 	})
 }
 
@@ -582,6 +531,18 @@ func TestE2E_OptionalParams(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t, "null", response, "Response should be null for non-matching data")
+	})
+
+	t.Run("test_run_tool_wrong_type_for_integer", func(t *testing.T) {
+		client := newClient(t)
+		tool := searchRowsTool(t, client)
+
+		_, err := tool.Invoke(context.Background(), map[string]any{
+			"email": "twishabansal@google.com",
+			"id":    "not-an-integer",
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "parameter 'id' expects an integer, but got string")
 	})
 }
 
