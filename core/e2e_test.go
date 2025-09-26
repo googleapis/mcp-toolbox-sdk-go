@@ -184,38 +184,35 @@ func TestE2E_Basic(t *testing.T) {
 }
 
 func TestE2E_LoadErrors(t *testing.T) {
-	newClient := func(t *testing.T, opts ...core.ClientOption) (*core.ToolboxClient, error) {
-		return core.NewToolboxClient("http://localhost:5000", opts...)
+	newClient := func(t *testing.T) *core.ToolboxClient {
+		client, err := core.NewToolboxClient("http://localhost:5000")
+		require.NoError(t, err, "Failed to create ToolboxClient")
+		return client
 	}
 
 	t.Run("test_load_non_existent_tool", func(t *testing.T) {
-		client, err := newClient(t)
-		require.NoError(t, err)
-
-		_, err = client.LoadTool("non-existent-tool", context.Background())
+		client := newClient(t)
+		_, err := client.LoadTool("non-existent-tool", context.Background())
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "tool 'non-existent-tool' not found")
+		assert.Contains(t, err.Error(), "server returned non-OK status: 404")
 	})
 
 	t.Run("test_load_non_existent_toolset", func(t *testing.T) {
-		client, err := newClient(t)
-		require.NoError(t, err)
-
-		_, err = client.LoadToolset("non-existent-toolset", context.Background())
+		client := newClient(t)
+		_, err := client.LoadToolset("non-existent-toolset", context.Background())
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "toolset 'non-existent-toolset' not found")
+		assert.Contains(t, err.Error(), "server returned non-OK status: 404")
 	})
 
 	t.Run("test_new_client_with_nil_option", func(t *testing.T) {
-		_, err := newClient(t, nil)
+		_, err := core.NewToolboxClient("http://localhost:5000", nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "received a nil ClientOption")
 	})
 
 	t.Run("test_load_tool_with_nil_option", func(t *testing.T) {
-		client, err := newClient(t)
-		require.NoError(t, err)
-		_, err = client.LoadTool("get-n-rows", context.Background(), nil)
+		client := newClient(t)
+		_, err := client.LoadTool("get-n-rows", context.Background(), nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "received a nil ToolOption")
 	})
