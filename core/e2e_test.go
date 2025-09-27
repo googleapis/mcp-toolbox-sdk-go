@@ -18,9 +18,11 @@ package core_test
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -216,6 +218,17 @@ func TestE2E_LoadErrors(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "received a nil ToolOption")
 	})
+
+	t.Run("test_invoke_tool_with_server_error", func(t *testing.T) {
+		client := newClient(t)
+		tool, err := client.LoadTool("error-tool", context.Background())
+		require.NoError(t, err)
+
+		_, err = tool.Invoke(context.Background(), map[string]any{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "server returned unexpected status: 500")
+		assert.Contains(t, err.Error(), "internal server error text")
+	})
 }
 
 func TestE2E_BindParams(t *testing.T) {
@@ -391,6 +404,19 @@ func TestE2E_Auth(t *testing.T) {
 		_, err = tool.Invoke(context.Background(), map[string]any{})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no field named row_data in claims")
+	})
+
+	t.Run("test_run_tool_with_failing_token_source", func(t *testing.T) {
+		client := newClient(t)
+		tool, err := client.LoadTool("get-row-by-id-auth", context.Background(),
+			core.WithAuthTokenSource("my-test-auth", &failingTokenSource{}),
+		)
+		require.NoError(t, err)
+
+		_, err = tool.Invoke(context.Background(), map[string]any{"id": "2"})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to get token for service 'my-test-auth'")
+		assert.Contains(t, err.Error(), "token source failed as designed")
 	})
 }
 
@@ -650,4 +676,42 @@ func TestE2E_MapParams(t *testing.T) {
 		require.Error(t, err, "Expected an error for wrong map value type")
 		assert.Contains(t, err.Error(), "expects an integer, but got string", "Error message should indicate a validation failure")
 	})
+}
+
+func TestE2E_ContextHandling(t *testing.T) {
+	newClient := func(t *testing.T) *core.ToolboxClient {
+		client, err := core.NewToolboxClient("http://localhost:5000")
+		require.NoError(t, err, "Failed to create ToolboxClient")
+		return client
+	}
+
+	t.Run("test_load_tool_with_cancelled_context", func(t *testing.T) {
+		client := newClient(t)
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := client.LoadTool("get-n-rows", ctx)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("test_invoke_tool_with_timed_out_context", func(t *testing.T) {
+		client := newClient(t)
+		tool, err := client.LoadTool("get-n-rows", context.Background())
+		require.NoError(t, err)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		time.Sleep(1 * time.Millisecond)
+
+		_, err = tool.Invoke(ctx, map[string]any{"num_rows": "1"})
+		require.Error(t, err)
+		assert.ErrorIs(t, err, context.DeadlineExceeded)
+	})
+}
+
+type failingTokenSource struct{}
+
+func (f *failingTokenSource) Token() (*oauth2.Token, error) {
+	return nil, errors.New("token source failed as designed")
 }
