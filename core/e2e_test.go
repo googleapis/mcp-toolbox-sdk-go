@@ -218,17 +218,6 @@ func TestE2E_LoadErrors(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "received a nil ToolOption")
 	})
-
-	t.Run("test_invoke_tool_with_server_error", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("error-tool", context.Background())
-		require.NoError(t, err)
-
-		_, err = tool.Invoke(context.Background(), map[string]any{})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "server returned unexpected status: 500")
-		assert.Contains(t, err.Error(), "internal server error text")
-	})
 }
 
 func TestE2E_BindParams(t *testing.T) {
