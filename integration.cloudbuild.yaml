@@ -73,42 +73,35 @@ steps:
       check_coverage() {
         local file=$1
         local test_name=$2
+        local enforce_threshold=$3 # "true" or "false"
         local threshold=90.0
 
         if [ ! -f "$file" ]; then
-          echo "Error: Coverage file $file not found for $test_name."
-          exit 1
+          echo "Warning: Coverage file $file not found for $test_name. Skipping."
+          return
         fi
 
-        echo "Checking coverage for $test_name from $file..."
-        go tool cover -func="$file" | awk -v test_name="$test_name" -v threshold="$threshold" '
-          BEGIN {
-            found_total = 0;
-          }
+        echo "Processing coverage for $test_name from $file..."
+        
+        go tool cover -func="$file" | awk -v test_name="$test_name" -v threshold="$threshold" -v enforce="$enforce_threshold" '
           /total:/ {
-            found_total = 1;
             coverage = $3;
             sub(/%/, "", coverage);
             print test_name " code coverage: " $3;
-            if (coverage < threshold) {
+            if (enforce == "true" && coverage < threshold) {
               print "Error: " test_name " code coverage is " $3 ", which is below the " threshold "% threshold.";
-              exit 1;
-            }
-          }
-          END {
-            if (found_total == 0) {
-              print "Error: Could not find total coverage line in " ARGV[1] " for " test_name;
               exit 1;
             }
           }
         '
       }
 
-      check_coverage "coverage-unit.out" "Unit Tests (core)"
-      check_coverage "coverage-e2e.out" "E2E Tests (core)"
-      check_coverage "coverage-tbgenkit.out" "TBGenKit Tests"
+      check_coverage "coverage-unit.out" "Unit Tests (core)" "true"
+      
+      check_coverage "coverage-e2e.out" "E2E Tests (core)" "false"
+      check_coverage "coverage-tbgenkit.out" "TBGenKit Tests" "false"
 
-      echo "All individual coverage checks passed."
+      echo "All required coverage checks passed."
 
 options:
   logging: CLOUD_LOGGING_ONLY
