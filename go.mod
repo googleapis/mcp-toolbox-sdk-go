@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	cloud.google.com/go/secretmanager v1.15.0
 	cloud.google.com/go/storage v1.57.0
-	github.com/firebase/genkit/go v1.0.4
+	github.com/firebase/genkit/go v1.0.5
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.31.0
 	google.golang.org/api v0.251.0
@@ -34,7 +34,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/goccy/go-yaml v1.17.1 // indirect
-	github.com/google/dotprompt/go v0.0.0-20250611200215-bb73406b05ca // indirect
+	github.com/google/dotprompt/go v0.0.0-20250923103342-a8a91d1dff59 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
