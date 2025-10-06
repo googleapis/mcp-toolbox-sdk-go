@@ -1,57 +1,59 @@
 {
-  "extends": [
-    "config:recommended",
-    ":semanticCommitTypeAll(chore)",
-    ":ignoreUnstable",
-    "group:allNonMajor",
-    ":separateMajorReleases",
-    ":prConcurrentLimitNone",
-    ":prHourlyLimitNone",
-    ":preserveSemverRanges"
+  extends: [
+    'config:recommended',
+    ':semanticCommitTypeAll(chore)',
+    ':ignoreUnstable',
+    'group:allNonMajor',
+    ':separateMajorReleases',
+    ':prConcurrentLimitNone',
+    ':prHourlyLimitNone',
+    ':preserveSemverRanges',
   ],
-  "minimumReleaseAge": "3",
-  "rebaseWhen": "conflicted",
-  "dependencyDashboardLabels": [
-    "type: process"
+  minimumReleaseAge: '3',
+  rebaseWhen: 'conflicted',
+  dependencyDashboardLabels: [
+    'type: process',
   ],
-  "postUpdateOptions": [
-    "gomodTidy"
+  postUpdateOptions: [
+    'gomodTidy',
   ],
-  "packageRules": [
+  packageRules: [
     {
-      "groupName": "GitHub Actions",
-      "matchManagers": [
-        "github-actions"
+      groupName: 'GitHub Actions',
+      matchManagers: [
+        'github-actions',
       ],
-      "pinDigests": true
+      pinDigests: true,
     },
     {
-      "groupName": "Toolbox Server Version",
-      "matchPackageNames": [
-        "googleapis/genai-toolbox"
+      description: 'Auto-update genai-toolbox server version',
+      matchPackageNames: [
+        'googleapis/genai-toolbox',
       ],
-      "matchManagers": [
-        "regex"
+      matchManagers: [
+        'regex',
       ],
-      "branchName": "auto-update/toolbox-server-v{{newValue}}",
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ]
-    }
+      branchName: 'auto-update/toolbox-server-v{{newValue}}',
+      commitMessageTopic: 'MCP Toolbox server for integration tests',
+      groupName: false,
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+      ],
+    },
   ],
-  "regexManagers": [
+  regexManagers: [
     {
-      "fileMatch": [
-        "integration.cloudbuild.yaml"
+      fileMatch: [
+        'integration.cloudbuild.yaml',
       ],
-      "matchStrings": [
-        "_TOOLBOX_VERSION: ['|\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['|\"]?"
+      matchStrings: [
+        '_TOOLBOX_VERSION: [\'|"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)[\'|"]?',
       ],
-      "datasourceTemplate": "github-releases",
-      "depNameTemplate": "googleapis/genai-toolbox",
-      "versioningTemplate": "semver",
-      "packageNameTemplate": "googleapis/genai-toolbox"
-    }
-  ]
+      datasourceTemplate: 'github-releases',
+      depNameTemplate: 'googleapis/genai-toolbox',
+      versioningTemplate: 'semver',
+      packageNameTemplate: 'googleapis/genai-toolbox',
+    },
+  ],
 }
