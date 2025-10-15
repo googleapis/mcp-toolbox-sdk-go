@@ -573,7 +573,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 			"id":    5,
 		})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "parameter 'email' is required but received a nil value")
+		assert.Contains(t, err.Error(), "email is required")
 	})
 
 	// Corresponds to tests that check server-side logic by providing data that doesn't match
@@ -623,7 +623,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 			"id":    "not-an-integer",
 		})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "parameter 'id' expects an integer, but got string")
+		assert.Contains(t, err.Error(), "data did not match expected schema")
 	})
 
 }
@@ -768,6 +768,6 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 
 		// Assert that an error was returned.
 		require.Error(t, err, "Expected an error for wrong map value type")
-		assert.Contains(t, err.Error(), "expects an integer, but got string", "Error message should indicate a validation failure")
+		assert.Contains(t, err.Error(), "Expected: integer, given: string", "Error message should indicate a validation failure")
 	})
 }
