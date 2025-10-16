@@ -669,16 +669,14 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 					"description": "A map of user IDs to their scores.",
 					"type":        "object",
 					"additionalProperties": map[string]any{
-						"description": "",
-						"type":        "integer",
+						"type": "integer",
 					},
 				},
 				"feature_flags": map[string]any{
 					"description": "Optional feature flags.",
 					"type":        "object",
 					"additionalProperties": map[string]any{
-						"description": "",
-						"type":        "boolean",
+						"type": "boolean",
 					},
 				}},
 			"required": []any{"execution_context", "user_scores"},
@@ -690,6 +688,7 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 	})
 
 	t.Run("test_run_tool_with_all_map_params", func(t *testing.T) {
+		// Skipping this test until integer typed maps are parsed correctly within genkit
 		t.Skip()
 		client := newClient(t)
 		tool := processDataTool(t, client)
@@ -725,6 +724,8 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 	})
 
 	t.Run("test_run_tool_omitting_optional_map", func(t *testing.T) {
+		// Skipping this test until integer typed maps are parsed correctly within genkit
+		t.Skip()
 		client := newClient(t)
 		tool := processDataTool(t, client)
 		g := newGenkit()

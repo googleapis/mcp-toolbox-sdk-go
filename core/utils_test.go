@@ -373,8 +373,7 @@ func TestSchemaToMap(t *testing.T) {
 				Description: "",
 			},
 			expected: map[string]any{
-				"type":        "boolean",
-				"description": "",
+				"type": "boolean",
 			},
 		},
 	}

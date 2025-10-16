@@ -232,9 +232,17 @@ func loadManifest(ctx context.Context, url string, httpClient *http.Client,
 // schemaToMap recursively converts a ParameterSchema to a map with it's type and description.
 func schemaToMap(p *ParameterSchema) map[string]any {
 	// Basic schema with type and description
-	schema := map[string]any{
-		"type":        p.Type,
-		"description": p.Description,
+	var schema = make(map[string]any)
+
+	if p.Type == "float" {
+		// Since there is no float type in JSON Schema Standard
+		schema["type"] = "number"
+	} else {
+		schema["type"] = p.Type
+	}
+
+	if p.Description != "" {
+		schema["description"] = p.Description
 	}
 
 	// If the type is "array", recursively define what's in the array.
