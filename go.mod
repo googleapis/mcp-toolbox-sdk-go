@@ -3,7 +3,7 @@ module github.com/googleapis/mcp-toolbox-sdk-go
 go 1.24.2
 
 require (
-	cloud.google.com/go/secretmanager v1.15.1
+	cloud.google.com/go/secretmanager v1.16.0
 	cloud.google.com/go/storage v1.57.0
 	github.com/firebase/genkit/go v1.1.0
 	github.com/stretchr/testify v1.11.1
