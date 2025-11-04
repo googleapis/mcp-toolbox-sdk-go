@@ -34,30 +34,12 @@ steps:
 
       echo "--- Configuring Git authentication and Go environment ---"
 
-      if [ -z "$GITHUB_TOKEN" ]; then
-        echo "ERROR: GITHUB_TOKEN variable is not set."
-        echo "Please check your Cloud Build Trigger variables."
-        exit 1
-      else
-        # Print only the first 4 chars for security
-        echo "Token is present. (Starts with: ${GITHUB_TOKEN:0:4}...)"
-      fi
-
       git config --file /gopath/.gitconfig url."https://oauth2:$GITHUB_TOKEN@github.com/".insteadOf "https://github.com/"
 
       echo "export GOPRIVATE='github.com/dishaprakash/adk-go'" > /gopath/goconfig.sh
       echo "export GIT_CONFIG_GLOBAL=/gopath/.gitconfig" >> /gopath/goconfig.sh
 
-
       source /gopath/goconfig.sh
-
-      echo "--- goconfig.sh contents: ---"
-      cat /gopath/goconfig.sh
-      echo "--- .gitconfig contents: ---"
-      cat /gopath/.gitconfig
-
-      # 4. Run your original command
-      echo "--- Installing dependencies ---"
       go mod tidy
 
   - id: "run-unit-tests"
