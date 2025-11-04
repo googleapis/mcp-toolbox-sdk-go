@@ -61,14 +61,18 @@ jobs:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
       # Remove this step once ADK Go is public
+      - name: Check if secret is present
+        run: |
+          if [ -z "${{ secrets.MY_FORK_GITHUB_TOKEN }}" ]; then
+            echo "::error:: SECRET IS EMPTY."
+            echo "This is likely because the workflow is running from a fork or using 'pull_request_target'."
+            exit 1
+          else
+            echo "::notice:: Secret is present and loaded."
+          fi
       - name: Configure Git for private modules
         run: |
-          git config --file /gopath/.gitconfig url."https://oauth2:${{ secrets.MY_FORK_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-
-          echo "export GOPRIVATE=${{ secrets.private-adk-go-repo }}" > /gopath/goconfig.sh
-          echo "export GIT_CONFIG_GLOBAL=/gopath/.gitconfig" >> /gopath/goconfig.sh
-
-          source /gopath/goconfig.sh
+          git config --global url."https://oauth2:${{ secrets.MY_FORK_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
       - name: >
           Verify go mod tidy. If you're reading this and the check has
