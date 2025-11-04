@@ -172,10 +172,10 @@ func TestToADKTool(t *testing.T) {
 		}
 	})
 
-	t.Run("Nil Input", func(t *testing.T) {
+	t.Run("Failure - Nil Input", func(t *testing.T) {
 		_, err := toADKTool(nil)
-		if err != nil {
-			t.Errorf("toADKTool(nil) error = %v, want nil", err)
+		if err == nil {
+			t.Errorf("toADKTool(nil) expects error but got nil")
 		}
 	})
 
