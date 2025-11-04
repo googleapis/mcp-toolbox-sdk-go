@@ -69,7 +69,7 @@ func createCoreTool(t *testing.T, toolName string, schema core.ToolSchema) (*cor
 
 	return tool, server
 }
-func TesttoADKTool(t *testing.T) {
+func TestToADKTool(t *testing.T) {
 
 	t.Run("Success - Happy Path with parameters", func(t *testing.T) {
 		toolSchema := core.ToolSchema{
