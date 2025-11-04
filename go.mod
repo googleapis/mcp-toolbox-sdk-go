@@ -1,6 +1,6 @@
 module github.com/googleapis/mcp-toolbox-sdk-go
 
-go 1.24.2
+go 1.24.4
 
 require (
 	cloud.google.com/go/secretmanager v1.16.0
@@ -8,7 +8,9 @@ require (
 	github.com/firebase/genkit/go v1.1.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.32.0
+	google.golang.org/adk v0.0.0
 	google.golang.org/api v0.254.0
+	google.golang.org/genai v1.24.0
 )
 
 require (
@@ -35,10 +37,12 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/goccy/go-yaml v1.17.1 // indirect
 	github.com/google/dotprompt/go v0.0.0-20251014011017-8d056e027254 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mbleigh/raymond v0.0.0-20250414171441-6b3a58ab9e0a // indirect
@@ -72,4 +76,8 @@ require (
 	google.golang.org/grpc v1.76.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	rsc.io/omap v1.2.0 // indirect
+	rsc.io/ordered v1.1.1 // indirect
 )
+
+replace google.golang.org/adk v0.0.0 => github.com/dishaprakash/adk-go v0.0.0-20251024110350-a6cc67eee15f
