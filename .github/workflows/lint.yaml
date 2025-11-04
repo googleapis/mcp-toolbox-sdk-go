@@ -15,8 +15,8 @@
 name: lint
 on:
   pull_request:
-  pull_request_target:
-    types: [labeled]
+  # pull_request_target:
+    # types: [labeled]
 
 # Declare default permissions as read only.
 permissions: read-all
@@ -68,7 +68,7 @@ jobs:
       - name: >
           Verify go mod tidy. If you're reading this and the check has
           failed, run `goimports -w . && go mod tidy && golangci-lint run`
-        # --- ADD THIS ENV VAR ---
+        # Remove the env var once ADK Go is public
         env:
           GOPRIVATE: 'github.com/dishaprakash/adk-go'
         run: |
