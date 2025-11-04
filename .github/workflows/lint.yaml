@@ -15,8 +15,8 @@
 name: lint
 on:
   pull_request:
-  pull_request_target:
-    types: [labeled]
+  # pull_request_target:
+  #   types: [labeled]
 
 # Declare default permissions as read only.
 permissions: read-all
