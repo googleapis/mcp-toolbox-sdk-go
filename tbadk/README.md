@@ -557,7 +557,7 @@ llmagent, err := llmagent.New(llmagent.Config{
 
 ```
 
-The reason we have to type assert it before passing it to ADK Go, is because it requires requires a generic `tool.Tool` interface. You can always convert it back to `ToolboxTool` format to access the specialized  methods.
+The reason we have to type assert it before passing it to ADK Go, is because it requires a generic `tool.Tool` interface. You can always convert it back to `ToolboxTool` format to access the specialized  methods.
 
 To see how the MCP Toolbox Go SDK works with ADK Go, check out the end-to-end example in the [/samples/](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/tbadk/samples) folder.
 
