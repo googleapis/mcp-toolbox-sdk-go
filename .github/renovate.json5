@@ -9,7 +9,7 @@
     ':prHourlyLimitNone',
     ':preserveSemverRanges',
   ],
-  minimumReleaseAge: '3',
+  minimumReleaseAge: '3 days',
   rebaseWhen: 'conflicted',
   dependencyDashboardLabels: [
     'type: process',
@@ -35,7 +35,6 @@
       ],
       branchName: 'auto-update/toolbox-server-v{{newValue}}',
       commitMessageTopic: 'MCP Toolbox server for integration tests',
-      groupName: false,
       matchUpdateTypes: [
         'minor',
         'patch',
