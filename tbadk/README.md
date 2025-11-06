@@ -1,12 +1,12 @@
 ![MCP Toolbox Logo](https://raw.githubusercontent.com/googleapis/genai-toolbox/main/logo.png)
 
-# MCP Toolbox Core SDK
+# MCP Toolbox tbadk SDK
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 This SDK allows you to seamlessly integrate the functionalities of
 [Toolbox](https://github.com/googleapis/genai-toolbox) allowing you to load and
-use tools defined in the service as standard Go structs within your GenAI
+use tools defined in the service as standard Go structs within your ADK Go
 applications.
 
 This simplifies integrating external functionalities (like APIs, databases, or
@@ -16,37 +16,39 @@ involving Large Language Models (LLMs).
 <!-- TOC ignore:true -->
 <!-- TOC -->
 
-- [Installation](#installation)
-- [Quickstart](#quickstart)
-- [Usage](#usage)
-- [Loading Tools](#loading-tools)
+- [MCP Toolbox tbadk SDK](#mcp-toolbox-tbadk-sdk)
+  - [Installation](#installation)
+  - [Quickstart](#quickstart)
+  - [Usage](#usage)
+  - [Loading Tools](#loading-tools)
     - [Load a toolset](#load-a-toolset)
     - [Load a single tool](#load-a-single-tool)
-- [Invoking Tools](#invoking-tools)
-- [Synchronous Usage](#synchronous-usage)
-- [Client to Server Authentication](#client-to-server-authentication)
+  - [Invoking Tools](#invoking-tools)
+  - [Client to Server Authentication](#client-to-server-authentication)
     - [When is Client-to-Server Authentication Needed?](#when-is-client-to-server-authentication-needed)
     - [How it works](#how-it-works)
     - [Configuration](#configuration)
     - [Authenticating with Google Cloud Servers](#authenticating-with-google-cloud-servers)
     - [Step by Step Guide for Cloud Run](#step-by-step-guide-for-cloud-run)
-- [Authenticating Tools](#authenticating-tools)
+  - [Authenticating Tools](#authenticating-tools)
     - [When is Authentication Needed?](#when-is-authentication-needed)
     - [Supported Authentication Mechanisms](#supported-authentication-mechanisms)
     - [Step 1: Configure Tools in Toolbox Service](#step-1-configure-tools-in-toolbox-service)
     - [Step 2: Configure SDK Client](#step-2-configure-sdk-client)
-        - [Provide an ID Token Retriever Function](#provide-an-id-token-retriever-function)
-        - [Option A: Add Default Authentication to a Client](#option-a-add-default-authentication-to-a-client)
-        - [Option B: Add Authentication to a Loaded Tool](#option-b-add-authentication-to-a-loaded-tool)
-        - [Option C: Add Authentication While Loading Tools](#option-c-add-authentication-while-loading-tools)
-
+      - [Provide an ID Token Retriever Function](#provide-an-id-token-retriever-function)
+      - [Option A: Add Default Authentication to a Client](#option-a-add-default-authentication-to-a-client)
+      - [Option B: Add Authentication to a Loaded Tool](#option-b-add-authentication-to-a-loaded-tool)
+      - [Option C: Add Authentication While Loading Tools](#option-c-add-authentication-while-loading-tools)
     - [Complete Authentication Example](#complete-authentication-example)
-- [Binding Parameter Values](#binding-parameter-values)
+  - [Binding Parameter Values](#binding-parameter-values)
     - [Why Bind Parameters?](#why-bind-parameters)
-    - [Option A: Binding Parameters to a Loaded Tool](#option-a-binding-parameters-to-a-loaded-tool)
-    - [Option B: Binding Parameters While Loading Tools](#option-b-binding-parameters-while-loading-tools)
+      - [Option A: Add Default Bound Parameters to a Client](#option-a-add-default-bound-parameters-to-a-client)
+    - [Option B: Binding Parameters to a Loaded Tool](#option-b-binding-parameters-to-a-loaded-tool)
+    - [Option C: Binding Parameters While Loading Tools](#option-c-binding-parameters-while-loading-tools)
     - [Binding Dynamic Values](#binding-dynamic-values)
-- [Using with Orchestration Frameworks](#using-with-orchestration-frameworks)
+  - [Using with ADK Go](#using-with-adk-go)
+    - [For a single tool](#for-a-single-tool)
+    - [For a toolset](#for-a-toolset)
 - [Contributing](#contributing)
 - [License](#license)
 - [Support](#support)
@@ -74,31 +76,31 @@ running and accessible.
 package main
 
 import (
-	"context"
-	"fmt"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core"
+  "context"
+  "fmt"
+  "github.com/googleapis/mcp-toolbox-sdk-go/tbadk"
 )
 
 func quickstart() string {
-	ctx := context.Background()
-	inputs := map[string]any{"location": "London"}
-	client, err := core.NewToolboxClient("http://localhost:5000")
-	if err != nil {
-		return fmt.Sprintln("Could not start Toolbox Client", err)
-	}
-	tool, err := client.LoadTool("get_weather", ctx)
-	if err != nil {
-		return fmt.Sprintln("Could not load Toolbox Tool", err)
-	}
-	result, err := tool.Invoke(ctx, inputs)
-	if err != nil {
-		return fmt.Sprintln("Could not invoke tool", err)
-	}
-	return fmt.Sprintln(result)
+  inputs := map[string]any{"location": "London"}
+  client, err := tbadk.NewToolboxClient("http://localhost:5000")
+  if err != nil {
+    return fmt.Sprintln("Could not start Toolbox Client", err)
+  }
+  tool, err := client.LoadTool("get_weather", ctx)
+  if err != nil {
+    return fmt.Sprintln("Could not load Toolbox Tool", err)
+  }
+  // pass the tool.Context as ctx into the Run() method
+  result, err := tool.Run(ctx, inputs)
+  if err != nil {
+    return fmt.Sprintln("Could not invoke tool", err)
+  }
+  return fmt.Sprintln(result["output"])
 }
 
 func main() {
-	fmt.Println(quickstart())
+  fmt.Println(quickstart())
 }
 ```
 
@@ -108,24 +110,18 @@ Import and initialize a Toolbox client, pointing it to the URL of your running
 Toolbox service.
 
 ```go
-import "github.com/googleapis/mcp-toolbox-sdk-go/core"
+import "github.com/googleapis/mcp-toolbox-sdk-go/tbadk"
 
-client, err := core.NewToolboxClient("http://localhost:5000")
+client, err := tbadk.NewToolboxClient("http://localhost:5000")
 ```
 
 All interactions for loading and invoking tools happen through this client.
 
 > [!NOTE]
 > For advanced use cases, you can provide an external custom `http.Client`
-> during initialization (e.g., `core.NewToolboxClient(URL, core.WithHTTPClient(myClient)`). If you
+> during initialization (e.g., `tbadk.NewToolboxClient(URL, core.WithHTTPClient(myClient)`). If you
 > provide your own session, you are responsible for managing its lifecycle;
 > `ToolboxClient` *will not* close it.
-
-> [!IMPORTANT]
-> Closing the `ToolboxClient` also closes the underlying network session shared by
-> all tools loaded from that client. As a result, any tool instances you have
-> loaded will cease to function and will raise an error if you attempt to invoke
-> them after the client is closed.
 
 ## Loading Tools
 
@@ -147,6 +143,8 @@ tools, err := client.LoadToolset("", ctx)
 tools, err := client.LoadToolset("my-toolset", ctx)
 ```
 
+`LoadToolset` returns a slice of the ToolboxTool structs (`[]ToolboxTool`).
+
 
 ### Load a single tool
 
@@ -158,14 +156,15 @@ tool, err = client.LoadTool("my-tool", ctx)
 
 ## Invoking Tools
 
-Once loaded, tools behave like Go structs. You invoke them using `Invoke` method
+Once loaded, tools behave like Go structs. You invoke them using `Run` method
 by passing arguments corresponding to the parameters defined in the tool's
 configuration within the Toolbox service.
 
 ```go
 tool, err = client.LoadTool("my-tool", ctx)
 inputs := map[string]any{"location": "London"}
-result, err := tool.Invoke(ctx, inputs)
+// Pass the tool.Context as ctx to the Run() function
+result, err := tool.Run(ctx, inputs)
 ```
 
 > [!TIP]
@@ -214,16 +213,19 @@ You can configure these dynamic headers as seen below:
 
 
 ```go
-import "github.com/googleapis/mcp-toolbox-sdk-go/core"
+import (
+  "github.com/googleapis/mcp-toolbox-sdk-go/core"
+  "github.com/googleapis/mcp-toolbox-sdk-go/tbadk"
+)
 
 tokenProvider := func() string {
-	return "header3_value"
+  return "header3_value"
 }
 
 staticTokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "header2_value"})
 dynamicTokenSource := core.NewCustomTokenSource(tokenProvider)
 
-client, err := core.NewToolboxClient(
+client, err := tbadk.NewToolboxClient(
   "toolbox-url",
   core.WithClientHeaderString("header1", "header1_value"),
   core.WithClientHeaderTokenSource("header2", staticTokenSource),
@@ -239,7 +241,7 @@ For Toolbox servers hosted on Google Cloud (e.g., Cloud Run) and requiring
 
 ### Step by Step Guide for Cloud Run
 
-1. **Configure Permissions**: [Grant](https://cloud.google.com/run/docs/securing/managing-access#service-add-principals) the `roles/run.invoker` IAM role on the Cloud
+1. **Configure Permissions**: [Grant](https://cloud.google.com/run/docs/securing/managing-access#service-add-principals) the `roles/run.Runr` IAM role on the Cloud
    Run service to the principal. This could be your `user account email` or a
    `service account`.
 2. **Configure Credentials**
@@ -250,14 +252,17 @@ For Toolbox servers hosted on Google Cloud (e.g., Cloud Run) and requiring
       configured automatically, using the environment's default service account.
 3. **Connect to the Toolbox Server**
     ```go
-    import "github.com/googleapis/mcp-toolbox-sdk-go/core"
-    import "context"
+    import (
+      "github.com/googleapis/mcp-toolbox-sdk-go/core"
+      "github.com/googleapis/mcp-toolbox-sdk-go/tbadk"
+      "context"
+    )
 
     ctx := context.Background()
 
     token, err := core.GetGoogleIDToken(ctx, URL)
 
-    client, err := core.NewToolboxClient(
+    client, err := tbadk.NewToolboxClient(
       URL,
       core.WithClientHeaderString("Authorization", token),
     )
@@ -320,7 +325,7 @@ authentication flow (e.g., retrieving a stored token, initiating an OAuth flow).
 func getAuthToken() string {
   // ... Logic to retrieve ID token (e.g., from local storage, OAuth flow)
   // This example just returns a placeholder. Replace with your actual token retrieval.
-	return "YOUR_ID_TOKEN" // Placeholder
+  return "YOUR_ID_TOKEN" // Placeholder
 }
 ```
 
@@ -340,10 +345,10 @@ Every tool / toolset loaded by the client will contain the auth token.
 
 ctx := context.Background()
 
-client, err := core.NewToolboxClient("http://127.0.0.1:5000",
-	core.WithDefaultToolOptions(
-		core.WithAuthTokenString("my-auth-1", "auth-value"),
-	),
+client, err := tbadk.NewToolboxClient("http://127.0.0.1:5000",
+  core.WithDefaultToolOptions(
+    core.WithAuthTokenString("my-auth-1", "auth-value"),
+  ),
 )
 
 AuthTool, err := client.LoadTool("my-tool", ctx)
@@ -358,7 +363,7 @@ loaded. This modifies the specific tool instance.
 
 ctx := context.Background()
 
-client, err := core.NewToolboxClient("http://127.0.0.1:5000")
+client, err := tbadk.NewToolboxClient("http://127.0.0.1:5000")
 
 tool, err := client.LoadTool("my-tool", ctx)
 
@@ -400,7 +405,7 @@ import "fmt"
 func getAuthToken() string {
   // ... Logic to retrieve ID token (e.g., from local storage, OAuth flow)
   // This example just returns a placeholder. Replace with your actual token retrieval.
-	return "YOUR_ID_TOKEN" // Placeholder
+  return "YOUR_ID_TOKEN" // Placeholder
 }
 
 func main() {
@@ -409,11 +414,11 @@ func main() {
 
   dynamicTokenSource := core.NewCustomTokenSource(getAuthToken)
 
-  client, err := core.NewToolboxClient("http://127.0.0.1:5000")
+  client, err := tbadk.NewToolboxClient("http://127.0.0.1:5000")
   tool, err := client.LoadTool("my-tool", ctx)
   AuthTool, err := tool.ToolFrom(core.WithAuthTokenSource("my_auth", dynamicTokenSource))
 
-  result, err := AuthTool.Invoke(ctx, inputs)
+  result, err := AuthTool.Run(ctx, inputs)
 
   fmt.Println(result)
 }
@@ -447,17 +452,17 @@ fixed and will not be requested or modified by the LLM during tool use.
 
 #### Option A: Add Default Bound Parameters to a Client
 
-You can add default tool level bound parameters to a client. Every tool / toolset  
+You can add default tool level bound parameters to a client. Every tool / toolset
 loaded by the client will have the bound parameter.
 
 ```go
 
 ctx := context.Background()
 
-client, err := core.NewToolboxClient("http://127.0.0.1:5000",
-	core.WithDefaultToolOptions(
-		core.WithBindParamString("param1", "value"),
-	),
+client, err := tbadk.NewToolboxClient("http://127.0.0.1:5000",
+  core.WithDefaultToolOptions(
+    core.WithBindParamString("param1", "value"),
+  ),
 )
 
 boundTool, err := client.LoadTool("my-tool", ctx)
@@ -469,7 +474,7 @@ Bind values to a tool object *after* it has been loaded. This modifies the
 specific tool instance.
 
 ```go
-client, err := core.NewToolboxClient("http://127.0.0.1:5000")
+client, err := tbadk.NewToolboxClient("http://127.0.0.1:5000")
 
 tool, err := client.LoadTool("my-tool", ctx)
 
@@ -511,12 +516,50 @@ dynamicBoundTool, err := tool.ToolFrom(core.WithBindParamStringFunc("param", get
 > [!IMPORTANT]
 > You don't need to modify tool configurations to bind parameter values.
 
+## Using with ADK Go
 
-# Using with Orchestration Frameworks
+After altering the tool to your needs, type-assert the ToolboxTool and pass it to the LLM agent.
 
-To see how the MCP Toolbox Go SDK works with orchestration frameworks, check out the end-to-end examples in the [/samples/](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/core/samples) folder.
+### For a single tool
 
-Use the [tbgenkit package](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/tbgenkit) to convert Toolbox Tools into Genkit compatible tools.
+```go
+
+toolboxtool, err = client.LoadTool("my-tool", ctx)
+
+// <Bind parameters & add authentication here>
+
+llmagent, err := llmagent.New(llmagent.Config{
+  Name:        "assistant",
+  Model:       model,
+  Description: "Agent to answer questions.",
+  Tools:       []tool.Tool{&toolboxtool},
+})
+```
+
+### For a toolset
+
+```go
+toolboxtools, err := client.LoadToolset("", ctx)
+
+// <Bind parameters & add authentication here>
+
+toolsList := make([]tool.Tool, len(toolboxtools))
+	for i := range toolboxtools {
+		toolsList[i] = &toolboxtools[i]
+	}
+
+llmagent, err := llmagent.New(llmagent.Config{
+  Name:        "assistant",
+  Model:       model,
+  Description: "Agent to answer questions.",
+  Tools:       toolsList,
+})
+
+```
+
+The reason we have to type assert it before passing it to ADK Go, is because it requires a generic `tool.Tool` interface. You can always convert it back to `ToolboxTool` format to access the specialized  methods.
+
+To see how the MCP Toolbox Go SDK works with ADK Go, check out the end-to-end example in the [/samples/](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/tbadk/samples) folder.
 
 # Contributing
 
