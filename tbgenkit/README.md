@@ -31,7 +31,7 @@ involving Large Language Models (LLMs).
 ```bash
 go get github.com/googleapis/mcp-toolbox-sdk-go
 ```
-This SDK is supported on Go version 1.24.2 and higher.
+This SDK is supported on Go version 1.24.4 and higher.
 
 ## Quickstart
 
@@ -57,7 +57,7 @@ For end-to-end example on how to use Toolbox with Genkit Go, check out the [/sam
 
 # Contributing
 
-Contributions are welcome! Please refer to the [DEVELOPER.md](./DEVELOPER.md)
+Contributions are welcome! Please refer to the [DEVELOPER.md](/DEVELOPER.md)
 file for guidelines on how to set up a development environment and run tests.
 
 # License
