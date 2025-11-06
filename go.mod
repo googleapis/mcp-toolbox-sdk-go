@@ -78,5 +78,3 @@ require (
 	rsc.io/omap v1.2.0 // indirect
 	rsc.io/ordered v1.1.1 // indirect
 )
-
-replace google.golang.org/adk v0.0.0 => github.com/dishaprakash/adk-go v0.0.0-20251024110350-a6cc67eee15f
