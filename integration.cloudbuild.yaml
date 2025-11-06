@@ -12,11 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-availableSecrets:
-  secretManager:
-  - versionName: projects/$PROJECT_ID/secrets/MY_FORK_GITHUB_TOKEN/versions/latest
-    env: 'GITHUB_TOKEN'
-
 steps:
   - id: "install-dependencies"
     name: golang:1.24.4
@@ -26,20 +21,7 @@ steps:
     volumes:
       - name: "go"
         path: "/gopath"
-    secretEnv:
-      ["GITHUB_TOKEN"]
     script: |
-      #!/bin/bash
-      set -e
-
-      echo "--- Configuring Git authentication and Go environment ---"
-
-      git config --file /gopath/.gitconfig url."https://oauth2:$GITHUB_TOKEN@github.com/".insteadOf "https://github.com/"
-
-      echo "export GOPRIVATE='github.com/dishaprakash/adk-go'" > /gopath/goconfig.sh
-      echo "export GIT_CONFIG_GLOBAL=/gopath/.gitconfig" >> /gopath/goconfig.sh
-
-      source /gopath/goconfig.sh
       go mod tidy
 
   - id: "run-unit-tests"
