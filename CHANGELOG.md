@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.3.0...v0.4.0) (2025-11-06)
+
+
+### Features
+
+* **renovate:** Add renovate configuration for auto-updating toolbox version in build file of Go SDK ([#83](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/83)) ([34212d8](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/34212d899758461b6973a624a9a4446e5f6a7e83))
+* **tbadk:** Add E2E integration tests for tbadk package ([#96](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/96)) ([de7bbfe](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/de7bbfe360ffb29a3eb028a152d372d885498f9c))
+* **tbadk:** Add tbadk ToolboxClient ([#95](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/95)) ([89c98a9](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/89c98a948e8f2becdaa0b434d7f5c465b9793511))
+* **tbadk:** Add tbadk ToolboxTool ([#94](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/94)) ([a34e995](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/a34e995054dec7fa65527e928fc857fda57efd77))
+
+
+### Bug Fixes
+
+* **renovate:** Fix config validation error ([#100](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/100)) ([6447ea6](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/6447ea67f45078b59c060a49a1db1bb044248bd0))
+
 ## [0.3.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.2.0...v0.3.0) (2025-08-20)
 
 
