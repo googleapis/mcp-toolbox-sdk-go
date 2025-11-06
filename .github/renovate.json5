@@ -14,8 +14,8 @@
   dependencyDashboardLabels: [
     'type: process',
   ],
-  "postUpdateOptions": [
-    "gomodTidy"
+  postUpdateOptions: [
+    'gomodTidy',
   ],
   packageRules: [
     {
@@ -24,6 +24,35 @@
         'github-actions',
       ],
       pinDigests: true,
+    },
+    {
+      description: 'Auto-update genai-toolbox server version',
+      matchPackageNames: [
+        'googleapis/genai-toolbox',
+      ],
+      matchManagers: [
+        'regex',
+      ],
+      branchName: 'auto-update/toolbox-server-v{{newValue}}',
+      commitMessageTopic: 'MCP Toolbox server for integration tests',
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+      ],
+    },
+  ],
+  regexManagers: [
+    {
+      fileMatch: [
+        'integration.cloudbuild.yaml',
+      ],
+      matchStrings: [
+        '_TOOLBOX_VERSION: [\'|"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)[\'|"]?',
+      ],
+      datasourceTemplate: 'github-releases',
+      depNameTemplate: 'googleapis/genai-toolbox',
+      versioningTemplate: 'semver',
+      packageNameTemplate: 'googleapis/genai-toolbox',
     },
   ],
 }
