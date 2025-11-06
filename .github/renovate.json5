@@ -9,7 +9,7 @@
     ':prHourlyLimitNone',
     ':preserveSemverRanges',
   ],
-  minimumReleaseAge: '3 days',
+  minimumReleaseAge: '3',
   rebaseWhen: 'conflicted',
   dependencyDashboardLabels: [
     'type: process',
