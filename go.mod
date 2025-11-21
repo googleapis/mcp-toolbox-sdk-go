@@ -8,7 +8,7 @@ require (
 	github.com/firebase/genkit/go v1.2.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.33.0
-	google.golang.org/adk v0.1.0
+	google.golang.org/adk v0.2.0
 	google.golang.org/api v0.256.0
 	google.golang.org/genai v1.36.0
 )
