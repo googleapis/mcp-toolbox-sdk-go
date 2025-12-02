@@ -11,6 +11,7 @@
   ],
   minimumReleaseAge: '3',
   rebaseWhen: 'conflicted',
+  configMigration: true,
   dependencyDashboardLabels: [
     'type: process',
   ],
@@ -33,7 +34,6 @@
       matchManagers: [
         'regex',
       ],
-      branchName: 'auto-update/toolbox-server-v{{newValue}}',
       commitMessageTopic: 'MCP Toolbox server for integration tests',
       matchUpdateTypes: [
         'minor',
