@@ -1,3 +1,5 @@
+//go:build unit
+
 // Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,11 +34,15 @@ import (
 )
 
 const (
+	testBaseURL  = "http://fake-toolbox-server.com"
 	testToolName = "test_tool"
 )
 
 // makeTokenSources is a helper to create the auth map required by the interface.
 func makeTokenSources(headers map[string]string) map[string]oauth2.TokenSource {
+	if headers == nil {
+		return nil
+	}
 	res := make(map[string]oauth2.TokenSource)
 	for k, v := range headers {
 		res[k] = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: v})
@@ -45,10 +51,9 @@ func makeTokenSources(headers map[string]string) map[string]oauth2.TokenSource {
 }
 
 func TestBaseURL(t *testing.T) {
-	baseURL := "http://fake-toolbox-server.com"
-	tr := toolboxtransport.New(baseURL, http.DefaultClient)
-	if tr.BaseURL() != baseURL {
-		t.Errorf("expected BaseURL %q, got %q", baseURL, tr.BaseURL())
+	tr := toolboxtransport.New(testBaseURL, http.DefaultClient)
+	if tr.BaseURL() != testBaseURL {
+		t.Errorf("expected BaseURL %q, got %q", testBaseURL, tr.BaseURL())
 	}
 }
 
@@ -77,7 +82,7 @@ func TestGetTool_Success(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(mockManifest)
+		_ = json.NewEncoder(w).Encode(mockManifest)
 	}))
 	defer server.Close()
 
@@ -102,7 +107,7 @@ func TestGetTool_Success(t *testing.T) {
 func TestGetTool_Failure(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Server Error"))
+		_, _ = w.Write([]byte("Internal Server Error"))
 	}))
 	defer server.Close()
 
@@ -112,7 +117,6 @@ func TestGetTool_Failure(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	// The Go implementation wraps the body in the error message
 	if !strings.Contains(err.Error(), "500") || !strings.Contains(err.Error(), "Internal Server Error") {
 		t.Errorf("expected error message to contain 500 and Internal Server Error, got: %v", err)
 	}
@@ -136,7 +140,7 @@ func TestListTools_Success(t *testing.T) {
 				if r.URL.Path != tc.expectedPath {
 					t.Errorf("expected path %q, got %q", tc.expectedPath, r.URL.Path)
 				}
-				json.NewEncoder(w).Encode(mockManifest)
+				_ = json.NewEncoder(w).Encode(mockManifest)
 			}))
 			defer server.Close()
 
@@ -164,15 +168,13 @@ func TestInvokeTool_Success(t *testing.T) {
 		}
 		// Verify Body
 		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
+		_ = json.NewDecoder(r.Body).Decode(&body)
 		if body["param1"] != "value1" {
 			t.Errorf("unexpected body param1: %v", body["param1"])
 		}
 
-		// Response
 		w.Header().Set("Content-Type", "application/json")
-		// The Toolbox Server wraps success in {"result": ...}
-		w.Write([]byte(`{"result": "success"}`))
+		_, _ = w.Write([]byte("success"))
 	}))
 	defer server.Close()
 
@@ -185,8 +187,6 @@ func TestInvokeTool_Success(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// The HTTP Transport returns the raw bytes of the 'result' field.
-	// json.RawMessage("success") is effectively []byte(`"success"`)
 	expected := "success"
 
 	if result != expected {
@@ -197,7 +197,7 @@ func TestInvokeTool_Success(t *testing.T) {
 func TestInvokeTool_Failure(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error": "Invalid arguments"}`))
+		_, _ = w.Write([]byte(`{"error": "Invalid arguments"}`))
 	}))
 	defer server.Close()
 
@@ -212,8 +212,6 @@ func TestInvokeTool_Failure(t *testing.T) {
 	}
 }
 
-// mockTransport allows us to intercept requests without a real network connection,
-// useful for testing logic that depends on the URL scheme (http vs https).
 type mockTransport struct {
 	RoundTripFunc func(req *http.Request) (*http.Response, error)
 }
@@ -221,6 +219,7 @@ type mockTransport struct {
 func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return m.RoundTripFunc(req)
 }
+
 func TestInvokeTool_HTTPWarning(t *testing.T) {
 	// Capture logs to verify the warning
 	var buf bytes.Buffer
@@ -231,19 +230,21 @@ func TestInvokeTool_HTTPWarning(t *testing.T) {
 	dummyResponse := func(req *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: 200,
-			// Return valid JSON result envelope so unmarshal doesn't error out early
-			Body:   io.NopCloser(bytes.NewBufferString(`{"result": "ok"}`)),
-			Header: make(http.Header),
+			Body:       io.NopCloser(bytes.NewBufferString("ok")),
+			Header:     make(http.Header),
 		}, nil
 	}
 
 	testCases := []struct {
 		name       string
 		baseURL    string
+		headers    map[string]string
 		shouldWarn bool
 	}{
-		{"HTTP URL", "http://insecure.com", true},
-		{"HTTPS URL", "https://secure.com", false},
+		{"HTTP with Auth", "http://insecure.com", map[string]string{"Authorization": "Bearer token"}, true},
+		{"HTTPS with Auth", "https://secure.com", map[string]string{"Authorization": "Bearer token"}, false},
+		{"HTTP Empty Auth", "http://insecure.com", map[string]string{}, false},
+		{"HTTP Nil Auth", "http://insecure.com", nil, false},
 	}
 
 	for _, tc := range testCases {
@@ -256,20 +257,19 @@ func TestInvokeTool_HTTPWarning(t *testing.T) {
 
 			tr := toolboxtransport.New(tc.baseURL, client)
 
-			payload := map[string]any{"foo": "bar"}
-			headers := makeTokenSources(map[string]string{"Authorization": "Bearer token"})
+			payload := map[string]any{"param": "val"}
+			tokenSources := makeTokenSources(tc.headers)
 
-			// Execute
-			_, _ = tr.InvokeTool(context.Background(), "test_tool", payload, headers)
+			_, _ = tr.InvokeTool(context.Background(), testToolName, payload, tokenSources)
 
 			logOutput := buf.String()
 			hasWarning := strings.Contains(logOutput, "Sending ID token over HTTP")
 
 			if tc.shouldWarn && !hasWarning {
-				t.Errorf("expected warning for URL %q, but got none", tc.baseURL)
+				t.Errorf("expected warning for %s, but got none", tc.name)
 			}
 			if !tc.shouldWarn && hasWarning {
-				t.Errorf("unexpected warning for URL %q", tc.baseURL)
+				t.Errorf("unexpected warning for %s", tc.name)
 			}
 		})
 	}

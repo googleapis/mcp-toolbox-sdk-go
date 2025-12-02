@@ -1,3 +1,17 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package toolboxtransport
 
 import (
@@ -35,6 +49,18 @@ func (t *ToolboxTransport) ListTools(ctx context.Context, toolsetName string, to
 	return t.fetchManifest(ctx, url, tokenSources)
 }
 
+// loadManifest is an internal helper for fetching manifests from the Toolbox server.
+// Inputs:
+//   - ctx: The context to control the lifecycle of the HTTP request, including
+//     cancellation.
+//   - url: The specific URL from which to fetch the manifest.
+//   - tokenSources: A map of token sources to be resolved and applied as
+//     headers to the request.
+//
+// Returns:
+//
+//	A pointer to the successfully parsed ManifestSchema and a nil error, or a
+//	nil ManifestSchema and a descriptive error if any part of the process fails.
 func (t *ToolboxTransport) fetchManifest(ctx context.Context, url string, tokenSources map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
 	// Create a new GET request with a context for cancellation.
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
@@ -135,6 +161,18 @@ func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payl
 	return string(responseBody), nil
 }
 
+// resolveAndApplyHeaders iterates through a map of token sources, retrieves a
+// token from each, and applies it as a header to the given HTTP request.
+//
+// Inputs:
+//   - req: The HTTP request to which the headers will be added. This request is
+//     modified in place.
+//   - tokenSources: A map where the key is the HTTP header name and the
+//     value is the TokenSource that provides the header's value.
+//
+// Returns:
+//
+//	An error if retrieving a token from any source fails, otherwise nil.
 func resolveAndApplyHeaders(req *http.Request, tokenSources map[string]oauth2.TokenSource) error {
 	for key, source := range tokenSources {
 		token, err := source.Token()
