@@ -1,5 +1,3 @@
-//go:build unit
-
 // Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,6 +36,13 @@ const (
 	testBaseURL  = "http://fake-toolbox-server.com"
 	testToolName = "test_tool"
 )
+
+// failingTokenSource is a token source that always returns an error, for testing failure paths.
+type failingTokenSource struct{}
+
+func (f *failingTokenSource) Token() (*oauth2.Token, error) {
+	return nil, errors.New("token source failed as designed")
+}
 
 // makeTokenSources is a helper to create the auth map required by the interface.
 func makeTokenSources(headers map[string]string) map[string]oauth2.TokenSource {
@@ -379,6 +384,209 @@ func TestLoadManifest(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "unable to parse manifest") {
 			t.Errorf("expected parse error, got: %v", err)
+		}
+	})
+}
+
+func TestLoadManifest_EdgeCases(t *testing.T) {
+	t.Run("Unreadable JSON Response", func(t *testing.T) {
+		// Server returns 200 OK but invalid JSON body
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{broken-manifest`))
+		}))
+		defer server.Close()
+
+		tr := toolboxtransport.New(server.URL, server.Client())
+		_, err := tr.GetTool(context.Background(), testToolName, nil)
+
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		// Matches: "unable to parse manifest correctly"
+		if !strings.Contains(err.Error(), "unable to parse manifest") {
+			t.Errorf("expected parse error, got: %v", err)
+		}
+	})
+
+	t.Run("Network Error (Server Down)", func(t *testing.T) {
+		// Start a server to get a valid URL, then immediately close it
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		url := server.URL
+		server.Close() // Kill the server
+
+		tr := toolboxtransport.New(url, server.Client())
+		_, err := tr.GetTool(context.Background(), testToolName, nil)
+
+		if err == nil {
+			t.Fatal("expected network error, got nil")
+		}
+		// Matches: "failed to make HTTP request"
+		if !strings.Contains(err.Error(), "failed to make HTTP request") {
+			t.Errorf("expected request error, got: %v", err)
+		}
+	})
+
+	t.Run("HTTP 500 with Non-JSON Body", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Fatal Server Error"))
+		}))
+		defer server.Close()
+
+		tr := toolboxtransport.New(server.URL, server.Client())
+		_, err := tr.GetTool(context.Background(), testToolName, nil)
+
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		// Matches: "server returned non-OK status: 500 ... body: Fatal Server Error"
+		if !strings.Contains(err.Error(), "500") || !strings.Contains(err.Error(), "Fatal Server Error") {
+			t.Errorf("expected error to contain status and raw body, got: %v", err)
+		}
+	})
+
+	t.Run("NewRequest Error (Bad URL)", func(t *testing.T) {
+		// Pass a URL with control characters to trigger http.NewRequest failure
+		tr := toolboxtransport.New("http://bad\nurl.com", http.DefaultClient)
+
+		_, err := tr.GetTool(context.Background(), testToolName, nil)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		// Matches: "failed to create HTTP request"
+		if !strings.Contains(err.Error(), "failed to create HTTP request") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Header Resolution Failure", func(t *testing.T) {
+		// Use a failing token source
+		failingSource := map[string]oauth2.TokenSource{
+			"Authorization": &failingTokenSource{},
+		}
+
+		tr := toolboxtransport.New(testBaseURL, http.DefaultClient)
+		_, err := tr.GetTool(context.Background(), testToolName, failingSource)
+
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		// Matches: "failed to apply client headers"
+		if !strings.Contains(err.Error(), "failed to apply client headers") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+}
+
+func TestInvokeTool_EdgeCases(t *testing.T) {
+	ctx := context.Background()
+	t.Run("Nil_HTTP_Client", func(t *testing.T) {
+		// Create transport with nil http client
+		tr := toolboxtransport.New(testBaseURL, nil)
+		_, err := tr.InvokeTool(ctx, "tool", map[string]any{}, nil)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "http client is not set") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Unreadable JSON Response", func(t *testing.T) {
+		// Server returns 200 OK but invalid JSON body
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{broken-json`))
+		}))
+		defer server.Close()
+
+		tr := toolboxtransport.New(server.URL, server.Client())
+		result, err := tr.InvokeTool(context.Background(), testToolName, map[string]any{}, nil)
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// If JSON parsing fails, the transport is designed to return the raw body as string
+		// This matches the logic: "Fallback for non-enveloped responses" or malformed result envelopes
+		if resStr, ok := result.(string); !ok || resStr != `{broken-json` {
+			t.Errorf("expected raw string '{broken-json', got %v", result)
+		}
+	})
+
+	t.Run("Network Error (Server Down)", func(t *testing.T) {
+		// Start a server to get a valid URL, then immediately close it
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		url := server.URL
+		server.Close() // Kill the server
+
+		tr := toolboxtransport.New(url, server.Client())
+		_, err := tr.InvokeTool(context.Background(), testToolName, map[string]any{}, nil)
+
+		if err == nil {
+			t.Fatal("expected network error, got nil")
+		}
+		// Error should come from http.Client.Do
+		if !strings.Contains(err.Error(), "connection refused") && !strings.Contains(err.Error(), "HTTP call to tool") {
+			t.Errorf("expected connection error, got: %v", err)
+		}
+	})
+
+	t.Run("HTTP 500 with Non-JSON Body", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Fatal Database Error"))
+		}))
+		defer server.Close()
+
+		tr := toolboxtransport.New(server.URL, server.Client())
+		_, err := tr.InvokeTool(context.Background(), testToolName, map[string]any{}, nil)
+
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "500") || !strings.Contains(err.Error(), "Fatal Database Error") {
+			t.Errorf("expected error to contain status and raw body, got: %v", err)
+		}
+	})
+
+	t.Run("ApplyHeaders_Error", func(t *testing.T) {
+		tr := toolboxtransport.New(testBaseURL, http.DefaultClient)
+		sources := map[string]oauth2.TokenSource{
+			"Auth": &failingTokenSource{},
+		}
+		_, err := tr.InvokeTool(ctx, "tool", map[string]any{}, sources)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		// This error comes from ResolveAndApplyHeaders directly
+		if !strings.Contains(err.Error(), "failed to resolve token") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Marshal_Error", func(t *testing.T) {
+		tr := toolboxtransport.New(testBaseURL, http.DefaultClient)
+		// Pass a channel which cannot be marshaled to JSON
+		payload := map[string]any{"bad": make(chan int)}
+		_, err := tr.InvokeTool(ctx, "tool", payload, nil)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to marshal tool payload") {
+			t.Errorf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("NewRequest_Error", func(t *testing.T) {
+		tr := toolboxtransport.New("http://bad\nurl.com", http.DefaultClient)
+		_, err := tr.InvokeTool(ctx, "tool", map[string]any{}, nil)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "failed to create API request") {
+			t.Errorf("unexpected error: %v", err)
 		}
 	})
 }
