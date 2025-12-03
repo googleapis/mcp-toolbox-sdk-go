@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.4.0...v0.5.0) (2025-12-03)
+
+
+### Features
+
+* **renovate:** Remove custom branchName for genai-toolbox updates ([#118](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/118)) ([38bde45](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/38bde4514dd8343440698a0e54080cfa87d4469a))
+
 ## [0.4.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.3.0...v0.4.0) (2025-11-06)
 
 
