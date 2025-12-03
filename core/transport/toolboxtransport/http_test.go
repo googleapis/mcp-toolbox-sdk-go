@@ -536,7 +536,7 @@ func TestInvokeTool_EdgeCases(t *testing.T) {
 	t.Run("HTTP 500 with Non-JSON Body", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Fatal Database Error"))
+			_, _ = w.Write([]byte("Fatal Database Error"))
 		}))
 		defer server.Close()
 
