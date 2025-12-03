@@ -32,7 +32,7 @@
         'googleapis/genai-toolbox',
       ],
       matchManagers: [
-        'regex',
+        'custom.regex',
       ],
       commitMessageTopic: 'MCP Toolbox server for integration tests',
       matchUpdateTypes: [
@@ -41,10 +41,11 @@
       ],
     },
   ],
-  regexManagers: [
+  customManagers: [
     {
-      fileMatch: [
-        'integration.cloudbuild.yaml',
+      customType: 'regex',
+      managerFilePatterns: [
+        '/integration.cloudbuild.yaml/',
       ],
       matchStrings: [
         '_TOOLBOX_VERSION: [\'|"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)[\'|"]?',
