@@ -27,8 +27,24 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/toolboxtransport"
 	"golang.org/x/oauth2"
 )
+
+// Dummy transport for tests
+type dummyTransport struct{}
+
+func (d *dummyTransport) BaseURL() string { return "" }
+func (d *dummyTransport) GetTool(ctx context.Context, name string, h map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+	return nil, nil
+}
+func (d *dummyTransport) ListTools(ctx context.Context, set string, h map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+	return nil, nil
+}
+func (d *dummyTransport) InvokeTool(ctx context.Context, name string, p map[string]any, h map[string]oauth2.TokenSource) (any, error) {
+	return nil, nil
+}
 
 func TestToolboxTool_Getters(t *testing.T) {
 	sampleParams := []ParameterSchema{
@@ -40,6 +56,7 @@ func TestToolboxTool_Getters(t *testing.T) {
 		name:        "my-test-tool",
 		description: "A tool specifically for testing purposes.",
 		parameters:  sampleParams,
+		transport:   &dummyTransport{},
 	}
 
 	t.Run("Name Method Returns Correct Value", func(t *testing.T) {
@@ -78,6 +95,7 @@ func TestToolboxTool_Getters(t *testing.T) {
 		t.Run("Handles Case With No Parameters", func(t *testing.T) {
 			emptyTool := &ToolboxTool{
 				parameters: []ParameterSchema{},
+				transport:  &dummyTransport{},
 			}
 
 			params := emptyTool.Parameters()
@@ -160,6 +178,7 @@ func TestToolFrom(t *testing.T) {
 		authTokenSources: map[string]oauth2.TokenSource{
 			"google": &mockTokenSource{}, // Auth source already set on parent
 		},
+		transport: &dummyTransport{},
 	}
 
 	getTestTool := func() *ToolboxTool {
@@ -241,9 +260,11 @@ func TestToolFrom(t *testing.T) {
 
 func TestCloneToolboxTool(t *testing.T) {
 	// 1. Setup an original tool with populated maps and slices to test deep copying.
+	originalTransport := &dummyTransport{}
 	originalTool := &ToolboxTool{
 		name:        "original_tool",
 		description: "An original tool to be cloned.",
+		transport:   originalTransport,
 		parameters: []ParameterSchema{
 			{Name: "p1", Type: "string"},
 		},
@@ -270,6 +291,10 @@ func TestCloneToolboxTool(t *testing.T) {
 	}
 	if !reflect.DeepEqual(originalTool, clone) {
 		t.Fatal("Initial clone is not deeply equal to the original")
+	}
+
+	if clone.transport != originalTool.transport {
+		t.Error("Clone should share the same transport reference")
 	}
 
 	t.Run("Negative Test - modifying clone's boundParams map", func(t *testing.T) {
@@ -469,12 +494,13 @@ func (ft *failingTransport) RoundTrip(req *http.Request) (*http.Response, error)
 
 func TestToolboxTool_Invoke(t *testing.T) {
 	// A base tool for successful invocations
-	createBaseTool := func(httpClient *http.Client, invocationURL string) *ToolboxTool {
+	createBaseTool := func(httpClient *http.Client, baseURL string) *ToolboxTool {
+		tr := toolboxtransport.New(baseURL, httpClient)
+
 		return &ToolboxTool{
-			name:          "weather",
-			description:   "Get the weather",
-			invocationURL: invocationURL,
-			httpClient:    httpClient,
+			name:        "weather",
+			description: "Get the weather",
+			transport:   tr,
 			parameters: []ParameterSchema{
 				{Name: "city", Type: "string"},
 			},
@@ -717,7 +743,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a failed API call, but got nil")
 		}
-		if !strings.Contains(err.Error(), "API call to tool 'weather' failed") {
+		if !strings.Contains(err.Error(), "transport execution failed") {
 			t.Errorf("Incorrect error message for failed API call. Got: %v", err)
 		}
 	})
@@ -733,7 +759,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a failed API call, but got nil")
 		}
-		if !strings.Contains(err.Error(), "API call to tool 'weather' failed") {
+		if !strings.Contains(err.Error(), "transport execution failed") {
 			t.Errorf("Incorrect error message for failed API call. Got: %v", err)
 		}
 	})
@@ -751,7 +777,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a failing response body read, but got nil")
 		}
-		if !strings.Contains(err.Error(), "failed to read API response body") {
+		if !strings.Contains(err.Error(), "failed to read response body") {
 			t.Errorf("Incorrect error message for failed body read. Got: %v", err)
 		}
 	})
