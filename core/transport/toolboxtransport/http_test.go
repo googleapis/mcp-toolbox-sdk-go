@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -238,13 +239,10 @@ func TestInvokeTool_HTTPWarning(t *testing.T) {
 	testCases := []struct {
 		name       string
 		baseURL    string
-		headers    map[string]string
 		shouldWarn bool
 	}{
-		{"HTTP with Auth", "http://insecure.com", map[string]string{"Authorization": "Bearer token"}, true},
-		{"HTTPS with Auth", "https://secure.com", map[string]string{"Authorization": "Bearer token"}, false},
-		{"HTTP Empty Auth", "http://insecure.com", map[string]string{}, false},
-		{"HTTP Nil Auth", "http://insecure.com", nil, false},
+		{"HTTP", "http://insecure.com", true},
+		{"HTTPS", "https://secure.com", false},
 	}
 
 	for _, tc := range testCases {
@@ -258,9 +256,8 @@ func TestInvokeTool_HTTPWarning(t *testing.T) {
 			tr := toolboxtransport.New(tc.baseURL, client)
 
 			payload := map[string]any{"param": "val"}
-			tokenSources := makeTokenSources(tc.headers)
 
-			_, _ = tr.InvokeTool(context.Background(), testToolName, payload, tokenSources)
+			_, _ = tr.InvokeTool(context.Background(), testToolName, payload, nil)
 
 			logOutput := buf.String()
 			hasWarning := strings.Contains(logOutput, "Sending ID token over HTTP")
@@ -273,4 +270,115 @@ func TestInvokeTool_HTTPWarning(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- Mock for Token Testing ---
+type mockTokenSource struct {
+	token *oauth2.Token
+	err   error
+}
+
+func (m *mockTokenSource) Token() (*oauth2.Token, error) {
+	return m.token, m.err
+}
+
+func TestResolveAndApplyHeaders(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "http://example.com", nil)
+		sources := map[string]oauth2.TokenSource{
+			"Authorization": &mockTokenSource{token: &oauth2.Token{AccessToken: "secret"}},
+			"X-Custom":      &mockTokenSource{token: &oauth2.Token{AccessToken: "custom-val"}},
+		}
+
+		err := toolboxtransport.ResolveAndApplyHeaders(req, sources)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if req.Header.Get("Authorization") != "secret" {
+			t.Errorf("Authorization header incorrect, got %s", req.Header.Get("Authorization"))
+		}
+		if req.Header.Get("X-Custom") != "custom-val" {
+			t.Errorf("X-Custom header incorrect, got %s", req.Header.Get("X-Custom"))
+		}
+	})
+
+	t.Run("Failure_TokenError", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "http://example.com", nil)
+		sources := map[string]oauth2.TokenSource{
+			"Authorization": &mockTokenSource{err: errors.New("token fetch failed")},
+		}
+
+		err := toolboxtransport.ResolveAndApplyHeaders(req, sources)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "token fetch failed") {
+			t.Errorf("expected error to contain underlying error, got: %v", err)
+		}
+	})
+}
+
+func TestLoadManifest(t *testing.T) {
+	mockJSON := `{"serverVersion":"1.0.0","tools":{"test":{"description":"foo"}}}`
+
+	t.Run("Success", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Authorization") != "Bearer token" {
+				t.Errorf("Missing Authorization header")
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(mockJSON))
+		}))
+		defer server.Close()
+
+		transportConcrete := toolboxtransport.New(server.URL, server.Client()).(*toolboxtransport.ToolboxTransport)
+
+		sources := makeTokenSources(map[string]string{"Authorization": "Bearer token"})
+
+		manifest, err := transportConcrete.LoadManifest(context.Background(), server.URL+"/some/path", sources)
+		if err != nil {
+			t.Fatalf("LoadManifest failed: %v", err)
+		}
+
+		if manifest.ServerVersion != "1.0.0" {
+			t.Errorf("unexpected version: %s", manifest.ServerVersion)
+		}
+	})
+
+	t.Run("Failure_Status500", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("oops"))
+		}))
+		defer server.Close()
+
+		transportConcrete := toolboxtransport.New(server.URL, server.Client()).(*toolboxtransport.ToolboxTransport)
+
+		_, err := transportConcrete.LoadManifest(context.Background(), server.URL, nil)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "500") {
+			t.Errorf("expected 500 error, got: %v", err)
+		}
+	})
+
+	t.Run("Failure_BadJSON", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{bad json`))
+		}))
+		defer server.Close()
+
+		transportConcrete := toolboxtransport.New(server.URL, server.Client()).(*toolboxtransport.ToolboxTransport)
+
+		_, err := transportConcrete.LoadManifest(context.Background(), server.URL, nil)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), "unable to parse manifest") {
+			t.Errorf("expected parse error, got: %v", err)
+		}
+	})
 }

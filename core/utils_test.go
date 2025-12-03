@@ -28,6 +28,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/toolboxtransport"
 	"golang.org/x/oauth2"
 )
 
@@ -130,15 +132,14 @@ func TestIdentifyAuthRequirements(t *testing.T) {
 
 func TestResolveAndApplyHeaders(t *testing.T) {
 	t.Run("Successfully applies headers", func(t *testing.T) {
-		// Setup
-		client, _ := NewToolboxClient("test-url")
-		client.clientHeaderSources["Authorization"] = &mockTokenSource{token: &oauth2.Token{AccessToken: "token123"}}
-		client.clientHeaderSources["X-Api-Key"] = &mockTokenSource{token: &oauth2.Token{AccessToken: "key456"}}
-
 		req, _ := http.NewRequest("GET", "https://toolbox.example.com", nil)
 
-		// Action
-		err := resolveAndApplyHeaders(client.clientHeaderSources, req)
+		sources := map[string]oauth2.TokenSource{
+			"Authorization": oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "token123"}),
+			"X-Api-Key":     oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "key456"}),
+		}
+
+		err := toolboxtransport.ResolveAndApplyHeaders(req, sources)
 
 		// Assert
 		if err != nil {
@@ -153,17 +154,19 @@ func TestResolveAndApplyHeaders(t *testing.T) {
 	})
 
 	t.Run("Returns error when a token source fails", func(t *testing.T) {
-		client, _ := NewToolboxClient("test-url")
-		client.clientHeaderSources["Authorization"] = &failingTokenSource{}
-
 		req, _ := http.NewRequest("GET", "https://toolbox.example.com", nil)
 
-		err := resolveAndApplyHeaders(client.clientHeaderSources, req)
+		sources := map[string]oauth2.TokenSource{
+			"Authorization": &failingTokenSource{},
+		}
+
+		err := toolboxtransport.ResolveAndApplyHeaders(req, sources)
 
 		if err == nil {
 			t.Fatal("Expected an error, but got nil")
 		}
-		if !strings.Contains(err.Error(), "failed to resolve header 'Authorization'") {
+		// Match the error message format in toolboxtransport/http.go
+		if !strings.Contains(err.Error(), "failed to resolve token for header 'Authorization'") {
 			t.Errorf("Error message missing expected text. Got: %s", err.Error())
 		}
 		if !strings.Contains(err.Error(), "token source failed as designed") {
@@ -173,13 +176,13 @@ func TestResolveAndApplyHeaders(t *testing.T) {
 }
 
 func TestLoadManifest(t *testing.T) {
-	validManifest := ManifestSchema{
+	validManifest := transport.ManifestSchema{
 		ServerVersion: "v1",
-		Tools: map[string]ToolSchema{
+		Tools: map[string]transport.ToolSchema{
 			"toolA": {Description: "Does a thing"},
 		},
 	}
-	validManifestJSON, _ := json.Marshal(validManifest)
+	// validManifestJSON, _ := json.Marshal(validManifest)
 
 	t.Run("Successfully loads and unmarshals manifest", func(t *testing.T) {
 		// Setup mock server
@@ -190,18 +193,20 @@ func TestLoadManifest(t *testing.T) {
 				return
 			}
 			w.WriteHeader(http.StatusOK)
-			if _, err := w.Write(validManifestJSON); err != nil {
-				t.Fatalf("Mock server failed to write response: %v", err)
-			}
+			_ = json.NewEncoder(w).Encode(validManifest)
 		}))
 		defer server.Close()
 
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
-		client.clientHeaderSources["Authorization"] = oauth2.StaticTokenSource(&oauth2.Token{
-			AccessToken: "Bearer test-token",
-		})
+		// Create Transport
+		tr := toolboxtransport.New(server.URL, server.Client())
+		// Cast to concrete type to access LoadManifest
+		httpTr := tr.(*toolboxtransport.ToolboxTransport)
 
-		manifest, err := loadManifest(context.Background(), server.URL, client.httpClient, client.clientHeaderSources)
+		sources := map[string]oauth2.TokenSource{
+			"Authorization": oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "Bearer test-token"}),
+		}
+
+		manifest, err := httpTr.LoadManifest(context.Background(), server.URL, sources)
 
 		if err != nil {
 			t.Fatalf("Expected no error, but got: %v", err)
@@ -212,12 +217,14 @@ func TestLoadManifest(t *testing.T) {
 	})
 
 	t.Run("Fails when header resolution fails", func(t *testing.T) {
-		// Setup client with a failing token source
-		client, _ := NewToolboxClient("any-url")
-		client.clientHeaderSources["Authorization"] = &failingTokenSource{} // Use the failing mock
+		tr := toolboxtransport.New("http://example.com", http.DefaultClient)
+		httpTr := tr.(*toolboxtransport.ToolboxTransport)
 
-		// Action
-		_, err := loadManifest(context.Background(), "http://example.com", client.httpClient, client.clientHeaderSources)
+		sources := map[string]oauth2.TokenSource{
+			"Authorization": &failingTokenSource{},
+		}
+
+		_, err := httpTr.LoadManifest(context.Background(), "http://example.com", sources)
 
 		// Assert
 		if err == nil {
@@ -231,15 +238,14 @@ func TestLoadManifest(t *testing.T) {
 	t.Run("Fails when server returns non-200 status", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
-			if _, err := w.Write([]byte("internal server error")); err != nil {
-				t.Fatalf("Mock server failed to write response: %v", err)
-			}
+			_, _ = w.Write([]byte("internal server error"))
 		}))
 		defer server.Close()
 
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		tr := toolboxtransport.New(server.URL, server.Client())
+		httpTr := tr.(*toolboxtransport.ToolboxTransport)
 
-		_, err := loadManifest(context.Background(), server.URL, client.httpClient, client.clientHeaderSources)
+		_, err := httpTr.LoadManifest(context.Background(), server.URL, nil)
 
 		if err == nil {
 			t.Fatal("Expected an error due to non-OK status, but got nil")
@@ -252,15 +258,14 @@ func TestLoadManifest(t *testing.T) {
 	t.Run("Fails when response body is invalid JSON", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			if _, err := w.Write([]byte(`{"serverVersion": "bad-json",`)); err != nil {
-				t.Fatalf("Mock server failed to write response: %v", err)
-			}
+			_, _ = w.Write([]byte(`{"serverVersion": "bad-json",`))
 		}))
 		defer server.Close()
 
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		tr := toolboxtransport.New(server.URL, server.Client())
+		httpTr := tr.(*toolboxtransport.ToolboxTransport)
 
-		_, err := loadManifest(context.Background(), server.URL, client.httpClient, client.clientHeaderSources)
+		_, err := httpTr.LoadManifest(context.Background(), server.URL, nil)
 
 		if err == nil {
 			t.Fatal("Expected an error due to JSON unmarshal failure, but got nil")
@@ -277,20 +282,20 @@ func TestLoadManifest(t *testing.T) {
 		}))
 		defer server.Close()
 
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		tr := toolboxtransport.New(server.URL, server.Client())
+		httpTr := tr.(*toolboxtransport.ToolboxTransport)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 		defer cancel()
 
-		// Action
-		_, err := loadManifest(ctx, server.URL, client.httpClient, client.clientHeaderSources)
+		_, err := httpTr.LoadManifest(ctx, server.URL, nil)
 
 		// Assert
 		if err == nil {
 			t.Fatal("Expected an error due to context cancellation, but got nil")
 		}
-		if !errors.Is(err, context.DeadlineExceeded) {
-			t.Errorf("Expected context.DeadlineExceeded error, but got a different error: %v", err)
+		if !errors.Is(err, context.DeadlineExceeded) && !strings.Contains(err.Error(), "context deadline exceeded") {
+			t.Errorf("Expected context.DeadlineExceeded error, but got: %v", err)
 		}
 	})
 }

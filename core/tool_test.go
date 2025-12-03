@@ -743,7 +743,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a failed API call, but got nil")
 		}
-		if !strings.Contains(err.Error(), "transport execution failed") {
+		if !strings.Contains(err.Error(), "HTTP call to tool 'weather' failed") {
 			t.Errorf("Incorrect error message for failed API call. Got: %v", err)
 		}
 	})
@@ -759,7 +759,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a failed API call, but got nil")
 		}
-		if !strings.Contains(err.Error(), "transport execution failed") {
+		if !strings.Contains(err.Error(), "HTTP call to tool 'weather' failed") {
 			t.Errorf("Incorrect error message for failed API call. Got: %v", err)
 		}
 	})

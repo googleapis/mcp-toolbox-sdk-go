@@ -41,15 +41,15 @@ func (t *ToolboxTransport) BaseURL() string { return t.baseURL }
 
 func (t *ToolboxTransport) GetTool(ctx context.Context, toolName string, tokenSources map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
 	url := fmt.Sprintf("%s/api/tool/%s", t.baseURL, toolName)
-	return t.fetchManifest(ctx, url, tokenSources)
+	return t.LoadManifest(ctx, url, tokenSources)
 }
 
 func (t *ToolboxTransport) ListTools(ctx context.Context, toolsetName string, tokenSources map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
 	url := fmt.Sprintf("%s/api/toolset/%s", t.baseURL, toolsetName)
-	return t.fetchManifest(ctx, url, tokenSources)
+	return t.LoadManifest(ctx, url, tokenSources)
 }
 
-// loadManifest is an internal helper for fetching manifests from the Toolbox server.
+// LoadManifest is an internal helper for fetching manifests from the Toolbox server.
 // Inputs:
 //   - ctx: The context to control the lifecycle of the HTTP request, including
 //     cancellation.
@@ -61,22 +61,22 @@ func (t *ToolboxTransport) ListTools(ctx context.Context, toolsetName string, to
 //
 //	A pointer to the successfully parsed ManifestSchema and a nil error, or a
 //	nil ManifestSchema and a descriptive error if any part of the process fails.
-func (t *ToolboxTransport) fetchManifest(ctx context.Context, url string, tokenSources map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+func (t *ToolboxTransport) LoadManifest(ctx context.Context, url string, tokenSources map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
 	// Create a new GET request with a context for cancellation.
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create HTTP request to %s: %w", url, err)
+		return nil, fmt.Errorf("failed to create HTTP request : %w", err)
 	}
 
 	// Add all client-level headers to the request
-	if err := resolveAndApplyHeaders(req, tokenSources); err != nil {
+	if err := ResolveAndApplyHeaders(req, tokenSources); err != nil {
 		return nil, fmt.Errorf("failed to apply client headers: %w", err)
 	}
 
 	//  Execute the HTTP request.
 	resp, err := t.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to make HTTP request to %s: %w", url, err)
+		return nil, fmt.Errorf("failed to make HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -124,7 +124,7 @@ func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payl
 	req.Header.Set("Content-Type", "application/json")
 
 	// Resolve and apply headers.
-	if err := resolveAndApplyHeaders(req, tokenSources); err != nil {
+	if err := ResolveAndApplyHeaders(req, tokenSources); err != nil {
 		return nil, err
 	}
 
@@ -161,7 +161,7 @@ func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payl
 	return string(responseBody), nil
 }
 
-// resolveAndApplyHeaders iterates through a map of token sources, retrieves a
+// ResolveAndApplyHeaders iterates through a map of token sources, retrieves a
 // token from each, and applies it as a header to the given HTTP request.
 //
 // Inputs:
@@ -173,7 +173,7 @@ func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payl
 // Returns:
 //
 //	An error if retrieving a token from any source fails, otherwise nil.
-func resolveAndApplyHeaders(req *http.Request, tokenSources map[string]oauth2.TokenSource) error {
+func ResolveAndApplyHeaders(req *http.Request, tokenSources map[string]oauth2.TokenSource) error {
 	for key, source := range tokenSources {
 		token, err := source.Token()
 		if err != nil {

@@ -50,6 +50,8 @@ type ToolboxClient struct {
 func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) {
 	// Initialize the client with default values.
 	tc := &ToolboxClient{
+		baseURL:             url,
+		httpClient:          &http.Client{},
 		clientHeaderSources: make(map[string]oauth2.TokenSource),
 		defaultToolOptions:  []ToolOption{},
 	}
@@ -63,7 +65,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 			return nil, err
 		}
 	}
-	tc.transport = toolboxtransport.New(tc.baseURL, tc.httpClient)
+	tc.transport = toolboxtransport.New(url, tc.httpClient)
 
 	return tc, nil
 }
