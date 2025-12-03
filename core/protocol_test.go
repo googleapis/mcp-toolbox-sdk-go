@@ -35,7 +35,7 @@ func TestParameterSchemaInteger(t *testing.T) {
 	t.Run("Test int param", func(t *testing.T) {
 		value := 1
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -44,7 +44,7 @@ func TestParameterSchemaInteger(t *testing.T) {
 	t.Run("Test int8 param", func(t *testing.T) {
 		var value int8 = 1
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -53,7 +53,7 @@ func TestParameterSchemaInteger(t *testing.T) {
 	t.Run("Test int16 param", func(t *testing.T) {
 		var value int16 = 1
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -62,7 +62,7 @@ func TestParameterSchemaInteger(t *testing.T) {
 	t.Run("Test int32 param", func(t *testing.T) {
 		var value int32 = 1
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -71,7 +71,7 @@ func TestParameterSchemaInteger(t *testing.T) {
 	t.Run("Test int64 param", func(t *testing.T) {
 		var value int64 = 1
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -80,7 +80,7 @@ func TestParameterSchemaInteger(t *testing.T) {
 	t.Run("Test uint param", func(t *testing.T) {
 		var value uint = 1
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -89,7 +89,7 @@ func TestParameterSchemaInteger(t *testing.T) {
 	t.Run("Test uint8 param", func(t *testing.T) {
 		var value uint8 = 1
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -98,7 +98,7 @@ func TestParameterSchemaInteger(t *testing.T) {
 	t.Run("Test uint16 param", func(t *testing.T) {
 		var value uint16 = 1
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -107,7 +107,7 @@ func TestParameterSchemaInteger(t *testing.T) {
 	t.Run("Test uint32 param", func(t *testing.T) {
 		var value uint32 = 1
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -116,7 +116,7 @@ func TestParameterSchemaInteger(t *testing.T) {
 	t.Run("Test uint64 param", func(t *testing.T) {
 		var value uint64 = 1
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -136,7 +136,7 @@ func TestParameterSchemaString(t *testing.T) {
 
 	value := "abc"
 
-	err := schema.validateType(value)
+	err := schema.ValidateType(value)
 
 	if err != nil {
 		t.Fatal(err.Error())
@@ -155,7 +155,7 @@ func TestParameterSchemaBoolean(t *testing.T) {
 
 	value := true
 
-	err := schema.validateType(value)
+	err := schema.ValidateType(value)
 
 	if err != nil {
 		t.Fatal(err.Error())
@@ -175,7 +175,7 @@ func TestParameterSchemaFloat(t *testing.T) {
 	t.Run("Test float32 param", func(t *testing.T) {
 		var value float32 = 3.14
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -184,7 +184,7 @@ func TestParameterSchemaFloat(t *testing.T) {
 	t.Run("Test float64 param", func(t *testing.T) {
 		value := 3.14
 
-		err := schema.validateType(value)
+		err := schema.ValidateType(value)
 
 		if err != nil {
 			t.Fatal(err.Error())
@@ -211,7 +211,7 @@ func TestParameterSchemaStringArray(t *testing.T) {
 
 	value := []string{"abc", "def"}
 
-	err := paramSchema.validateType(value)
+	err := paramSchema.ValidateType(value)
 
 	if err != nil {
 		t.Fatal(err.Error())
@@ -230,7 +230,7 @@ func TestParameterSchemaUndefinedType(t *testing.T) {
 
 	value := time.Now()
 
-	err := paramSchema.validateType(value)
+	err := paramSchema.ValidateType(value)
 
 	if err == nil {
 		t.Fatal("Expected an error, but got nil")
@@ -247,16 +247,16 @@ func TestOptionalStringParameter(t *testing.T) {
 	}
 
 	t.Run("allows nil value for optional parameter", func(t *testing.T) {
-		err := schema.validateType(nil)
+		err := schema.ValidateType(nil)
 		if err != nil {
-			t.Errorf("validateType() with nil should not return an error for an optional parameter, but got: %v", err)
+			t.Errorf("ValidateType() with nil should not return an error for an optional parameter, but got: %v", err)
 		}
 	})
 
 	t.Run("allows valid string value", func(t *testing.T) {
-		err := schema.validateType("my-name")
+		err := schema.ValidateType("my-name")
 		if err != nil {
-			t.Errorf("validateType() should not return an error for a valid string, but got: %v", err)
+			t.Errorf("ValidateType() should not return an error for a valid string, but got: %v", err)
 		}
 	})
 }
@@ -270,16 +270,16 @@ func TestRequiredParameter(t *testing.T) {
 	}
 
 	t.Run("rejects nil value for required parameter", func(t *testing.T) {
-		err := schema.validateType(nil)
+		err := schema.ValidateType(nil)
 		if err == nil {
-			t.Errorf("validateType() with nil should return an error for a required parameter, but it didn't")
+			t.Errorf("ValidateType() with nil should return an error for a required parameter, but it didn't")
 		}
 	})
 
 	t.Run("allows valid integer value", func(t *testing.T) {
-		err := schema.validateType(12345)
+		err := schema.ValidateType(12345)
 		if err != nil {
-			t.Errorf("validateType() should not return an error for a valid integer, but got: %v", err)
+			t.Errorf("ValidateType() should not return an error for a valid integer, but got: %v", err)
 		}
 	})
 }
@@ -296,23 +296,23 @@ func TestOptionalArrayParameter(t *testing.T) {
 	}
 
 	t.Run("allows nil value for optional array", func(t *testing.T) {
-		err := schema.validateType(nil)
+		err := schema.ValidateType(nil)
 		if err != nil {
-			t.Errorf("validateType() with nil should not return an error for an optional array, but got: %v", err)
+			t.Errorf("ValidateType() with nil should not return an error for an optional array, but got: %v", err)
 		}
 	})
 
 	t.Run("allows valid integer slice", func(t *testing.T) {
-		err := schema.validateType([]int{95, 100})
+		err := schema.ValidateType([]int{95, 100})
 		if err != nil {
-			t.Errorf("validateType() should not return an error for a valid slice, but got: %v", err)
+			t.Errorf("ValidateType() should not return an error for a valid slice, but got: %v", err)
 		}
 	})
 
 	t.Run("rejects slice with wrong item type", func(t *testing.T) {
-		err := schema.validateType([]string{"not", "an", "int"})
+		err := schema.ValidateType([]string{"not", "an", "int"})
 		if err == nil {
-			t.Errorf("validateType() should have returned an error for a slice with incorrect item types, but it didn't")
+			t.Errorf("ValidateType() should have returned an error for a slice with incorrect item types, but it didn't")
 		}
 	})
 }
@@ -330,16 +330,16 @@ func TestValidateTypeObject(t *testing.T) {
 			"key_string": "a string",
 			"key_int":    123,
 			"key_bool":   true,
-			"key_map": map[string]any{"id": 1},
-			"key_array": []string{"id", "number"},
+			"key_map":    map[string]any{"id": 1},
+			"key_array":  []string{"id", "number"},
 		}
-		if err := schema.validateType(validInput); err != nil {
+		if err := schema.ValidateType(validInput); err != nil {
 			t.Errorf("Expected no error for generic object, but got: %v", err)
 		}
 
 		// A value that is not a map should be invalid.
 		invalidInput := "I am a string, not an object"
-		if err := schema.validateType(invalidInput); err == nil {
+		if err := schema.ValidateType(invalidInput); err == nil {
 			t.Errorf("Expected an error for non-map input, but got nil")
 		}
 	})
@@ -386,12 +386,12 @@ func TestValidateTypeObject(t *testing.T) {
 				}
 
 				// Test that valid input passes
-				if err := schema.validateType(tc.validInput); err != nil {
+				if err := schema.ValidateType(tc.validInput); err != nil {
 					t.Errorf("Expected no error for valid input, got: %v", err)
 				}
 
 				// Test that invalid input fails
-				if err := schema.validateType(tc.invalidInput); err == nil {
+				if err := schema.ValidateType(tc.invalidInput); err == nil {
 					t.Errorf("Expected an error for invalid input, but got nil")
 				}
 			})
@@ -407,9 +407,9 @@ func TestValidateTypeObject(t *testing.T) {
 			AdditionalProperties: &ParameterSchema{Type: "object"},
 		}
 
-		invalidInput := map[string]any{"feature_flag": map[string]any{"id": "123"},}
+		invalidInput := map[string]any{"feature_flag": map[string]any{"id": "123"}}
 		// Test that invalid input fails
-		if err := schema.validateType(invalidInput); err == nil {
+		if err := schema.ValidateType(invalidInput); err == nil {
 			t.Errorf("Expected an error for invalid input, but got nil")
 		}
 	})
@@ -423,9 +423,9 @@ func TestValidateTypeObject(t *testing.T) {
 			AdditionalProperties: &ParameterSchema{Type: "array"},
 		}
 
-		invalidInput := map[string]any{"feature_flag": []string{"id", "number"},}
+		invalidInput := map[string]any{"feature_flag": []string{"id", "number"}}
 		// Test that invalid input fails
-		if err := schema.validateType(invalidInput); err == nil {
+		if err := schema.ValidateType(invalidInput); err == nil {
 			t.Errorf("Expected an error for invalid input, but got nil")
 		}
 	})
@@ -433,13 +433,13 @@ func TestValidateTypeObject(t *testing.T) {
 	t.Run("optional and required objects", func(t *testing.T) {
 		// An optional object can be nil
 		optionalSchema := ParameterSchema{Name: "optional_metadata", Type: "object", Required: false}
-		if err := optionalSchema.validateType(nil); err != nil {
+		if err := optionalSchema.ValidateType(nil); err != nil {
 			t.Errorf("Expected no error for nil on optional object, but got: %v", err)
 		}
 
 		// A required object cannot be nil
 		requiredSchema := ParameterSchema{Name: "required_metadata", Type: "object", Required: true}
-		if err := requiredSchema.validateType(nil); err == nil {
+		if err := requiredSchema.ValidateType(nil); err == nil {
 			t.Error("Expected an error for nil on required object, but got nil")
 		}
 	})
@@ -453,7 +453,7 @@ func TestValidateTypeObject(t *testing.T) {
 		}
 
 		input := map[string]any{"key": "some value"}
-		err := schema.validateType(input)
+		err := schema.ValidateType(input)
 
 		if err == nil {
 			t.Fatal("Expected an error for unsupported sub-schema type, but got nil")
