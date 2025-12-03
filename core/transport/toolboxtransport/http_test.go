@@ -393,7 +393,7 @@ func TestLoadManifest_EdgeCases(t *testing.T) {
 		// Server returns 200 OK but invalid JSON body
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{broken-manifest`))
+			_, _ = w.Write([]byte(`{broken-manifest`))
 		}))
 		defer server.Close()
 
@@ -430,7 +430,7 @@ func TestLoadManifest_EdgeCases(t *testing.T) {
 	t.Run("HTTP 500 with Non-JSON Body", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Fatal Server Error"))
+			_, _ = w.Write([]byte("Fatal Server Error"))
 		}))
 		defer server.Close()
 
@@ -497,7 +497,7 @@ func TestInvokeTool_EdgeCases(t *testing.T) {
 		// Server returns 200 OK but invalid JSON body
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{broken-json`))
+			_, _ = w.Write([]byte(`{broken-json`))
 		}))
 		defer server.Close()
 
