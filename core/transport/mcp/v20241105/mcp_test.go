@@ -155,6 +155,40 @@ func TestListTools(t *testing.T) {
 	})
 }
 
+func TestGetTool_Success(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
+		return listToolsResult{
+			Tools: []map[string]any{
+				{"name": "tool_a", "inputSchema": map[string]any{"type": "object"}},
+				{"name": "tool_b", "inputSchema": map[string]any{"type": "object"}},
+			},
+		}, nil
+	}
+
+	client := NewMcpTransport(server.URL, server.Client())
+	manifest, err := client.GetTool(context.Background(), "tool_a", nil)
+	require.NoError(t, err)
+	assert.Contains(t, manifest.Tools, "tool_a")
+	assert.NotContains(t, manifest.Tools, "tool_b")
+}
+
+func TestGetTool_NotFound(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
+		return listToolsResult{Tools: []map[string]any{}}, nil
+	}
+
+	client := NewMcpTransport(server.URL, server.Client())
+	_, err := client.GetTool(context.Background(), "missing_tool", nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+}
+
 func TestInvokeTool(t *testing.T) {
 	server := newMockMCPServer(t)
 	defer server.Close()
@@ -208,6 +242,24 @@ func TestProtocolMismatch(t *testing.T) {
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "MCP version mismatch")
+}
+
+func TestInitialize_MissingCapabilities(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	server.handlers["initialize"] = func(params json.RawMessage) (any, error) {
+		return initializeResult{
+			ProtocolVersion: "2024-11-05",
+			Capabilities:    serverCapabilities{Tools: nil},
+			ServerInfo:      implementation{Name: "srv", Version: "1"},
+		}, nil
+	}
+
+	client := NewMcpTransport(server.URL, server.Client())
+	_, err := client.ListTools(context.Background(), "", nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "does not support the 'tools' capability")
 }
 
 func TestConvertToolSchema(t *testing.T) {
