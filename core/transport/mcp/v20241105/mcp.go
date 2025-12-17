@@ -37,9 +37,8 @@ type McpTransport struct {
 	protocolVersion string
 }
 
-var (
-	_ transport.Transport = &McpTransport{}
-)
+// Ensure that McpTransport implements the Transport interface.
+var _ transport.Transport = &McpTransport{}
 
 const (
 	ProtocolVersion = "2024-11-05"
@@ -47,8 +46,8 @@ const (
 	ClientVersion   = version.Version
 )
 
-// NewMcpTransport creates a new version-specific transport instance.
-func NewMcpTransport(baseURL string, client *http.Client) *McpTransport {
+// New creates a new version-specific transport instance.
+func New(baseURL string, client *http.Client) *McpTransport {
 	t := &McpTransport{
 		BaseMcpTransport: mcp.NewBaseTransport(baseURL, client),
 		protocolVersion:  ProtocolVersion,
