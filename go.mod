@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.34.0
-	google.golang.org/adk v0.2.0
+	google.golang.org/adk v0.3.0
 	google.golang.org/api v0.257.0
 	google.golang.org/genai v1.40.0
 )
