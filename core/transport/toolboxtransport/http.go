@@ -33,6 +33,9 @@ type ToolboxTransport struct {
 	httpClient *http.Client
 }
 
+// Ensure that ToolboxTransport implements the Transport interface.
+var _ transport.Transport = &ToolboxTransport{}
+
 func New(baseURL string, client *http.Client) transport.Transport {
 	return &ToolboxTransport{baseURL: baseURL, httpClient: client}
 }
