@@ -14,6 +14,8 @@
 
 package v20241105
 
+import "encoding/json"
+
 type jsonRPCRequest struct {
 	JSONRPC string `json:"jsonrpc"`
 	Method  string `json:"method"`
@@ -28,10 +30,10 @@ type jsonRPCNotification struct {
 }
 
 type jsonRPCResponse struct {
-	JSONRPC string        `json:"jsonrpc"`
-	ID      any           `json:"id"`
-	Result  any           `json:"result,omitempty"`
-	Error   *jsonRPCError `json:"error,omitempty"`
+	JSONRPC string          `json:"jsonrpc"`
+	ID      any             `json:"id"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   *jsonRPCError   `json:"error,omitempty"`
 }
 
 type jsonRPCError struct {
@@ -65,8 +67,16 @@ type initializeResult struct {
 	Instructions    string             `json:"instructions,omitempty"`
 }
 
+// Tool represents a tool definition in the MCP protocol.
+type Tool struct {
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
+	InputSchema map[string]any `json:"inputSchema"`
+	Meta        map[string]any `json:"_meta,omitempty"`
+}
+
 type listToolsResult struct {
-	Tools []map[string]any `json:"tools"`
+	Tools []Tool `json:"tools"`
 }
 
 type callToolParams struct {

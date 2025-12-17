@@ -19,6 +19,7 @@ package v20241105
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/oauth2"
 )
 
 // mockMCPServer is a helper to mock MCP JSON-RPC responses
@@ -72,10 +74,13 @@ func newMockMCPServer(t *testing.T) *mockMCPServer {
 			return
 		}
 
+		resBytes, err := json.Marshal(result)
+		require.NoError(t, err)
+
 		resp := jsonRPCResponse{
 			JSONRPC: "2.0",
 			ID:      req.ID,
-			Result:  result,
+			Result:  resBytes,
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -112,14 +117,14 @@ func TestListTools(t *testing.T) {
 	server := newMockMCPServer(t)
 	defer server.Close()
 
-	// Mock tools/list response
+	// Mock tools/list response using strict Tool struct
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
 		return listToolsResult{
-			Tools: []map[string]any{
+			Tools: []Tool{
 				{
-					"name":        "get_weather",
-					"description": "Get weather for a location",
-					"inputSchema": map[string]any{
+					Name:        "get_weather",
+					Description: "Get weather for a location",
+					InputSchema: map[string]any{
 						"type": "object",
 						"properties": map[string]any{
 							"location": map[string]any{"type": "string"},
@@ -155,15 +160,35 @@ func TestListTools(t *testing.T) {
 	})
 }
 
+func TestListTools_ErrorOnEmptyName(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
+		return listToolsResult{
+			Tools: []Tool{
+				{Name: "valid", InputSchema: map[string]any{}},
+				{Name: "", InputSchema: map[string]any{}}, // Invalid tool
+			},
+		}, nil
+	}
+
+	client := New(server.URL, server.Client())
+	_, err := client.ListTools(context.Background(), "", nil)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing 'name' field")
+}
+
 func TestGetTool_Success(t *testing.T) {
 	server := newMockMCPServer(t)
 	defer server.Close()
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
 		return listToolsResult{
-			Tools: []map[string]any{
-				{"name": "tool_a", "inputSchema": map[string]any{"type": "object"}},
-				{"name": "tool_b", "inputSchema": map[string]any{"type": "object"}},
+			Tools: []Tool{
+				{Name: "tool_a", InputSchema: map[string]any{"type": "object"}},
+				{Name: "tool_b", InputSchema: map[string]any{"type": "object"}},
 			},
 		}, nil
 	}
@@ -180,7 +205,7 @@ func TestGetTool_NotFound(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
-		return listToolsResult{Tools: []map[string]any{}}, nil
+		return listToolsResult{Tools: []Tool{}}, nil
 	}
 
 	client := New(server.URL, server.Client())
@@ -312,7 +337,7 @@ func TestListTools_WithToolset(t *testing.T) {
 
 	// We verify that the toolset name was appended to the URL in the POST request
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
-		return listToolsResult{Tools: []map[string]any{}}, nil
+		return listToolsResult{Tools: []Tool{}}, nil
 	}
 
 	client := New(server.URL, server.Client())
@@ -320,4 +345,157 @@ func TestListTools_WithToolset(t *testing.T) {
 
 	_, err := client.ListTools(context.Background(), toolsetName, nil)
 	require.NoError(t, err)
+}
+
+func TestRequest_NetworkError(t *testing.T) {
+	// Close server immediately to simulate connection refused
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	url := server.URL
+	server.Close()
+
+	client := New(url, server.Client())
+	_, err := client.ListTools(context.Background(), "", nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "http request failed")
+}
+
+func TestRequest_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal Error"))
+	}))
+	defer server.Close()
+
+	client := New(server.URL, server.Client())
+	_, err := client.ListTools(context.Background(), "", nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "API request failed with status 500")
+}
+
+func TestRequest_BadJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{ broken json `))
+	}))
+	defer server.Close()
+
+	client := New(server.URL, server.Client())
+	_, err := client.ListTools(context.Background(), "", nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "response unmarshal failed")
+}
+
+func TestRequest_NewRequestError(t *testing.T) {
+	// Bad URL triggers http.NewRequest error
+	client := New("http://bad\nurl.com", http.DefaultClient)
+	_, err := client.ListTools(context.Background(), "", nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "create request failed")
+}
+
+func TestRequest_MarshalError(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+	client := New(server.URL, server.Client())
+
+	// Force initialization first
+	_ = client.EnsureInitialized(context.Background())
+
+	// Pass a type that cannot be marshaled to JSON (e.g. channel)
+	badPayload := map[string]any{"bad": make(chan int)}
+	_, err := client.InvokeTool(context.Background(), "tool", badPayload, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "marshal failed")
+}
+
+type failingTokenSource struct{}
+
+func (f *failingTokenSource) Token() (*oauth2.Token, error) {
+	return nil, errors.New("token failure")
+}
+
+func TestHeaders_ResolutionError(t *testing.T) {
+	// Use mock server to pass initialization
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	client := New(server.URL, server.Client())
+	headers := map[string]oauth2.TokenSource{"auth": &failingTokenSource{}}
+
+	// Test failing in ListTools
+	_, err := client.ListTools(context.Background(), "", headers)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "token failure")
+
+	// Test failing in InvokeTool
+	_, err = client.InvokeTool(context.Background(), "tool", nil, headers)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "token failure")
+}
+
+func TestInvokeTool_ErrorResult(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
+		return callToolResult{
+			Content: []textContent{{Type: "text", Text: "Something went wrong"}},
+			IsError: true,
+		}, nil
+	}
+
+	client := New(server.URL, server.Client())
+	_, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "tool execution resulted in error")
+}
+
+func TestInvokeTool_RPCError(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
+		return nil, errors.New("internal server error")
+	}
+
+	client := New(server.URL, server.Client())
+	_, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "internal server error")
+}
+
+func TestInvokeTool_ComplexContent(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
+		return callToolResult{
+			Content: []textContent{
+				{Type: "text", Text: "Part 1 "},
+				{Type: "image", Text: "base64data"}, // Should be ignored
+				{Type: "text", Text: "Part 2"},
+			},
+		}, nil
+	}
+
+	client := New(server.URL, server.Client())
+	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "Part 1 Part 2", res)
+}
+
+func TestInvokeTool_EmptyResult(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
+		return callToolResult{
+			Content: []textContent{},
+		}, nil
+	}
+
+	client := New(server.URL, server.Client())
+	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "null", res)
 }
