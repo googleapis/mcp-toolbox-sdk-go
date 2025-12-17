@@ -83,18 +83,27 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 		Tools:         make(map[string]transport.ToolSchema),
 	}
 
-	for _, toolData := range result.Tools {
-		name, _ := toolData["name"].(string)
-		if name == "" {
-			continue
+	for i, tool := range result.Tools {
+		if tool.Name == "" {
+			return nil, fmt.Errorf("received invalid tool definition at index %d: missing 'name' field", i)
 		}
 
-		toolSchema, err := t.ConvertToolDefinition(toolData)
+		rawTool := map[string]any{
+			"name":        tool.Name,
+			"description": tool.Description,
+			"inputSchema": tool.InputSchema,
+		}
+
+		if tool.Meta != nil {
+			rawTool["_meta"] = tool.Meta
+		}
+
+		toolSchema, err := t.ConvertToolDefinition(rawTool)
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert schema for tool %s: %w", name, err)
+			return nil, fmt.Errorf("failed to convert schema for tool %s: %w", tool.Name, err)
 		}
 
-		manifest.Tools[name] = toolSchema
+		manifest.Tools[tool.Name] = toolSchema
 	}
 
 	return manifest, nil
