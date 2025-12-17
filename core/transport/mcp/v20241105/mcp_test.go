@@ -131,7 +131,7 @@ func TestListTools(t *testing.T) {
 		}, nil
 	}
 
-	client := NewMcpTransport(server.URL, server.Client())
+	client := New(server.URL, server.Client())
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -168,7 +168,7 @@ func TestGetTool_Success(t *testing.T) {
 		}, nil
 	}
 
-	client := NewMcpTransport(server.URL, server.Client())
+	client := New(server.URL, server.Client())
 	manifest, err := client.GetTool(context.Background(), "tool_a", nil)
 	require.NoError(t, err)
 	assert.Contains(t, manifest.Tools, "tool_a")
@@ -183,7 +183,7 @@ func TestGetTool_NotFound(t *testing.T) {
 		return listToolsResult{Tools: []map[string]any{}}, nil
 	}
 
-	client := NewMcpTransport(server.URL, server.Client())
+	client := New(server.URL, server.Client())
 	_, err := client.GetTool(context.Background(), "missing_tool", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
@@ -210,7 +210,7 @@ func TestInvokeTool(t *testing.T) {
 		}, nil
 	}
 
-	client := NewMcpTransport(server.URL, server.Client())
+	client := New(server.URL, server.Client())
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -237,7 +237,7 @@ func TestProtocolMismatch(t *testing.T) {
 		}, nil
 	}
 
-	client := NewMcpTransport(server.URL, server.Client())
+	client := New(server.URL, server.Client())
 
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
@@ -256,7 +256,7 @@ func TestInitialize_MissingCapabilities(t *testing.T) {
 		}, nil
 	}
 
-	client := NewMcpTransport(server.URL, server.Client())
+	client := New(server.URL, server.Client())
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "does not support the 'tools' capability")
@@ -264,7 +264,7 @@ func TestInitialize_MissingCapabilities(t *testing.T) {
 
 func TestConvertToolSchema(t *testing.T) {
 	// Use the transport's ConvertToolDefinition which delegates to the base/helper logic
-	tr := NewMcpTransport("http://example.com", nil)
+	tr := New("http://example.com", nil)
 
 	// Correctly structured test data matching Python logic: _meta is a sibling of inputSchema
 	rawTool := map[string]any{
@@ -315,7 +315,7 @@ func TestListTools_WithToolset(t *testing.T) {
 		return listToolsResult{Tools: []map[string]any{}}, nil
 	}
 
-	client := NewMcpTransport(server.URL, server.Client())
+	client := New(server.URL, server.Client())
 	toolsetName := "my-toolset"
 
 	_, err := client.ListTools(context.Background(), toolsetName, nil)
