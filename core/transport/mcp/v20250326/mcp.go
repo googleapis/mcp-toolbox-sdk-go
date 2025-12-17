@@ -307,14 +307,17 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 	}
 	defer resp.Body.Close()
 
-	// Handle HTTP Errors
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != 204 {
+	if resp.StatusCode == http.StatusOK {
+		// Continue to body parsing
+	} else if (resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusNoContent) && dest == nil {
+		return nil // Valid notification success
+	} else {
+		// Any other code, OR a 202/204 when we expected a result, is a failure.
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	// If no content expected or 204, return early
-	if dest == nil || resp.StatusCode == 204 {
+	if dest == nil {
 		return nil
 	}
 
