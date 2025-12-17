@@ -10,7 +10,7 @@ require (
 	golang.org/x/oauth2 v0.34.0
 	google.golang.org/adk v0.2.0
 	google.golang.org/api v0.257.0
-	google.golang.org/genai v1.39.0
+	google.golang.org/genai v1.40.0
 )
 
 require (
