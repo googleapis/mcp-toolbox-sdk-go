@@ -75,7 +75,7 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 	}
 
 	var result ListToolsResult
-	if err := t.sendRequest(ctx, requestURL, "tools/list", map[string]any{}, finalHeaders, &result); err != nil {
+	if _, err := t.sendRequest(ctx, requestURL, "tools/list", map[string]any{}, finalHeaders, &result); err != nil {
 		return nil, fmt.Errorf("failed to list tools: %w", err)
 	}
 
@@ -144,7 +144,7 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map
 	}
 
 	var result CallToolResult
-	if err := t.sendRequest(ctx, t.BaseURL(), "tools/call", params, finalHeaders, &result); err != nil {
+	if _, err := t.sendRequest(ctx, t.BaseURL(), "tools/call", params, finalHeaders, &result); err != nil {
 		return "", fmt.Errorf("failed to invoke tool '%s': %w", toolName, err)
 	}
 
@@ -180,7 +180,8 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 
 	var result InitializeResult
 
-	if err := t.sendRequest(ctx, t.BaseURL(), "initialize", params, nil, &result); err != nil {
+	respHeaders, err := t.sendRequest(ctx, t.BaseURL(), "initialize", params, nil, &result)
+	if err != nil {
 		return err
 	}
 
@@ -198,13 +199,22 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 	t.ServerVersion = result.ServerInfo.Version
 
 	// Extract Session ID (v2025-03-26 specific)
-	if result.McpSessionId == "" {
+	// Check JSON body for session id
+	sessionId := result.McpSessionId
+
+	// Check HTTP Headers for session id if not in JSON body
+	if sessionId == "" {
+		sessionId = respHeaders.Get("Mcp-Session-Id")
+	}
+
+	if sessionId == "" {
 		return fmt.Errorf("server did not return a Mcp-Session-Id during initialization")
 	}
-	t.sessionId = result.McpSessionId
+	t.sessionId = sessionId
 
 	// Confirm Handshake
-	return t.sendNotification(ctx, "notifications/initialized", map[string]any{})
+	_, err = t.sendNotification(ctx, "notifications/initialized", map[string]any{})
+	return err
 }
 
 // resolveHeaders converts a map of TokenSources into standard HTTP headers (map[string]string).
@@ -231,7 +241,8 @@ func (t *McpTransport) resolveHeaders(sources map[string]oauth2.TokenSource) (ma
 }
 
 // sendRequest sends a standard JSON-RPC request and injects the session ID if present.
-func (t *McpTransport) sendRequest(ctx context.Context, url string, method string, params any, headers map[string]string, dest any) error {
+// Returns headers and error.
+func (t *McpTransport) sendRequest(ctx context.Context, url string, method string, params any, headers map[string]string, dest any) (http.Header, error) {
 
 	// Inject Session ID for non-initialize requests (v2025-03-26 specific)
 	finalParams := params
@@ -257,7 +268,8 @@ func (t *McpTransport) sendRequest(ctx context.Context, url string, method strin
 }
 
 // sendNotification sends a standard JSON-RPC notification and injects the session ID if present.
-func (t *McpTransport) sendNotification(ctx context.Context, method string, params any) error {
+// Returns headers and error.
+func (t *McpTransport) sendNotification(ctx context.Context, method string, params any) (http.Header, error) {
 
 	// Inject Session ID (v2025-03-26 specific)
 	finalParams := params
@@ -281,17 +293,17 @@ func (t *McpTransport) sendNotification(ctx context.Context, method string, para
 	return t.doRPC(ctx, t.BaseURL(), req, nil, nil)
 }
 
-// doRPC performs the low-level HTTP POST and handles JSON-RPC wrapping/unwrapping.
-func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, headers map[string]string, dest any) error {
+// doRPC performs the low-level HTTP POST, handles JSON-RPC wrapping/unwrapping, and returns headers and error.
+func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, headers map[string]string, dest any) (http.Header, error) {
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
-		return fmt.Errorf("marshal failed: %w", err)
+		return nil, fmt.Errorf("marshal failed: %w", err)
 	}
 
 	// Create Request
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payload))
 	if err != nil {
-		return fmt.Errorf("create request failed: %w", err)
+		return nil, fmt.Errorf("create request failed: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -303,45 +315,45 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 
 	resp, err := t.HTTPClient.Do(httpReq)
 	if err != nil {
-		return fmt.Errorf("http request failed: %w", err)
+		return nil, fmt.Errorf("http request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		// Continue to body parsing
 	} else if (resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusNoContent) && dest == nil {
-		return nil // Valid notification success
+		return resp.Header, nil // Valid notification success
 	} else {
 		// Any other code, OR a 202/204 when we expected a result, is a failure.
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
 	if dest == nil {
-		return nil
+		return resp.Header, nil
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("read body failed: %w", err)
+		return nil, fmt.Errorf("read body failed: %w", err)
 	}
 
 	// Decode RPC Envelope
 	var rpcResp JSONRPCResponse
 	if err := json.Unmarshal(bodyBytes, &rpcResp); err != nil {
-		return fmt.Errorf("response unmarshal failed: %w", err)
+		return nil, fmt.Errorf("response unmarshal failed: %w", err)
 	}
 
 	// Check RPC Error
 	if rpcResp.Error != nil {
-		return fmt.Errorf("MCP request failed with code %d: %s", rpcResp.Error.Code, rpcResp.Error.Message)
+		return nil, fmt.Errorf("MCP request failed with code %d: %s", rpcResp.Error.Code, rpcResp.Error.Message)
 	}
 
 	// Decode Result into specific struct
 	resultBytes, _ := json.Marshal(rpcResp.Result)
 	if err := json.Unmarshal(resultBytes, dest); err != nil {
-		return fmt.Errorf("failed to parse result data: %w", err)
+		return nil, fmt.Errorf("failed to parse result data: %w", err)
 	}
 
-	return nil
+	return resp.Header, nil
 }

@@ -532,7 +532,7 @@ func TestDoRPC_204_NoContent(t *testing.T) {
 	defer server.Close()
 
 	client := New(server.URL, server.Client())
-	err := client.sendNotification(context.Background(), "test", nil)
+	_, err := client.sendNotification(context.Background(), "test", nil)
 	require.NoError(t, err)
 }
 
