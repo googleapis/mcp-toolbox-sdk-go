@@ -82,11 +82,10 @@ func TestMain(m *testing.M) {
 }
 
 // helper factory to create a client with a specific protocol
-func getNewToolboxClient()(t *testing.T, p core.Protocol) *core.ToolboxClient {
+func getNewToolboxClient() (*core.ToolboxClient, error) {
 	client, err := core.NewToolboxClient("http://localhost:5000",
 		core.WithProtocol(core.Toolbox))
-	require.NoError(t, err, "Failed to create MCP ToolboxClient for protocol %s", p)
-	return client
+	return client, err
 }
 
 func TestE2E_Basic(t *testing.T) {

@@ -18,8 +18,6 @@ package core_test
 
 import (
 	"context"
-	"log"
-	"os"
 	"testing"
 	"time"
 
@@ -40,7 +38,7 @@ var protocolsToTest = []struct {
 }
 
 // helper factory to create a client with a specific protocol
-func getNewToolboxClient()(t *testing.T, p core.Protocol) *core.ToolboxClient {
+func getNewMCPToolboxClient(t *testing.T, p core.Protocol) *core.ToolboxClient {
 	client, err := core.NewToolboxClient("http://localhost:5000",
 		core.WithProtocol(p))
 	require.NoError(t, err, "Failed to create MCP ToolboxClient for protocol %s", p)
@@ -52,7 +50,7 @@ func TestMCP_Basic(t *testing.T) {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewToolboxClient()(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto.protocol)
 			}
 
 			// Helper to load the get-n-rows tool
@@ -156,7 +154,7 @@ func TestMCP_LoadErrors(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewToolboxClient()(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto.protocol)
 			}
 
 			t.Run("test_load_non_existent_tool", func(t *testing.T) {
@@ -181,7 +179,7 @@ func TestMCP_LoadErrors(t *testing.T) {
 	})
 
 	t.Run("test_load_tool_with_nil_option", func(t *testing.T) {
-		client := getNewToolboxClient()(t, protocolsToTest[0].protocol)
+		client := getNewMCPToolboxClient(t, protocolsToTest[0].protocol)
 		_, err := client.LoadTool("get-n-rows", context.Background(), nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "received a nil ToolOption")
@@ -192,7 +190,7 @@ func TestMCP_BindParams(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewToolboxClient()(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto.protocol)
 			}
 			getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
 				tool, err := client.LoadTool("get-n-rows", context.Background())
@@ -246,7 +244,7 @@ func TestMCP_BindParams(t *testing.T) {
 func TestMCP_BindParamErrors(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
-			client := getNewToolboxClient()(t, proto.protocol)
+			client := getNewMCPToolboxClient(t, proto.protocol)
 			tool, err := client.LoadTool("get-n-rows", context.Background())
 			require.NoError(t, err)
 
@@ -269,16 +267,21 @@ func TestMCP_BindParamErrors(t *testing.T) {
 }
 
 func TestMCP_Auth(t *testing.T) {
+	// Helper to create a static token source from a string token
+	staticTokenSource := func(token string) oauth2.TokenSource {
+		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+	}
+
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewToolboxClient()(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto.protocol)
 			}
 
 			t.Run("test_run_tool_unauth_with_auth", func(t *testing.T) {
 				client := newClient(t)
 				_, err := client.LoadTool("get-row-by-id", context.Background(),
-					core.WithAuthTokenSource("my-test-auth", customTokenSource(authToken2)),
+					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken2)),
 				)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "validation failed for tool 'get-row-by-id': unused auth tokens: my-test-auth")
@@ -383,7 +386,7 @@ func TestMCP_OptionalParams(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewToolboxClient()(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto.protocol)
 			}
 			searchRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
 				tool, err := client.LoadTool("search-rows", context.Background())
@@ -526,7 +529,7 @@ func TestMCP_MapParams(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewToolboxClient()(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto.protocol)
 			}
 			processDataTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
 				tool, err := client.LoadTool("process-data", context.Background())
@@ -626,7 +629,7 @@ func TestMCP_ContextHandling(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewToolboxClient()(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto.protocol)
 			}
 
 			t.Run("test_load_tool_with_cancelled_context", func(t *testing.T) {
