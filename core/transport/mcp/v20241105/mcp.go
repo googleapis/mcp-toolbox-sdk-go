@@ -26,15 +26,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core/version"
 	"golang.org/x/oauth2"
 )
 
 const (
 	ProtocolVersion = "2024-11-05"
 	ClientName      = "toolbox-go-sdk"
-	ClientVersion   = version.Version
 )
+
+var ClientVersion = mcp.SDKVersion
 
 // Ensure that McpTransport implements the Transport interface.
 var _ transport.Transport = &McpTransport{}
