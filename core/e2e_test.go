@@ -81,10 +81,16 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
+func getNewToolboxClient() *core.ToolboxClient {
+	client, err := core.NewToolboxClient("http://localhost:5000",
+		WithProtocol(core.Toolbox))
+	return client, err
+}
+
 func TestE2E_Basic(t *testing.T) {
 	// Helper to create a new client for each sub-test, like a function-scoped fixture
 	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
+		client, err := getNewToolboxClient()
 		require.NoError(t, err, "Failed to create ToolboxClient")
 		return client
 	}
@@ -187,7 +193,7 @@ func TestE2E_Basic(t *testing.T) {
 
 func TestE2E_LoadErrors(t *testing.T) {
 	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
+		client, err := getNewToolboxClient()
 		require.NoError(t, err, "Failed to create ToolboxClient")
 		return client
 	}
@@ -222,7 +228,7 @@ func TestE2E_LoadErrors(t *testing.T) {
 
 func TestE2E_BindParams(t *testing.T) {
 	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
+		client, err := getNewToolboxClient()
 		require.NoError(t, err)
 		return client
 	}
@@ -274,7 +280,7 @@ func TestE2E_BindParams(t *testing.T) {
 }
 
 func TestE2E_BindParamErrors(t *testing.T) {
-	client, err := core.NewToolboxClient("http://localhost:5000")
+	client, err := getNewToolboxClient()
 	require.NoError(t, err)
 	tool, err := client.LoadTool("get-n-rows", context.Background())
 	require.NoError(t, err)
@@ -297,7 +303,7 @@ func TestE2E_BindParamErrors(t *testing.T) {
 
 func TestE2E_Auth(t *testing.T) {
 	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
+		client, err := getNewToolboxClient()
 		require.NoError(t, err)
 		return client
 	}
@@ -412,7 +418,7 @@ func TestE2E_Auth(t *testing.T) {
 func TestE2E_OptionalParams(t *testing.T) {
 	// Helper to create a new client
 	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
+		client, err := getNewToolboxClient()
 		require.NoError(t, err, "Failed to create ToolboxClient")
 		return client
 	}
@@ -561,7 +567,7 @@ func TestE2E_OptionalParams(t *testing.T) {
 func TestE2E_MapParams(t *testing.T) {
 	// Helper to create a new client
 	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
+		client, err := getNewToolboxClient()
 		require.NoError(t, err, "Failed to create ToolboxClient")
 		return client
 	}
@@ -669,7 +675,7 @@ func TestE2E_MapParams(t *testing.T) {
 
 func TestE2E_ContextHandling(t *testing.T) {
 	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
+		client, err := getNewToolboxClient()
 		require.NoError(t, err, "Failed to create ToolboxClient")
 		return client
 	}
