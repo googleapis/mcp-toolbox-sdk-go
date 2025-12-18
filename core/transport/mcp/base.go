@@ -48,12 +48,17 @@ func NewBaseTransport(baseURL string, client *http.Client) *BaseMcpTransport {
 		client = &http.Client{}
 	}
 
-	// Ensure proper URL formatting efficiently
 	fullURL := baseURL
-	if !strings.HasSuffix(fullURL, "/") {
+	// Normalize by removing trailing slash first
+	fullURL = strings.TrimSuffix(fullURL, "/")
+
+	// Only append "/mcp/" if it is not already present
+	if !strings.HasSuffix(fullURL, "/mcp") {
+		fullURL += "/mcp/"
+	} else {
+		// Ensure it ends with a slash for clean concatenation later
 		fullURL += "/"
 	}
-	fullURL += "mcp/"
 
 	return &BaseMcpTransport{
 		baseURL:    fullURL,
