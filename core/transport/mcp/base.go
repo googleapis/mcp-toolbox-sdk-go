@@ -16,7 +16,6 @@ package mcp
 
 import (
 	"context"
-	_ "embed"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,12 +23,6 @@ import (
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 )
-
-//go:embed version.txt
-var rawVersion string
-
-// SDKVersion is the version read from version.txt, trimmed of whitespace.
-var SDKVersion = strings.TrimSpace(rawVersion)
 
 // BaseMcpTransport holds the common state and logic for MCP HTTP transports.
 type BaseMcpTransport struct {
