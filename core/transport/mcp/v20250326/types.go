@@ -16,91 +16,95 @@ package mcp20250326
 
 import "encoding/json"
 
-// JSONRPCRequest represents a standard JSON-RPC 2.0 request.
-type JSONRPCRequest struct {
+// jsonRPCRequest represents a standard JSON-RPC 2.0 request.
+type jsonRPCRequest struct {
 	JSONRPC string `json:"jsonrpc"`
-	ID      any    `json:"id"` // string or int
+	Method  string `json:"method"`
+	ID      any    `json:"id,omitempty"`
+	Params  any    `json:"params,omitempty"`
+}
+
+// jsonRPCNotification represents a standard JSON-RPC 2.0 notification (no ID).
+type jsonRPCNotification struct {
+	JSONRPC string `json:"jsonrpc"`
 	Method  string `json:"method"`
 	Params  any    `json:"params,omitempty"`
 }
 
-// JSONRPCNotification represents a standard JSON-RPC 2.0 notification (no ID).
-type JSONRPCNotification struct {
-	JSONRPC string `json:"jsonrpc"`
-	Method  string `json:"method"`
-	Params  any    `json:"params,omitempty"`
-}
-
-// JSONRPCResponse represents a standard JSON-RPC 2.0 response.
-type JSONRPCResponse struct {
+// jsonRPCResponse represents a standard JSON-RPC 2.0 response.
+type jsonRPCResponse struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      any             `json:"id"`
 	Result  json.RawMessage `json:"result,omitempty"`
-	Error   *JSONRPCError   `json:"error,omitempty"`
+	Error   *jsonRPCError   `json:"error,omitempty"`
 }
 
-// JSONRPCError represents a JSON-RPC 2.0 error object.
-type JSONRPCError struct {
+// jsonRPCError represents the error object inside a JSON-RPC response.
+type jsonRPCError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    any    `json:"data,omitempty"`
 }
 
-// InitializeRequestParams are the parameters for the "initialize" method.
-type InitializeRequestParams struct {
-	ProtocolVersion string             `json:"protocolVersion"`
-	Capabilities    ClientCapabilities `json:"capabilities"`
-	ClientInfo      Implementation     `json:"clientInfo"`
-}
-
-type ClientCapabilities struct{}
-
-type Implementation struct {
+// implementation describes the name and version of the client/server software.
+type implementation struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
 
-// InitializeResult is the result of the "initialize" method.
-type InitializeResult struct {
-	ProtocolVersion string             `json:"protocolVersion"`
-	Capabilities    ServerCapabilities `json:"capabilities"`
-	ServerInfo      Implementation     `json:"serverInfo"`
-	Instructions    string             `json:"instructions,omitempty"`
-	McpSessionId    string             `json:"Mcp-Session-Id,omitempty"`
-}
+// clientCapabilities describes the features supported by the client.
+type clientCapabilities map[string]any
 
-type ServerCapabilities struct {
+// serverCapabilities describes the features supported by the server.
+type serverCapabilities struct {
 	Prompts map[string]any `json:"prompts,omitempty"`
 	Tools   map[string]any `json:"tools,omitempty"`
 }
 
-// Tool represents a tool definition in the MCP protocol.
-type Tool struct {
+// initializeRequestParams holds the parameters for the 'initialize' handshake.
+type initializeRequestParams struct {
+	ProtocolVersion string             `json:"protocolVersion"`
+	Capabilities    clientCapabilities `json:"capabilities"`
+	ClientInfo      implementation     `json:"clientInfo"`
+}
+
+// initializeResult holds the response from the 'initialize' handshake.
+// v2025-03-26: Includes an optional McpSessionId field.
+type initializeResult struct {
+	ProtocolVersion string             `json:"protocolVersion"`
+	Capabilities    serverCapabilities `json:"capabilities"`
+	ServerInfo      implementation     `json:"serverInfo"`
+	Instructions    string             `json:"instructions,omitempty"`
+	McpSessionId    string             `json:"Mcp-Session-Id,omitempty"`
+}
+
+// mcpTool represents a single tool definition from the server.
+type mcpTool struct {
 	Name        string         `json:"name"`
 	Description string         `json:"description,omitempty"`
 	InputSchema map[string]any `json:"inputSchema"`
 	Meta        map[string]any `json:"_meta,omitempty"`
 }
 
-// ListToolsResult is the result of the "tools/list" method.
-type ListToolsResult struct {
-	Tools []Tool `json:"tools"`
+// listToolsResult holds the response from the 'tools/list' method.
+type listToolsResult struct {
+	Tools []mcpTool `json:"tools"`
 }
 
-// CallToolRequestParams are the parameters for the "tools/call" method.
-type CallToolRequestParams struct {
+// callToolRequestParams holds the parameters for the 'tools/call' method.
+type callToolRequestParams struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
 }
 
-// TextContent represents a text content block in the tool call result.
-type TextContent struct {
-	Type string `json:"type"` // should be "text"
+// textContent represents a single text block in a tool's output.
+type textContent struct {
+	Type string `json:"type"`
 	Text string `json:"text"`
 }
 
-// CallToolResult is the result of the "tools/call" method.
-type CallToolResult struct {
-	Content []TextContent `json:"content"`
+// callToolResult holds the response from the 'tools/call' method.
+type callToolResult struct {
+	Content []textContent `json:"content"`
 	IsError bool          `json:"isError"`
 }
