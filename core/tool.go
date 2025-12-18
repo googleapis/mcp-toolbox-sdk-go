@@ -15,17 +15,15 @@
 package core
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"reflect"
 	"strings"
 
 	"maps"
 
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	"golang.org/x/oauth2"
 )
 
@@ -34,16 +32,13 @@ type ToolboxTool struct {
 	name                string
 	description         string
 	parameters          []ParameterSchema
-	invocationURL       string
-	httpClient          *http.Client
+	transport           transport.Transport
 	authTokenSources    map[string]oauth2.TokenSource
 	boundParams         map[string]any
 	requiredAuthnParams map[string][]string
 	requiredAuthzTokens []string
 	clientHeaderSources map[string]oauth2.TokenSource
 }
-
-const toolInvokeSuffix = "/invoke"
 
 // Name returns the tool's name.
 func (tt *ToolboxTool) Name() string {
@@ -189,8 +184,7 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 	newTt := &ToolboxTool{
 		name:                tt.name,
 		description:         tt.description,
-		invocationURL:       tt.invocationURL,
-		httpClient:          tt.httpClient,
+		transport:           tt.transport,
 		parameters:          make([]ParameterSchema, len(tt.parameters)),
 		authTokenSources:    make(map[string]oauth2.TokenSource, len(tt.authTokenSources)),
 		boundParams:         make(map[string]any, len(tt.boundParams)),
@@ -244,11 +238,8 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 //	'result' field) or a raw string. Returns an error if any step of the
 //	process fails.
 func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, error) {
-	if tt.httpClient == nil {
-		return nil, fmt.Errorf("http client is not set for toolbox tool '%s'", tt.name)
-	}
 
-	// Before proceeding, ensure all authentication tokens required by the tool are available.
+	// Ensure all authentication tokens required by the tool are available.
 	if len(tt.requiredAuthnParams) > 0 || len(tt.requiredAuthzTokens) > 0 {
 		reqAuthServices := make(map[string]struct{})
 		for _, services := range tt.requiredAuthnParams {
@@ -274,67 +265,23 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 		return nil, fmt.Errorf("tool payload processing failed: %w", err)
 	}
 
-	payloadBytes, err := json.Marshal(finalPayload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal tool payload for API call: %w", err)
-	}
-
-	// Assemble the API request
-	req, err := http.NewRequestWithContext(ctx, "POST", tt.invocationURL, bytes.NewBuffer(payloadBytes))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create API request for tool '%s': %w", tt.name, err)
-	}
-	req.Header.Set("Content-Type", "application/json")
+	finalTokenSources := make(map[string]oauth2.TokenSource)
 
 	// Apply client-wide headers.
-	for name, source := range tt.clientHeaderSources {
-		token, tokenErr := source.Token()
-		if tokenErr != nil {
-			return nil, fmt.Errorf("failed to resolve client header '%s': %w", name, tokenErr)
-		}
-		req.Header.Set(name, token.AccessToken)
-	}
-	// Apply tool-specific authentication headers.
-	for authService, source := range tt.authTokenSources {
-		token, tokenErr := source.Token()
-		if tokenErr != nil {
-			return nil, fmt.Errorf("failed to get token for service '%s' for tool '%s': %w", authService, tt.name, tokenErr)
-		}
-		headerName := fmt.Sprintf("%s_token", authService)
-		req.Header.Set(headerName, token.AccessToken)
+	maps.Copy(finalTokenSources, tt.clientHeaderSources)
+
+	for name, source := range tt.authTokenSources {
+		// Toolbox HTTP protocol expects the suffix "_token"
+		headerName := fmt.Sprintf("%s_token", name)
+		finalTokenSources[headerName] = source
 	}
 
-	// API call execution
-	resp, err := tt.httpClient.Do(req)
+	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, finalTokenSources)
 	if err != nil {
-		return nil, fmt.Errorf("API call to tool '%s' failed: %w", tt.name, err)
-	}
-	defer resp.Body.Close()
-
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read API response body for tool '%s': %w", tt.name, err)
+		return nil, err
 	}
 
-	// Handle non-successful status codes
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		var errorResponse map[string]any
-		if jsonErr := json.Unmarshal(responseBody, &errorResponse); jsonErr == nil {
-			if errMsg, ok := errorResponse["error"].(string); ok {
-				return nil, fmt.Errorf("tool '%s' API returned error status %d: %s", tt.name, resp.StatusCode, errMsg)
-			}
-		}
-		return nil, fmt.Errorf("tool '%s' API returned unexpected status: %d %s, body: %s", tt.name, resp.StatusCode, resp.Status, string(responseBody))
-	}
-
-	// For successful responses, attempt to extract the 'result' field.
-	var apiResult map[string]any
-	if err := json.Unmarshal(responseBody, &apiResult); err == nil {
-		if result, ok := apiResult["result"]; ok {
-			return result, nil
-		}
-	}
-	return string(responseBody), nil
+	return response, nil
 }
 
 // validateAndBuildPayload performs manual type validation and applies bound parameters.
@@ -366,7 +313,7 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 
 		// If the parameter is a valid unbound parameter, validate its type.
 		if isUnbound {
-			if err := param.validateType(value); err != nil {
+			if err := param.ValidateType(value); err != nil {
 				return nil, err
 			}
 		}
