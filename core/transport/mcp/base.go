@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
@@ -25,13 +26,11 @@ import (
 
 // BaseMcpTransport holds the common state and logic for MCP HTTP transports.
 type BaseMcpTransport struct {
-	baseURL            string
-	HTTPClient         *http.Client
-	ProtocolVer        string
-	ServerVersion      string
-	ServerCapabilities map[string]any
-	initOnce           sync.Once
-	initErr            error
+	baseURL       string
+	HTTPClient    *http.Client
+	ServerVersion string
+	initOnce      sync.Once
+	initErr       error
 
 	// HandshakeHook is the abstract method _initialize_session.
 	// The specific version implementation will assign this function.
@@ -48,8 +47,10 @@ func NewBaseTransport(baseURL string, client *http.Client) *BaseMcpTransport {
 	if client == nil {
 		client = &http.Client{}
 	}
+
+	// Ensure proper URL formatting efficiently
 	fullURL := baseURL
-	if len(fullURL) > 0 && fullURL[len(fullURL)-1] != '/' {
+	if !strings.HasSuffix(fullURL, "/") {
 		fullURL += "/"
 	}
 	fullURL += "mcp/"
@@ -82,6 +83,7 @@ func (b *BaseMcpTransport) ConvertToolDefinition(toolData map[string]any) (trans
 			paramAuth = pa
 		}
 		if ia, ok := meta["toolbox/authInvoke"].([]any); ok {
+			invokeAuth = make([]string, 0, len(ia))
 			for _, v := range ia {
 				if s, ok := v.(string); ok {
 					invokeAuth = append(invokeAuth, s)
@@ -105,7 +107,7 @@ func (b *BaseMcpTransport) ConvertToolDefinition(toolData map[string]any) (trans
 	}
 
 	// Build Parameter List
-	var parameters []transport.ParameterSchema
+	parameters := make([]transport.ParameterSchema, 0, len(properties))
 
 	for propertyName, definition := range properties {
 		definitionMap, ok := definition.(map[string]any)
@@ -116,9 +118,9 @@ func (b *BaseMcpTransport) ConvertToolDefinition(toolData map[string]any) (trans
 		// Handle Auth Sources for this specific parameter
 		var authSources []string
 		if paramAuth != nil {
-			// Check if this parameter name exists in the auth map
 			if sourcesRaw, ok := paramAuth[propertyName]; ok {
 				if sourcesList, ok := sourcesRaw.([]any); ok {
+					authSources = make([]string, 0, len(sourcesList))
 					for _, s := range sourcesList {
 						if str, ok := s.(string); ok {
 							authSources = append(authSources, str)
@@ -153,11 +155,12 @@ func parseProperty(name string, definitionMap map[string]any, isRequired bool) t
 
 	switch param.Type {
 	case "object":
-		if raw, ok := definitionMap["additionalProperties"]; ok {
-			if b, isBool := raw.(bool); isBool {
-				param.AdditionalProperties = b
-			} else if m, isMap := raw.(map[string]any); isMap {
-				schema := parseProperty("", m, false)
+		if ap, ok := definitionMap["additionalProperties"]; ok {
+			switch v := ap.(type) {
+			case bool:
+				param.AdditionalProperties = v
+			case map[string]any:
+				schema := parseProperty("", v, false)
 				param.AdditionalProperties = &schema
 			}
 		}
@@ -172,6 +175,7 @@ func parseProperty(name string, definitionMap map[string]any, isRequired bool) t
 	return param
 }
 
+// Helper to safely extract string values from map
 func getString(m map[string]any, key string) string {
 	if v, ok := m[key]; ok {
 		if s, ok := v.(string); ok {
