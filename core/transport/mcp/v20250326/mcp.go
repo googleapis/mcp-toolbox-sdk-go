@@ -32,7 +32,7 @@ import (
 const (
 	ProtocolVersion = "2025-03-26"
 	ClientName      = "toolbox-go-sdk"
-	ClientVersion   = "0.1.0"
+	ClientVersion   = mcp.SDKVersion
 )
 
 // Ensure that McpTransport implements the Transport interface.
@@ -74,7 +74,7 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 		requestURL += toolsetName
 	}
 
-	var result ListToolsResult
+	var result listToolsResult
 	if _, err := t.sendRequest(ctx, requestURL, "tools/list", map[string]any{}, finalHeaders, &result); err != nil {
 		return nil, fmt.Errorf("failed to list tools: %w", err)
 	}
@@ -83,33 +83,31 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 		ServerVersion: t.ServerVersion,
 		Tools:         make(map[string]transport.ToolSchema),
 	}
-
-	for i, mcpTool := range result.Tools {
-		if mcpTool.Name == "" {
+	for i, tool := range result.Tools {
+		if tool.Name == "" {
 			return nil, fmt.Errorf("received invalid tool definition at index %d: missing 'name' field", i)
 		}
 
 		rawTool := map[string]any{
-			"name":        mcpTool.Name,
-			"description": mcpTool.Description,
-			"inputSchema": mcpTool.InputSchema,
+			"name":        tool.Name,
+			"description": tool.Description,
+			"inputSchema": tool.InputSchema,
 		}
-		if mcpTool.Meta != nil {
-			rawTool["_meta"] = mcpTool.Meta
+		if tool.Meta != nil {
+			rawTool["_meta"] = tool.Meta
 		}
 
 		toolSchema, err := t.ConvertToolDefinition(rawTool)
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert schema for tool %s: %w", mcpTool.Name, err)
+			return nil, fmt.Errorf("failed to convert schema for tool %s: %w", tool.Name, err)
 		}
-
-		manifest.Tools[mcpTool.Name] = toolSchema
+		manifest.Tools[tool.Name] = toolSchema
 	}
 
 	return manifest, nil
 }
 
-// GetTool fetches a single tool definition.
+// GetTool fetches a single tool
 func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
 	manifest, err := t.ListTools(ctx, "", headers)
 	if err != nil {
@@ -127,7 +125,7 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 	}, nil
 }
 
-// InvokeTool calls a specific tool on the server and returns the text result.
+// InvokeTool executes a tool
 func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
 	if err := t.EnsureInitialized(ctx); err != nil {
 		return "", err
@@ -138,12 +136,11 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map
 		return "", err
 	}
 
-	params := CallToolRequestParams{
+	params := callToolRequestParams{
 		Name:      toolName,
 		Arguments: args,
 	}
-
-	var result CallToolResult
+	var result callToolResult
 	if _, err := t.sendRequest(ctx, t.BaseURL(), "tools/call", params, finalHeaders, &result); err != nil {
 		return "", fmt.Errorf("failed to invoke tool '%s': %w", toolName, err)
 	}
@@ -167,28 +164,33 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map
 	return output, nil
 }
 
-// initializeSession is the concrete implementation of the handshake hook.
+// initializeSession performs the initial handshake and extracts the Session ID.
 func (t *McpTransport) initializeSession(ctx context.Context) error {
-	params := InitializeRequestParams{
+	params := initializeRequestParams{
 		ProtocolVersion: t.protocolVersion,
-		Capabilities:    ClientCapabilities{},
-		ClientInfo: Implementation{
+		Capabilities:    clientCapabilities{},
+		ClientInfo: implementation{
 			Name:    ClientName,
 			Version: ClientVersion,
 		},
 	}
+	var result initializeResult
+	req := jsonRPCRequest{
+		JSONRPC: "2.0",
+		Method:  "initialize",
+		ID:      uuid.New().String(),
+		Params:  params,
+	}
 
-	var result InitializeResult
-
-	respHeaders, err := t.sendRequest(ctx, t.BaseURL(), "initialize", params, nil, &result)
+	// Capture headers to check for Session ID
+	respHeaders, err := t.doRPC(ctx, t.BaseURL(), req, nil, &result)
 	if err != nil {
 		return err
 	}
 
 	// Protocol Version Check
 	if result.ProtocolVersion != t.protocolVersion {
-		return fmt.Errorf("MCP version mismatch: client (%s) != server (%s)",
-			t.protocolVersion, result.ProtocolVersion)
+		return fmt.Errorf("MCP version mismatch: client (%s) != server (%s)", t.protocolVersion, result.ProtocolVersion)
 	}
 
 	// Capabilities Check
@@ -198,8 +200,7 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 
 	t.ServerVersion = result.ServerInfo.Version
 
-	// Extract Session ID (v2025-03-26 specific)
-	// Check JSON body for session id
+	// Session ID Extraction: Check Body first, then Headers.
 	sessionId := result.McpSessionId
 
 	// Check HTTP Headers for session id if not in JSON body
@@ -208,7 +209,7 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 	}
 
 	if sessionId == "" {
-		return fmt.Errorf("server did not return a Mcp-Session-Id during initialization")
+		return fmt.Errorf("server did not return a Mcp-Session-Id in body or headers")
 	}
 	t.sessionId = sessionId
 
@@ -217,7 +218,7 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 	return err
 }
 
-// resolveHeaders converts a map of TokenSources into standard HTTP headers (map[string]string).
+// resolveHeaders converts a map of TokenSources into standard HTTP headers.
 func (t *McpTransport) resolveHeaders(sources map[string]oauth2.TokenSource) (map[string]string, error) {
 	if sources == nil {
 		return nil, nil
@@ -233,15 +234,12 @@ func (t *McpTransport) resolveHeaders(sources map[string]oauth2.TokenSource) (ma
 		if err != nil {
 			return nil, fmt.Errorf("failed to get token for header %s: %w", headerKey, err)
 		}
-		val := token.AccessToken
-
-		headers[headerKey] = val
+		headers[headerKey] = token.AccessToken
 	}
 	return headers, nil
 }
 
-// sendRequest sends a standard JSON-RPC request and injects the session ID if present.
-// Returns headers and error.
+// sendRequest sends a JSON-RPC request and injects the Session ID if active.
 func (t *McpTransport) sendRequest(ctx context.Context, url string, method string, params any, headers map[string]string, dest any) (http.Header, error) {
 
 	// Inject Session ID for non-initialize requests (v2025-03-26 specific)
@@ -257,8 +255,7 @@ func (t *McpTransport) sendRequest(ctx context.Context, url string, method strin
 			finalParams = paramMap
 		}
 	}
-
-	req := JSONRPCRequest{
+	req := jsonRPCRequest{
 		JSONRPC: "2.0",
 		Method:  method,
 		ID:      uuid.New().String(),
@@ -267,8 +264,7 @@ func (t *McpTransport) sendRequest(ctx context.Context, url string, method strin
 	return t.doRPC(ctx, url, req, headers, dest)
 }
 
-// sendNotification sends a standard JSON-RPC notification and injects the session ID if present.
-// Returns headers and error.
+// sendNotification sends a JSON-RPC notification and injects the Session ID if active.
 func (t *McpTransport) sendNotification(ctx context.Context, method string, params any) (http.Header, error) {
 
 	// Inject Session ID (v2025-03-26 specific)
@@ -284,8 +280,7 @@ func (t *McpTransport) sendNotification(ctx context.Context, method string, para
 			finalParams = paramMap
 		}
 	}
-
-	req := JSONRPCNotification{
+	req := jsonRPCNotification{
 		JSONRPC: "2.0",
 		Method:  method,
 		Params:  finalParams,
@@ -293,7 +288,7 @@ func (t *McpTransport) sendNotification(ctx context.Context, method string, para
 	return t.doRPC(ctx, t.BaseURL(), req, nil, nil)
 }
 
-// doRPC performs the low-level HTTP POST, handles JSON-RPC wrapping/unwrapping, and returns headers and error.
+// doRPC performs the HTTP POST, returns headers, and handles JSON-RPC wrapping.
 func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, headers map[string]string, dest any) (http.Header, error) {
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
@@ -337,9 +332,7 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 	if err != nil {
 		return nil, fmt.Errorf("read body failed: %w", err)
 	}
-
-	// Decode RPC Envelope
-	var rpcResp JSONRPCResponse
+	var rpcResp jsonRPCResponse
 	if err := json.Unmarshal(bodyBytes, &rpcResp); err != nil {
 		return nil, fmt.Errorf("response unmarshal failed: %w", err)
 	}
