@@ -160,6 +160,7 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map
 
 	output := sb.String()
 	if output == "" {
+		// Return null if no text content found but not an error
 		return "null", nil
 	}
 	return output, nil
