@@ -57,7 +57,7 @@ func New(baseURL string, client *http.Client) *McpTransport {
 	return t
 }
 
-// ListTools fetches tools from the server and converts them to the ManifestSchema.
+// ListTools fetches available tools
 func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
 	if err := t.EnsureInitialized(ctx); err != nil {
 		return nil, err
