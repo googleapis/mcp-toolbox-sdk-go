@@ -117,10 +117,10 @@ func TestListTools(t *testing.T) {
 	server := newMockMCPServer(t)
 	defer server.Close()
 
-	// Mock tools/list response using strict Tool struct
+	// Mock tools/list response using strict mcpTool struct
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
 		return listToolsResult{
-			Tools: []Tool{
+			Tools: []mcpTool{
 				{
 					Name:        "get_weather",
 					Description: "Get weather for a location",
@@ -166,7 +166,7 @@ func TestListTools_ErrorOnEmptyName(t *testing.T) {
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
 		return listToolsResult{
-			Tools: []Tool{
+			Tools: []mcpTool{
 				{Name: "valid", InputSchema: map[string]any{}},
 				{Name: "", InputSchema: map[string]any{}}, // Invalid tool
 			},
@@ -186,7 +186,7 @@ func TestGetTool_Success(t *testing.T) {
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
 		return listToolsResult{
-			Tools: []Tool{
+			Tools: []mcpTool{
 				{Name: "tool_a", InputSchema: map[string]any{"type": "object"}},
 				{Name: "tool_b", InputSchema: map[string]any{"type": "object"}},
 			},
@@ -205,7 +205,7 @@ func TestGetTool_NotFound(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
-		return listToolsResult{Tools: []Tool{}}, nil
+		return listToolsResult{Tools: []mcpTool{}}, nil
 	}
 
 	client := New(server.URL, server.Client())
@@ -220,7 +220,7 @@ func TestInvokeTool(t *testing.T) {
 
 	server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
 		// Verify arguments
-		var callParams callToolParams
+		var callParams callToolRequestParams
 		_ = json.Unmarshal(params, &callParams)
 		if callParams.Name != "echo" {
 			return nil, nil
@@ -336,7 +336,7 @@ func TestListTools_WithToolset(t *testing.T) {
 
 	// We verify that the toolset name was appended to the URL in the POST request
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
-		return listToolsResult{Tools: []Tool{}}, nil
+		return listToolsResult{Tools: []mcpTool{}}, nil
 	}
 
 	client := New(server.URL, server.Client())
