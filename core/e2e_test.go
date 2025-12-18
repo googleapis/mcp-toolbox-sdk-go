@@ -345,7 +345,7 @@ func TestE2E_Auth(t *testing.T) {
 
 		_, err = authedTool.Invoke(context.Background(), map[string]any{"id": "2"})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "tool invocation not authorized")
+		assert.Contains(t, err.Error(), "unauthorized Tool call")
 	})
 
 	t.Run("test_run_tool_auth", func(t *testing.T) {
