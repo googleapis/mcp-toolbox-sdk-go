@@ -67,11 +67,11 @@ func TestMain(m *testing.M) {
 	// Download and start the toolbox server
 	cmd := setupAndStartToolboxServer(ctx, toolboxVersion, toolsFilePath)
 
-	// --- 2. Run Tests ---
+	// Run Tests
 	log.Println("Setup complete. Running tests...")
 	exitCode := m.Run()
 
-	// --- 3. Teardown Phase ---
+	// 3. Teardown Phase
 	log.Println("Tearing down toolbox server...")
 	if err := cmd.Process.Kill(); err != nil {
 		log.Printf("Failed to kill toolbox server process: %v", err)
@@ -81,10 +81,12 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func getNewToolboxClient() *core.ToolboxClient {
+// helper factory to create a client with a specific protocol
+func getNewToolboxClient()(t *testing.T, p core.Protocol) *core.ToolboxClient {
 	client, err := core.NewToolboxClient("http://localhost:5000",
-		WithProtocol(core.Toolbox))
-	return client, err
+		core.WithProtocol(core.Toolbox))
+	require.NoError(t, err, "Failed to create MCP ToolboxClient for protocol %s", p)
+	return client
 }
 
 func TestE2E_Basic(t *testing.T) {
