@@ -29,56 +29,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// Global variables to hold session-scoped "fixtures"
-var (
-	projectID       string = getEnvVar("GOOGLE_CLOUD_PROJECT")
-	toolboxVersion  string = getEnvVar("TOOLBOX_VERSION")
-	authToken1      string
-	authToken2      string
-	manifestVersion string = getEnvVar("TOOLBOX_MANIFEST_VERSION")
-)
-
-func TestMain(m *testing.M) {
-	ctx := context.Background()
-	log.Println("Starting E2E test setup...")
-
-	// Get secrets and auth tokens
-	log.Println("Fetching secrets and auth tokens...")
-	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools", manifestVersion)
-	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1", "latest")
-	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2", "latest")
-	authToken1 = getAuthToken(ctx, clientID1)
-	authToken2 = getAuthToken(ctx, clientID2)
-
-	// Create a temporary file for the tools manifest
-	toolsFile, err := os.CreateTemp("", "tools-mcp-*.json")
-	if err != nil {
-		log.Fatalf("Failed to create temp file for tools: %v", err)
-	}
-	if _, err := toolsFile.WriteString(toolsManifestContent); err != nil {
-		log.Fatalf("Failed to write to temp file: %v", err)
-	}
-	toolsFile.Close()
-	toolsFilePath := toolsFile.Name()
-	defer os.Remove(toolsFilePath) // Ensure cleanup
-
-	// Download and start the toolbox server
-	cmd := setupAndStartToolboxServer(ctx, toolboxVersion, toolsFilePath)
-
-	// --- 2. Run Tests ---
-	log.Println("Setup complete. Running tests...")
-	exitCode := m.Run()
-
-	// --- 3. Teardown Phase ---
-	log.Println("Tearing down toolbox server...")
-	if err := cmd.Process.Kill(); err != nil {
-		log.Printf("Failed to kill toolbox server process: %v", err)
-	}
-	_ = cmd.Wait() // Clean up the process resources
-
-	os.Exit(exitCode)
-}
-
 // protocolsToTest defines the matrix of MCP protocols we want to verify.
 var protocolsToTest = []struct {
 	name     string
@@ -91,8 +41,6 @@ var protocolsToTest = []struct {
 
 // helper factory to create a client with a specific protocol
 func getNewToolboxClient()(t *testing.T, p core.Protocol) *core.ToolboxClient {
-	// We assume the test server started in TestMain is listening on port 5000
-	// and supports MCP on the /mcp route (handled by the SDK transport logic).
 	client, err := core.NewToolboxClient("http://localhost:5000",
 		core.WithProtocol(p))
 	require.NoError(t, err, "Failed to create MCP ToolboxClient for protocol %s", p)
@@ -189,8 +137,6 @@ func TestMCP_Basic(t *testing.T) {
 
 				_, err := tool.Invoke(context.Background(), map[string]any{})
 				require.Error(t, err)
-				// Note: Error messages might vary slightly between protocols if the validation happens server-side,
-				// but client-side validation (in the SDK) should be consistent.
 				assert.Contains(t, err.Error(), "missing required parameter 'num_rows'")
 			})
 
@@ -217,10 +163,6 @@ func TestMCP_LoadErrors(t *testing.T) {
 				client := newClient(t)
 				_, err := client.LoadTool("non-existent-tool", context.Background())
 				require.Error(t, err)
-				// MCP JSON-RPC errors might return different codes/messages than REST 404,
-				// but usually, the SDK standardizes this or the server returns a tool not found error.
-				// We check loosely for failure first.
-				// Adjust assertion if MCP returns "Method not found" or "Invalid params".
 				assert.True(t, err != nil)
 			})
 
@@ -233,14 +175,12 @@ func TestMCP_LoadErrors(t *testing.T) {
 	}
 
 	t.Run("test_new_client_with_nil_option", func(t *testing.T) {
-		// This is protocol agnostic, running once is sufficient
 		_, err := core.NewToolboxClient("http://localhost:5000", nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "received a nil ClientOption")
 	})
 
 	t.Run("test_load_tool_with_nil_option", func(t *testing.T) {
-		// Using the first available protocol for this generic SDK test
 		client := getNewToolboxClient()(t, protocolsToTest[0].protocol)
 		_, err := client.LoadTool("get-n-rows", context.Background(), nil)
 		require.Error(t, err)
@@ -329,11 +269,6 @@ func TestMCP_BindParamErrors(t *testing.T) {
 }
 
 func TestMCP_Auth(t *testing.T) {
-	// Helper to create a static token source
-	staticTokenSource := func(token string) oauth2.TokenSource {
-		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-	}
-
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
@@ -343,7 +278,7 @@ func TestMCP_Auth(t *testing.T) {
 			t.Run("test_run_tool_unauth_with_auth", func(t *testing.T) {
 				client := newClient(t)
 				_, err := client.LoadTool("get-row-by-id", context.Background(),
-					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken2)),
+					core.WithAuthTokenSource("my-test-auth", customTokenSource(authToken2)),
 				)
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "validation failed for tool 'get-row-by-id': unused auth tokens: my-test-auth")
@@ -371,8 +306,6 @@ func TestMCP_Auth(t *testing.T) {
 
 				_, err = authedTool.Invoke(context.Background(), map[string]any{"id": "2"})
 				require.Error(t, err)
-				// Note: Error string might vary slightly in MCP if the server returns a generic error,
-				// but "tool invocation not authorized" is likely consistent.
 				assert.Contains(t, err.Error(), "tool invocation not authorized")
 			})
 
@@ -427,7 +360,6 @@ func TestMCP_Auth(t *testing.T) {
 
 				_, err = tool.Invoke(context.Background(), map[string]any{})
 				require.Error(t, err)
-				// The SDK logic for extracting claims maps is consistent regardless of protocol
 				assert.Contains(t, err.Error(), "no field named row_data in claims")
 			})
 
