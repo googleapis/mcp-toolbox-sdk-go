@@ -291,7 +291,6 @@ func TestConvertToolSchema(t *testing.T) {
 	// Use the transport's ConvertToolDefinition which delegates to the base/helper logic
 	tr := New("http://example.com", nil)
 
-	// Correctly structured test data matching Python logic: _meta is a sibling of inputSchema
 	rawTool := map[string]any{
 		"name":        "complex_tool",
 		"description": "Complex tool",
