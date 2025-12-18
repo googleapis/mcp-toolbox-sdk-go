@@ -23,28 +23,27 @@ import (
 	"net/http"
 	"strings"
 
-	"golang.org/x/oauth2"
-
 	"github.com/google/uuid"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/version"
+	"golang.org/x/oauth2"
 )
-
-// McpTransport implements the MCP v2024-11-05 protocol.
-type McpTransport struct {
-	*mcp.BaseMcpTransport
-	protocolVersion string
-}
-
-// Ensure that McpTransport implements the Transport interface.
-var _ transport.Transport = &McpTransport{}
 
 const (
 	ProtocolVersion = "2024-11-05"
 	ClientName      = "toolbox-go-sdk"
 	ClientVersion   = version.Version
 )
+
+// Ensure that McpTransport implements the Transport interface.
+var _ transport.Transport = &McpTransport{}
+
+// McpTransport implements the MCP v2024-11-05 protocol.
+type McpTransport struct {
+	*mcp.BaseMcpTransport
+	protocolVersion string
+}
 
 // New creates a new version-specific transport instance.
 func New(baseURL string, client *http.Client) *McpTransport {
@@ -57,7 +56,7 @@ func New(baseURL string, client *http.Client) *McpTransport {
 	return t
 }
 
-// ListTools fetches tools from the server and converts them to the ManifestSchema.
+// ListTools fetches available tools
 func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
 	if err := t.EnsureInitialized(ctx); err != nil {
 		return nil, err
@@ -109,7 +108,7 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 	return manifest, nil
 }
 
-// GetTool fetches a single tool definition.
+// GetTool fetches a single tool
 func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
 	manifest, err := t.ListTools(ctx, "", headers)
 	if err != nil {
@@ -127,7 +126,7 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 	}, nil
 }
 
-// InvokeTool calls a specific tool on the server and returns the text result.
+// InvokeTool executes a tool
 func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
 	if err := t.EnsureInitialized(ctx); err != nil {
 		return "", err
@@ -138,7 +137,7 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map
 		return "", err
 	}
 
-	params := callToolParams{
+	params := callToolRequestParams{
 		Name:      toolName,
 		Arguments: args,
 	}
@@ -167,14 +166,14 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map
 	return output, nil
 }
 
-// initializeSession is the concrete implementation of the handshake hook.
+// initializeSession performs the initial handshake with the server.
 func (t *McpTransport) initializeSession(ctx context.Context) error {
 	params := initializeRequestParams{
 		ProtocolVersion: t.protocolVersion,
 		Capabilities:    clientCapabilities{},
 		ClientInfo: implementation{
 			Name:    ClientName,
-			Version: version.Version,
+			Version: ClientVersion,
 		},
 	}
 
@@ -185,8 +184,7 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 
 	// Protocol Version Check
 	if result.ProtocolVersion != t.protocolVersion {
-		return fmt.Errorf("MCP version mismatch: client (%s) != server (%s)",
-			t.protocolVersion, result.ProtocolVersion)
+		return fmt.Errorf("MCP version mismatch: client (%s) != server (%s)", t.protocolVersion, result.ProtocolVersion)
 	}
 
 	// Capabilities Check
@@ -200,7 +198,7 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 	return t.sendNotification(ctx, "notifications/initialized", map[string]any{})
 }
 
-// resolveHeaders converts a map of TokenSources into standard HTTP headers (map[string]string).
+// resolveHeaders converts a map of TokenSources into standard HTTP headers.
 func (t *McpTransport) resolveHeaders(sources map[string]oauth2.TokenSource) (map[string]string, error) {
 	if sources == nil {
 		return nil, nil
@@ -216,14 +214,12 @@ func (t *McpTransport) resolveHeaders(sources map[string]oauth2.TokenSource) (ma
 		if err != nil {
 			return nil, fmt.Errorf("failed to get token for header %s: %w", headerKey, err)
 		}
-		val := token.AccessToken
-
-		headers[headerKey] = val
+		headers[headerKey] = token.AccessToken
 	}
 	return headers, nil
 }
 
-// sendRequest sends a standard JSON-RPC request.
+// sendRequest sends a standard JSON-RPC request to the server.
 func (t *McpTransport) sendRequest(ctx context.Context, url string, method string, params any, headers map[string]string, dest any) error {
 	req := jsonRPCRequest{
 		JSONRPC: "2.0",
