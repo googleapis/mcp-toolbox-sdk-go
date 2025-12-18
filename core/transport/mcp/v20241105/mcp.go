@@ -32,9 +32,8 @@ import (
 const (
 	ProtocolVersion = "2024-11-05"
 	ClientName      = "toolbox-go-sdk"
+	ClientVersion   = mcp.SDKVersion
 )
-
-var ClientVersion = mcp.SDKVersion
 
 // Ensure that McpTransport implements the Transport interface.
 var _ transport.Transport = &McpTransport{}
