@@ -34,7 +34,7 @@ import (
 type mockMCPServer struct {
 	*httptest.Server
 	handlers map[string]func(params json.RawMessage) (any, error)
-	requests []JSONRPCRequest
+	requests []jsonRPCRequest
 }
 
 func newMockMCPServer() *mockMCPServer {
@@ -49,7 +49,7 @@ func newMockMCPServer() *mockMCPServer {
 			return
 		}
 
-		var req JSONRPCRequest
+		var req jsonRPCRequest
 		if err := json.Unmarshal(body, &req); err != nil {
 			http.Error(w, "json unmarshal failed", http.StatusBadRequest)
 			return
@@ -74,13 +74,13 @@ func newMockMCPServer() *mockMCPServer {
 		}
 
 		result, err := handler(asRawMessage(req.Params))
-		resp := JSONRPCResponse{
+		resp := jsonRPCResponse{
 			JSONRPC: "2.0",
 			ID:      req.ID,
 		}
 
 		if err != nil {
-			resp.Error = &JSONRPCError{
+			resp.Error = &jsonRPCError{
 				Code:    -32000,
 				Message: err.Error(),
 			}
@@ -96,12 +96,12 @@ func newMockMCPServer() *mockMCPServer {
 
 	// Register default successful handshake
 	m.handlers["initialize"] = func(params json.RawMessage) (any, error) {
-		return InitializeResult{
+		return initializeResult{
 			ProtocolVersion: ProtocolVersion,
-			Capabilities: ServerCapabilities{
+			Capabilities: serverCapabilities{
 				Tools: map[string]any{"listChanged": true},
 			},
-			ServerInfo: Implementation{
+			ServerInfo: implementation{
 				Name:    "mock-server",
 				Version: "1.0.0",
 			},
@@ -140,11 +140,11 @@ func TestInitialize_MissingSessionId(t *testing.T) {
 
 	// Override initialize to return NO session ID
 	server.handlers["initialize"] = func(params json.RawMessage) (any, error) {
-		return InitializeResult{
+		return initializeResult{
 			ProtocolVersion: ProtocolVersion,
 			// Must provide non-empty tools so it isn't omitted by json omitempty
-			Capabilities: ServerCapabilities{Tools: map[string]any{"listChanged": true}},
-			ServerInfo:   Implementation{Name: "bad-server", Version: "1"},
+			Capabilities: serverCapabilities{Tools: map[string]any{"listChanged": true}},
+			ServerInfo:   implementation{Name: "bad-server", Version: "1"},
 			McpSessionId: "", // Missing
 		}, nil
 	}
@@ -160,8 +160,8 @@ func TestSessionId_Injection_InvokeTool(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
-		return CallToolResult{
-			Content: []TextContent{{Type: "text", Text: "OK"}},
+		return callToolResult{
+			Content: []textContent{{Type: "text", Text: "OK"}},
 		}, nil
 	}
 
@@ -192,7 +192,7 @@ func TestSessionId_Injection_ListTools(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
-		return ListToolsResult{Tools: []Tool{}}, nil
+		return listToolsResult{Tools: []mcpTool{}}, nil
 	}
 
 	client := New(server.URL, server.Client())
@@ -213,11 +213,11 @@ func TestListTools_MetaPreservation(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
-		return ListToolsResult{
-			Tools: []Tool{
+		return listToolsResult{
+			Tools: []mcpTool{
 				{
 					Name:        "auth_tool",
-					Description: "Tool with auth",
+					Description: "mcpTool with auth",
 					InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 					Meta: map[string]any{
 						"toolbox/authInvoke": []string{"oauth-scope"},
@@ -241,8 +241,8 @@ func TestGetTool_Success(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
-		return ListToolsResult{
-			Tools: []Tool{
+		return listToolsResult{
+			Tools: []mcpTool{
 				{Name: "wanted", InputSchema: map[string]any{}},
 				{Name: "unwanted", InputSchema: map[string]any{}},
 			},
@@ -261,8 +261,8 @@ func TestInvokeTool_ErrorResult(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
-		return CallToolResult{
-			Content: []TextContent{{Type: "text", Text: "Something went wrong"}},
+		return callToolResult{
+			Content: []textContent{{Type: "text", Text: "Something went wrong"}},
 			IsError: true,
 		}, nil
 	}
@@ -292,7 +292,7 @@ func TestListTools_WithAuthHeaders(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
-		return ListToolsResult{Tools: []Tool{}}, nil
+		return listToolsResult{Tools: []mcpTool{}}, nil
 	}
 
 	client := New(server.URL, server.Client())
@@ -308,10 +308,10 @@ func TestProtocolVersionMismatch(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["initialize"] = func(params json.RawMessage) (any, error) {
-		return InitializeResult{
+		return initializeResult{
 			ProtocolVersion: "2099-01-01",
-			Capabilities:    ServerCapabilities{Tools: map[string]any{}},
-			ServerInfo:      Implementation{Name: "futuristic", Version: "1"},
+			Capabilities:    serverCapabilities{Tools: map[string]any{}},
+			ServerInfo:      implementation{Name: "futuristic", Version: "1"},
 			McpSessionId:    "s1",
 		}, nil
 	}
@@ -327,9 +327,9 @@ func TestInitialization_MissingCapabilities(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["initialize"] = func(params json.RawMessage) (any, error) {
-		return InitializeResult{
+		return initializeResult{
 			ProtocolVersion: ProtocolVersion,
-			ServerInfo:      Implementation{Name: "bad", Version: "1"},
+			ServerInfo:      implementation{Name: "bad", Version: "1"},
 			McpSessionId:    "s1",
 			// Tools capability missing
 		}, nil
@@ -406,7 +406,7 @@ func TestGetTool_NotFound(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
-		return ListToolsResult{Tools: []Tool{}}, nil
+		return listToolsResult{Tools: []mcpTool{}}, nil
 	}
 
 	client := New(server.URL, server.Client())
@@ -457,14 +457,14 @@ func TestInit_NotificationFailure(t *testing.T) {
 	// Fix: Use a custom server that returns 500 for the notification specifically.
 	// doRPC swallows JSON-RPC error bodies for notifications (dest=nil), so we must rely on HTTP status codes.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var req JSONRPCRequest
+		var req jsonRPCRequest
 		// Read body to clear buffer, though we just check fields
 		body, _ := io.ReadAll(r.Body)
 		json.Unmarshal(body, &req)
 
 		if req.Method == "initialize" {
 			// Success
-			resp := JSONRPCResponse{
+			resp := jsonRPCResponse{
 				JSONRPC: "2.0",
 				ID:      req.ID,
 				Result:  json.RawMessage(`{"protocolVersion":"2025-03-26","capabilities":{"tools":{}},"serverInfo":{"name":"mock","version":"1"},"Mcp-Session-Id":"s1"}`),
@@ -493,8 +493,8 @@ func TestInvokeTool_ComplexContent(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
-		return CallToolResult{
-			Content: []TextContent{
+		return callToolResult{
+			Content: []textContent{
 				{Type: "text", Text: "Part 1 "},
 				{Type: "image", Text: "base64data"}, // Should be ignored based on text logic
 				{Type: "text", Text: "Part 2"},
@@ -514,8 +514,8 @@ func TestInvokeTool_EmptyResult(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
-		return CallToolResult{
-			Content: []TextContent{},
+		return callToolResult{
+			Content: []textContent{},
 		}, nil
 	}
 
@@ -541,8 +541,8 @@ func TestListTools_ErrorOnEmptyName(t *testing.T) {
 	defer server.Close()
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
-		return ListToolsResult{
-			Tools: []Tool{
+		return listToolsResult{
+			Tools: []mcpTool{
 				{Name: "valid", InputSchema: map[string]any{}},
 				{Name: "", InputSchema: map[string]any{}},
 			},
