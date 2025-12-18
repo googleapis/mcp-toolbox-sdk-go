@@ -46,7 +46,7 @@ type jsonRPCError struct {
 	Data    any    `json:"data,omitempty"`
 }
 
-// implementation describes the name and version of the client/server software.
+// implementation describes the name and version of the client.
 type implementation struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
