@@ -309,7 +309,7 @@ func TestMCP_Auth(t *testing.T) {
 
 				_, err = authedTool.Invoke(context.Background(), map[string]any{"id": "2"})
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "unauthorized Tool call")
+				assert.Contains(t, err.Error(), "tool invocation not authorized")
 			})
 
 			t.Run("test_run_tool_auth", func(t *testing.T) {
