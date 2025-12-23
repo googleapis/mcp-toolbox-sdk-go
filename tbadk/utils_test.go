@@ -105,7 +105,7 @@ func createCoreTool(t *testing.T, toolName string, schema core.ToolSchema) (*cor
 			"result":  result,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 
 	//  Create Client, defaults to Latest MCP (v2025-06-18)
