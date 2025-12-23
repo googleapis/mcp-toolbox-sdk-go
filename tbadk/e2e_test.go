@@ -247,14 +247,14 @@ func TestE2E_LoadErrors(t *testing.T) {
 		client := newClient(t)
 		_, err := client.LoadTool("non-existent-tool", context.Background())
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "server returned non-OK status: 404")
+		assert.Contains(t, err.Error(), "tool 'non-existent-tool' not found")
 	})
 
 	t.Run("test_load_non_existent_toolset", func(t *testing.T) {
 		client := newClient(t)
 		_, err := client.LoadToolset("non-existent-toolset", context.Background())
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "server returned non-OK status: 404")
+		assert.Contains(t, err.Error(), "toolset does not exist")
 	})
 
 	t.Run("test_new_client_with_nil_option", func(t *testing.T) {
@@ -406,7 +406,7 @@ func TestE2E_Auth(t *testing.T) {
 
 		_, err = authedTool.Run(testToolCtx, map[string]any{"id": "2"})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "tool invocation not authorized")
+		assert.Contains(t, err.Error(), "unauthorized Tool call")
 	})
 
 	t.Run("test_run_tool_auth", func(t *testing.T) {
