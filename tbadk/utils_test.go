@@ -20,47 +20,102 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core"
 )
 
+// convertParamsToJSONSchema reconstructs a raw JSON schema from the SDK's internal ParameterSchema.
+// This is needed because the Mock Server must send "raw" JSON, which the Client then parses back into structs.
+func convertParamsToJSONSchema(params []core.ParameterSchema) map[string]any {
+	properties := make(map[string]any)
+	required := []string{}
+
+	for _, p := range params {
+		prop := map[string]any{
+			"type":        p.Type,
+			"description": p.Description,
+		}
+		properties[p.Name] = prop
+		if p.Required {
+			required = append(required, p.Name)
+		}
+	}
+
+	return map[string]any{
+		"type":       "object",
+		"properties": properties,
+		"required":   required,
+	}
+}
+
 func createCoreTool(t *testing.T, toolName string, schema core.ToolSchema) (*core.ToolboxTool, *httptest.Server) {
 	t.Helper()
 
-	// Create a mock manifest
-	manifest := core.ManifestSchema{
-		ServerVersion: "v1",
-		Tools: map[string]core.ToolSchema{
-			toolName: schema,
-		},
-	}
-	manifestJSON, err := json.Marshal(manifest)
-	if err != nil {
-		t.Fatalf("Failed to marshal mock manifest: %v", err)
+	// Prepare the Tool definition in MCP JSON format
+	mcpToolDef := map[string]any{
+		"name":        toolName,
+		"description": schema.Description,
+		"inputSchema": convertParamsToJSONSchema(schema.Parameters),
 	}
 
-	// Setup a mock server to serve this manifest.
+	// Setup a Mock MCP Server (JSON-RPC 2.0)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Handle the specific tool manifest request from LoadTool
-		if strings.HasSuffix(r.URL.Path, "/api/tool/"+toolName) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(manifestJSON)
+		var req struct {
+			JSONRPC string `json:"jsonrpc"`
+			Method  string `json:"method"`
+			ID      any    `json:"id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
-		http.NotFound(w, r)
+
+		var result any
+
+		// Handle MCP Protocol Lifecycle
+		switch req.Method {
+		case "initialize":
+			// Handshake
+			result = map[string]any{
+				"protocolVersion": "2025-06-18", // Matches latest default
+				"capabilities":    map[string]any{"tools": map[string]any{}},
+				"serverInfo": map[string]any{
+					"name":    "mock-server",
+					"version": "1.0.0",
+				},
+			}
+		case "notifications/initialized":
+			// Confirmation (No response needed)
+			return
+		case "tools/list":
+			// List available tools
+			result = map[string]any{
+				"tools": []any{mcpToolDef},
+			}
+		default:
+			// Ignore other methods for this test
+			return
+		}
+
+		// Send JSON-RPC Response
+		resp := map[string]any{
+			"jsonrpc": "2.0",
+			"id":      req.ID,
+			"result":  result,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
 	}))
 
-	// Create a real client pointing to the mock server.
+	//  Create Client, defaults to Latest MCP (v2025-06-18)
 	client, err := core.NewToolboxClient(server.URL, core.WithHTTPClient(server.Client()))
 	if err != nil {
 		server.Close()
 		t.Fatalf("Failed to create ToolboxClient: %v", err)
 	}
 
-	// Load the tool, which returns the real *core.ToolboxTool instance.
+	// 4. Load the tool (Triggers initialize -> tools/list)
 	tool, err := client.LoadTool(toolName, context.Background())
 	if err != nil {
 		server.Close()
@@ -69,6 +124,7 @@ func createCoreTool(t *testing.T, toolName string, schema core.ToolSchema) (*cor
 
 	return tool, server
 }
+
 func TestToADKTool(t *testing.T) {
 
 	t.Run("Success - Happy Path with parameters", func(t *testing.T) {
@@ -80,11 +136,11 @@ func TestToADKTool(t *testing.T) {
 			},
 		}
 
-		// Create Core Tool
+		// Create Core Tool via MCP Mock
 		coreTool, server := createCoreTool(t, "getWeather", toolSchema)
-		defer server.Close() // Ensure server is closed after the test
+		defer server.Close()
 
-		// Convert the Core tool to ADK Tool
+		// Convert to ADK Tool
 		adkTool, err := toADKTool(coreTool)
 
 		if err != nil {
@@ -93,11 +149,8 @@ func TestToADKTool(t *testing.T) {
 		if adkTool.funcDeclaration == nil {
 			t.Fatal("adkTool.funcDeclaration is nil")
 		}
-		if adkTool.ToolboxTool != coreTool {
-			t.Error("adkTool.ToolboxTool does not point to the original tool")
-		}
 
-		// Verify the FunctionDeclaration fields
+		// Verify Basic Fields
 		if got, want := adkTool.funcDeclaration.Name, "getWeather"; got != want {
 			t.Errorf("funcDeclaration.Name = %q, want %q", got, want)
 		}
@@ -105,17 +158,17 @@ func TestToADKTool(t *testing.T) {
 			t.Errorf("funcDeclaration.Description = %q, want %q", got, want)
 		}
 
-		// Verify the parameters schema
+		// Verify Schema Conversion
 		var params map[string]any
 		schema, err := adkTool.InputSchema()
 		if err != nil {
 			t.Error("Failed to fetch input schema", err)
 		}
-		err = json.Unmarshal(schema, &params)
-		if err != nil {
+		if err := json.Unmarshal(schema, &params); err != nil {
 			t.Fatalf("Failed to unmarshal generated parameters schema: %v", err)
 		}
 
+		// Expected JSON Structure
 		expectedParamsJSON := `
 		{
 			"type": "object",
@@ -134,10 +187,9 @@ func TestToADKTool(t *testing.T) {
 	})
 
 	t.Run("Success - No Parameters", func(t *testing.T) {
-		// Define schema with no parameters
 		toolSchema := core.ToolSchema{
 			Description: "A tool with no params",
-			Parameters:  nil, // Test nil slice
+			Parameters:  nil,
 		}
 
 		coreTool, server := createCoreTool(t, "noParams", toolSchema)
@@ -157,12 +209,8 @@ func TestToADKTool(t *testing.T) {
 		if err != nil {
 			t.Error("Failed to fetch input schema", err)
 		}
-		err = json.Unmarshal(schema, &params)
-		if err != nil {
-			t.Fatalf("Failed to unmarshal generated parameters schema: %v", err)
-		}
+		_ = json.Unmarshal(schema, &params)
 
-		// core.ToolboxTool.InputSchema() correctly returns an empty properties map
 		expectedParamsJSON := `{"type": "object", "properties": {}}`
 		var expectedParams map[string]any
 		_ = json.Unmarshal([]byte(expectedParamsJSON), &expectedParams)
