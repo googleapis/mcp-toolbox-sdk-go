@@ -388,7 +388,7 @@ func TestRequest_NewRequestError(t *testing.T) {
 	// Bad URL triggers http.NewRequest error
 	_, err := New("http://bad\nurl.com", http.DefaultClient)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid character")
+	assert.Contains(t, err.Error(), "invalid control character in URL")
 }
 
 func TestRequest_MarshalError(t *testing.T) {
