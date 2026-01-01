@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/google/uuid"
@@ -71,7 +72,11 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 	// Append toolset name to base URL if provided
 	requestURL := t.BaseURL()
 	if toolsetName != "" {
-		requestURL += toolsetName
+		var err error
+		requestURL, err = url.JoinPath(requestURL, toolsetName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct toolset URL: %w", err)
+		}
 	}
 
 	var result listToolsResult
@@ -126,7 +131,7 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 }
 
 // InvokeTool executes a tool
-func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
+func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
 	if err := t.EnsureInitialized(ctx); err != nil {
 		return "", err
 	}
@@ -138,7 +143,7 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map
 
 	params := callToolRequestParams{
 		Name:      toolName,
-		Arguments: args,
+		Arguments: payload,
 	}
 	var result callToolResult
 	if _, err := t.sendRequest(ctx, t.BaseURL(), "tools/call", params, finalHeaders, &result); err != nil {
@@ -201,16 +206,11 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 
 	t.ServerVersion = result.ServerInfo.Version
 
-	// Session ID Extraction: Check Body first, then Headers.
-	sessionId := result.McpSessionId
-
-	// Check HTTP Headers for session id if not in JSON body
-	if sessionId == "" {
-		sessionId = respHeaders.Get("Mcp-Session-Id")
-	}
+	// Session ID Extraction: Check the Headers.
+	sessionId := respHeaders.Get("Mcp-Session-Id")
 
 	if sessionId == "" {
-		return fmt.Errorf("server did not return a Mcp-Session-Id in body or headers")
+		return fmt.Errorf("server did not return a Mcp-Session-Id in the headers")
 	}
 	t.sessionId = sessionId
 
@@ -243,50 +243,47 @@ func (t *McpTransport) resolveHeaders(sources map[string]oauth2.TokenSource) (ma
 // sendRequest sends a JSON-RPC request and injects the Session ID if active.
 func (t *McpTransport) sendRequest(ctx context.Context, url string, method string, params any, headers map[string]string, dest any) (http.Header, error) {
 
-	// Inject Session ID for non-initialize requests (v2025-03-26 specific)
-	finalParams := params
-	if method != "initialize" && t.sessionId != "" {
-		paramBytes, _ := json.Marshal(params)
-		var paramMap map[string]any
-		if err := json.Unmarshal(paramBytes, &paramMap); err == nil {
-			if paramMap == nil {
-				paramMap = make(map[string]any)
-			}
-			paramMap["Mcp-Session-Id"] = t.sessionId
-			finalParams = paramMap
-		}
+	// Initialize headers map if it is nil
+	if headers == nil {
+		headers = make(map[string]string)
 	}
+
+	// Spec Requirement: Include Mcp-Session-Id in the HEADER for all subsequent requests
+	if method != "initialize" && t.sessionId != "" {
+		headers["Mcp-Session-Id"] = t.sessionId
+	}
+
+	// Construct the standard JSON-RPC request (Params are NOT modified)
 	req := jsonRPCRequest{
 		JSONRPC: "2.0",
 		Method:  method,
 		ID:      uuid.New().String(),
-		Params:  finalParams,
+		Params:  params,
 	}
+
 	return t.doRPC(ctx, url, req, headers, dest)
 }
 
 // sendNotification sends a JSON-RPC notification and injects the Session ID if active.
 func (t *McpTransport) sendNotification(ctx context.Context, method string, params any) (http.Header, error) {
 
-	// Inject Session ID (v2025-03-26 specific)
-	finalParams := params
+	// Initialize headers map
+	headers := make(map[string]string)
+
+	// Spec Requirement: Inject Session ID as a HEADER
 	if t.sessionId != "" {
-		paramBytes, _ := json.Marshal(params)
-		var paramMap map[string]any
-		if err := json.Unmarshal(paramBytes, &paramMap); err == nil {
-			if paramMap == nil {
-				paramMap = make(map[string]any)
-			}
-			paramMap["Mcp-Session-Id"] = t.sessionId
-			finalParams = paramMap
-		}
+		headers["Mcp-Session-Id"] = t.sessionId
 	}
+
+	// Construct the standard JSON-RPC notification
 	req := jsonRPCNotification{
 		JSONRPC: "2.0",
 		Method:  method,
-		Params:  finalParams,
+		Params:  params,
 	}
-	return t.doRPC(ctx, t.BaseURL(), req, nil, nil)
+
+	// Pass the headers to doRPC
+	return t.doRPC(ctx, t.BaseURL(), req, headers, nil)
 }
 
 // doRPC performs the HTTP POST, returns headers, and handles JSON-RPC wrapping.
