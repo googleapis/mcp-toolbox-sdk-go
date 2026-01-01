@@ -44,7 +44,7 @@ func (b *BaseMcpTransport) BaseURL() string {
 }
 
 // NewBaseTransport creates a new base transport.
-func NewBaseTransport(baseURL string, client *http.Client) *BaseMcpTransport {
+func NewBaseTransport(baseURL string, client *http.Client) (*BaseMcpTransport, error) {
 	if client == nil {
 		client = &http.Client{}
 	}
@@ -62,7 +62,7 @@ func NewBaseTransport(baseURL string, client *http.Client) *BaseMcpTransport {
 		// url.JoinPath handles the slash insertion automatically
 		fullURL, err = url.JoinPath(cleanBaseURL, "mcp")
 		if err != nil {
-			return nil
+			return nil, err
 		}
 	}
 
@@ -72,7 +72,7 @@ func NewBaseTransport(baseURL string, client *http.Client) *BaseMcpTransport {
 	return &BaseMcpTransport{
 		baseURL:    fullURL,
 		HTTPClient: client,
-	}
+	}, nil
 }
 
 // EnsureInitialized guarantees the session is ready before making requests.

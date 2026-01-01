@@ -136,7 +136,7 @@ func TestListTools(t *testing.T) {
 		}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -173,7 +173,7 @@ func TestListTools_ErrorOnEmptyName(t *testing.T) {
 		}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	_, err := client.ListTools(context.Background(), "", nil)
 
 	assert.Error(t, err)
@@ -193,7 +193,7 @@ func TestGetTool_Success(t *testing.T) {
 		}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	manifest, err := client.GetTool(context.Background(), "tool_a", nil)
 	require.NoError(t, err)
 	assert.Contains(t, manifest.Tools, "tool_a")
@@ -208,7 +208,7 @@ func TestGetTool_NotFound(t *testing.T) {
 		return listToolsResult{Tools: []mcpTool{}}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	_, err := client.GetTool(context.Background(), "missing_tool", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
@@ -235,7 +235,7 @@ func TestInvokeTool(t *testing.T) {
 		}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -262,7 +262,7 @@ func TestProtocolMismatch(t *testing.T) {
 		}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
@@ -281,7 +281,7 @@ func TestInitialize_MissingCapabilities(t *testing.T) {
 		}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "does not support the 'tools' capability")
@@ -289,7 +289,7 @@ func TestInitialize_MissingCapabilities(t *testing.T) {
 
 func TestConvertToolSchema(t *testing.T) {
 	// Use the transport's ConvertToolDefinition which delegates to the base/helper logic
-	tr := New("http://example.com", nil)
+	tr, _ := New("http://example.com", nil)
 
 	rawTool := map[string]any{
 		"name":        "complex_tool",
@@ -339,7 +339,7 @@ func TestListTools_WithToolset(t *testing.T) {
 		return listToolsResult{Tools: []mcpTool{}}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	toolsetName := "my-toolset"
 
 	_, err := client.ListTools(context.Background(), toolsetName, nil)
@@ -352,7 +352,7 @@ func TestRequest_NetworkError(t *testing.T) {
 	url := server.URL
 	server.Close()
 
-	client := New(url, server.Client())
+	client, _ := New(url, server.Client())
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "http request failed")
@@ -365,7 +365,7 @@ func TestRequest_ServerError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "API request failed with status 500")
@@ -378,7 +378,7 @@ func TestRequest_BadJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "response unmarshal failed")
@@ -386,14 +386,15 @@ func TestRequest_BadJSON(t *testing.T) {
 
 func TestRequest_NewRequestError(t *testing.T) {
 	// Bad URL triggers http.NewRequest error
-	client := New("http://bad\nurl.com", http.DefaultClient)
-	assert.Nil(t, client)
+	_, err := New("http://bad\nurl.com", http.DefaultClient)
+	assert.NotNil(t, err)
+	assert.Contains(t, err.Error(), "invalid character")
 }
 
 func TestRequest_MarshalError(t *testing.T) {
 	server := newMockMCPServer(t)
 	defer server.Close()
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 
 	// Force initialization first
 	_ = client.EnsureInitialized(context.Background())
@@ -416,7 +417,7 @@ func TestHeaders_ResolutionError(t *testing.T) {
 	server := newMockMCPServer(t)
 	defer server.Close()
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	headers := map[string]oauth2.TokenSource{"auth": &failingTokenSource{}}
 
 	// Test failing in ListTools
@@ -441,7 +442,7 @@ func TestInvokeTool_ErrorResult(t *testing.T) {
 		}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	_, err := client.InvokeTool(context.Background(), "tool", nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "tool execution resulted in error")
@@ -455,7 +456,7 @@ func TestInvokeTool_RPCError(t *testing.T) {
 		return nil, errors.New("internal server error")
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	_, err := client.InvokeTool(context.Background(), "tool", nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "internal server error")
@@ -475,7 +476,7 @@ func TestInvokeTool_ComplexContent(t *testing.T) {
 		}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "Part 1 Part 2", res)
@@ -491,7 +492,7 @@ func TestInvokeTool_EmptyResult(t *testing.T) {
 		}, nil
 	}
 
-	client := New(server.URL, server.Client())
+	client, _ := New(server.URL, server.Client())
 	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "null", res)
