@@ -48,14 +48,18 @@ type McpTransport struct {
 }
 
 // New creates a new version-specific transport instance.
-func New(baseURL string, client *http.Client) *McpTransport {
+func New(baseURL string, client *http.Client) (*McpTransport, error) {
+	baseTransport, err := mcp.NewBaseTransport(baseURL, client)
+	if err != nil {
+		return nil, err
+	}
 	t := &McpTransport{
-		BaseMcpTransport: mcp.NewBaseTransport(baseURL, client),
+		BaseMcpTransport: baseTransport,
 		protocolVersion:  ProtocolVersion,
 	}
 	t.BaseMcpTransport.HandshakeHook = t.initializeSession
 
-	return t
+	return t, nil
 }
 
 // ListTools fetches available tools
