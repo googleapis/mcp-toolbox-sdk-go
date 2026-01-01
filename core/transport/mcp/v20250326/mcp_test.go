@@ -383,7 +383,7 @@ func TestRequest_BadJSON(t *testing.T) {
 func TestRequest_NewRequestError(t *testing.T) {
 	_, err := New("http://bad\nurl.com", http.DefaultClient)
 	assert.NotNil(t, err)
-	assert.Contains(t, err.Error(), "invalid character")
+	assert.Contains(t, err.Error(), "invalid control character in URL")
 }
 
 func TestRequest_MarshalError(t *testing.T) {
