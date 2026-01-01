@@ -587,7 +587,7 @@ func TestInvokeTool_EdgeCases(t *testing.T) {
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
-		if !strings.Contains(err.Error(), "failed to create API request") {
+		if !strings.Contains(err.Error(), "invalid control character in URL") {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
