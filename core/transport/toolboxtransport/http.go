@@ -22,6 +22,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
@@ -42,14 +43,17 @@ func New(baseURL string, client *http.Client) transport.Transport {
 
 func (t *ToolboxTransport) BaseURL() string { return t.baseURL }
 
-func (t *ToolboxTransport) GetTool(ctx context.Context, toolName string, tokenSources map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
-	url := fmt.Sprintf("%s/api/tool/%s", t.baseURL, toolName)
-	return t.LoadManifest(ctx, url, tokenSources)
+func (t *ToolboxTransport) GetTool(ctx context.Context, toolName string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+	url, err := url.JoinPath(t.baseURL, "api", "tool", toolName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct URL: %w", err)
+	}
+	return t.LoadManifest(ctx, url, headers)
 }
 
-func (t *ToolboxTransport) ListTools(ctx context.Context, toolsetName string, tokenSources map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+func (t *ToolboxTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
 	url := fmt.Sprintf("%s/api/toolset/%s", t.baseURL, toolsetName)
-	return t.LoadManifest(ctx, url, tokenSources)
+	return t.LoadManifest(ctx, url, headers)
 }
 
 // LoadManifest is an internal helper for fetching manifests from the Toolbox server.
@@ -57,14 +61,14 @@ func (t *ToolboxTransport) ListTools(ctx context.Context, toolsetName string, to
 //   - ctx: The context to control the lifecycle of the HTTP request, including
 //     cancellation.
 //   - url: The specific URL from which to fetch the manifest.
-//   - tokenSources: A map of token sources to be resolved and applied as
+//   - headers: A map of token sources to be resolved and applied as
 //     headers to the request.
 //
 // Returns:
 //
 //	A pointer to the successfully parsed ManifestSchema and a nil error, or a
 //	nil ManifestSchema and a descriptive error if any part of the process fails.
-func (t *ToolboxTransport) LoadManifest(ctx context.Context, url string, tokenSources map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+func (t *ToolboxTransport) LoadManifest(ctx context.Context, url string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
 	// Create a new GET request with a context for cancellation.
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -72,7 +76,7 @@ func (t *ToolboxTransport) LoadManifest(ctx context.Context, url string, tokenSo
 	}
 
 	// Add all client-level headers to the request
-	if err := ResolveAndApplyHeaders(req, tokenSources); err != nil {
+	if err := ResolveAndApplyHeaders(req, headers); err != nil {
 		return nil, fmt.Errorf("failed to apply client headers: %w", err)
 	}
 
@@ -104,7 +108,7 @@ func (t *ToolboxTransport) LoadManifest(ctx context.Context, url string, tokenSo
 	return &manifest, nil
 }
 
-func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, tokenSources map[string]oauth2.TokenSource) (any, error) {
+func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
 	if !strings.HasPrefix(t.baseURL, "https://") {
 		log.Println("WARNING: Sending ID token over HTTP. User data may be exposed. Use HTTPS for secure communication.")
 	}
@@ -127,7 +131,7 @@ func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payl
 	req.Header.Set("Content-Type", "application/json")
 
 	// Resolve and apply headers.
-	if err := ResolveAndApplyHeaders(req, tokenSources); err != nil {
+	if err := ResolveAndApplyHeaders(req, headers); err != nil {
 		return nil, err
 	}
 
