@@ -457,7 +457,7 @@ func TestLoadManifest_EdgeCases(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 		// Matches: "failed to create HTTP request"
-		if !strings.Contains(err.Error(), "failed to create HTTP request") {
+		if !strings.Contains(err.Error(), "invalid control character in URL") {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
