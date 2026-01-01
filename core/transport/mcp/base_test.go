@@ -57,7 +57,7 @@ func TestNewBaseTransport(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tr := NewBaseTransport(tc.baseURL, nil)
+			tr, _ := NewBaseTransport(tc.baseURL, nil)
 			if tr.BaseURL() != tc.expected {
 				t.Errorf("Expected URL %s, got %s", tc.expected, tr.BaseURL())
 			}
@@ -70,7 +70,7 @@ func TestNewBaseTransport(t *testing.T) {
 
 func TestEnsureInitialized(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		tr := NewBaseTransport("http://example.com", nil)
+		tr, _ := NewBaseTransport("http://example.com", nil)
 		called := 0
 		tr.HandshakeHook = func(ctx context.Context) error {
 			called++
@@ -93,7 +93,7 @@ func TestEnsureInitialized(t *testing.T) {
 	})
 
 	t.Run("Failure", func(t *testing.T) {
-		tr := NewBaseTransport("http://example.com", nil)
+		tr, _ := NewBaseTransport("http://example.com", nil)
 		expectedErr := errors.New("handshake failed")
 		tr.HandshakeHook = func(ctx context.Context) error {
 			return expectedErr
@@ -110,7 +110,7 @@ func TestEnsureInitialized(t *testing.T) {
 	})
 
 	t.Run("MissingHook", func(t *testing.T) {
-		tr := NewBaseTransport("http://example.com", nil)
+		tr, _ := NewBaseTransport("http://example.com", nil)
 		// No hook defined
 		err := tr.EnsureInitialized(context.Background())
 		if err == nil {
@@ -120,7 +120,7 @@ func TestEnsureInitialized(t *testing.T) {
 }
 
 func TestConvertToolDefinition(t *testing.T) {
-	tr := NewBaseTransport("http://example.com", nil)
+	tr, _ := NewBaseTransport("http://example.com", nil)
 
 	rawTool := map[string]any{
 		"name":        "complex_tool",
