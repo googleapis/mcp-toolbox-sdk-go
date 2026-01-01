@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/google/uuid"
@@ -45,14 +46,18 @@ type McpTransport struct {
 }
 
 // New creates a new version-specific transport instance.
-func New(baseURL string, client *http.Client) *McpTransport {
+func New(baseURL string, client *http.Client) (*McpTransport, error) {
+	baseTransport, err := mcp.NewBaseTransport(baseURL, client)
+	if err != nil {
+		return nil, err
+	}
 	t := &McpTransport{
-		BaseMcpTransport: mcp.NewBaseTransport(baseURL, client),
+		BaseMcpTransport: baseTransport,
 		protocolVersion:  ProtocolVersion,
 	}
 	t.BaseMcpTransport.HandshakeHook = t.initializeSession
 
-	return t
+	return t, nil
 }
 
 // ListTools fetches available tools
@@ -68,7 +73,11 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 
 	requestURL := t.BaseURL()
 	if toolsetName != "" {
-		requestURL += toolsetName
+		var err error
+		requestURL, err = url.JoinPath(requestURL, toolsetName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct toolset URL: %w", err)
+		}
 	}
 
 	var result listToolsResult
@@ -125,7 +134,7 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 }
 
 // InvokeTool executes a tool
-func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
+func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
 	if err := t.EnsureInitialized(ctx); err != nil {
 		return "", err
 	}
@@ -137,7 +146,7 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map
 
 	params := callToolRequestParams{
 		Name:      toolName,
-		Arguments: args,
+		Arguments: payload,
 	}
 
 	var result callToolResult
