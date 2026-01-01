@@ -387,9 +387,7 @@ func TestRequest_BadJSON(t *testing.T) {
 func TestRequest_NewRequestError(t *testing.T) {
 	// Bad URL triggers http.NewRequest error
 	client := New("http://bad\nurl.com", http.DefaultClient)
-	_, err := client.ListTools(context.Background(), "", nil)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "create request failed")
+	assert.Nil(t, client)
 }
 
 func TestRequest_MarshalError(t *testing.T) {

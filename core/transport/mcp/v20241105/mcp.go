@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/google/uuid"
@@ -68,7 +69,11 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 
 	requestURL := t.BaseURL()
 	if toolsetName != "" {
-		requestURL += toolsetName
+		var err error
+		requestURL, err = url.JoinPath(requestURL, toolsetName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct toolset URL: %w", err)
+		}
 	}
 
 	var result listToolsResult
