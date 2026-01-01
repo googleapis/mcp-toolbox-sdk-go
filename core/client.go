@@ -74,20 +74,21 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	}
 
 	// Initialize the Transport based on the selected Protocol.
+	var transportErr error = nil
 	switch tc.protocol {
 	case MCPv20250618:
-		tc.transport = mcp20250618.New(tc.baseURL, tc.httpClient)
+		tc.transport, transportErr = mcp20250618.New(tc.baseURL, tc.httpClient)
 	case MCPv20250326:
-		tc.transport = mcp20250326.New(tc.baseURL, tc.httpClient)
+		tc.transport, transportErr = mcp20250326.New(tc.baseURL, tc.httpClient)
 	case MCPv20241105:
-		tc.transport = mcp20241105.New(tc.baseURL, tc.httpClient)
+		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient)
 	case Toolbox:
 		tc.transport = toolboxtransport.New(tc.baseURL, tc.httpClient)
 	default:
 		return nil, fmt.Errorf("unsupported protocol version: %s", tc.protocol)
 	}
 
-	return tc, nil
+	return tc, transportErr
 }
 
 // newToolboxTool is an internal factory method that constructs a
