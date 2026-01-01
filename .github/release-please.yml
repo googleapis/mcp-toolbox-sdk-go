@@ -15,3 +15,6 @@
 handleGHRelease: true
 packageName: mcp-toolbox-sdk-go
 releaseType: go
+extraFiles: [
+    "core/transport/mcp/version.go",
+]

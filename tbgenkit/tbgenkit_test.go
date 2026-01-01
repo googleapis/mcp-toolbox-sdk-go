@@ -324,7 +324,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 
 		_, err = genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "tool invocation not authorized")
+		assert.Contains(t, err.Error(), "unauthorized Tool call")
 	})
 
 	t.Run("test_run_tool_auth", func(t *testing.T) {
@@ -422,7 +422,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 
 		_, err = genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to get token for service 'my-test-auth'")
+		assert.Contains(t, err.Error(), "failed to get token for header my-test-auth_token")
 		assert.Contains(t, err.Error(), "token source failed as designed")
 	})
 }
