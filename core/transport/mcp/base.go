@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -47,18 +48,26 @@ func NewBaseTransport(baseURL string, client *http.Client) *BaseMcpTransport {
 	if client == nil {
 		client = &http.Client{}
 	}
-
-	fullURL := baseURL
+	var fullURL string
+	var err error
 	// Normalize by removing trailing slash first
-	fullURL = strings.TrimSuffix(fullURL, "/")
+	cleanBaseURL := strings.TrimRight(baseURL, "/")
 
 	// Only append "/mcp/" if it is not already present
-	if !strings.HasSuffix(fullURL, "/mcp") {
-		fullURL += "/mcp/"
+	if strings.HasSuffix(cleanBaseURL, "/mcp") {
+		// It's already correct, just use it
+		fullURL = cleanBaseURL
 	} else {
-		// Ensure it ends with a slash for clean concatenation later
-		fullURL += "/"
+		// It's missing, so join it safely
+		// url.JoinPath handles the slash insertion automatically
+		fullURL, err = url.JoinPath(cleanBaseURL, "mcp")
+		if err != nil {
+			return nil
+		}
 	}
+
+	// Ensure trailing slash
+	fullURL += "/"
 
 	return &BaseMcpTransport{
 		baseURL:    fullURL,
