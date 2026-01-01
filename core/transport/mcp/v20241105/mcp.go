@@ -1,4 +1,4 @@
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -126,7 +126,7 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 }
 
 // InvokeTool executes a tool
-func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
+func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
 	if err := t.EnsureInitialized(ctx); err != nil {
 		return "", err
 	}
@@ -138,7 +138,7 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, args map
 
 	params := callToolRequestParams{
 		Name:      toolName,
-		Arguments: args,
+		Arguments: payload,
 	}
 
 	var result callToolResult
