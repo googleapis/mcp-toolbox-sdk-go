@@ -263,6 +263,9 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+	// Set Accept header for MCP Spec 2025-03-26
+	// Since SSE is not supported, we only accept application/json
+	httpReq.Header.Set("Accept", "application/json")
 	// v2025-06-18 Specific: Inject Protocol Version Header
 	httpReq.Header.Set("MCP-Protocol-Version", t.protocolVersion)
 

@@ -30,11 +30,17 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// capturedRequest holds both the RPC body and the HTTP headers for verification
+type capturedRequest struct {
+	Body    jsonRPCRequest
+	Headers http.Header
+}
+
 // mockMCPServer is a helper to mock MCP JSON-RPC responses
 type mockMCPServer struct {
 	*httptest.Server
 	handlers map[string]func(params json.RawMessage) (any, error)
-	requests []jsonRPCRequest // Log of received requests for verification
+	requests []capturedRequest // Log of received requests (body + headers)
 }
 
 func newMockMCPServer(t *testing.T) *mockMCPServer {
@@ -50,7 +56,11 @@ func newMockMCPServer(t *testing.T) *mockMCPServer {
 		err = json.Unmarshal(body, &req)
 		require.NoError(t, err)
 
-		m.requests = append(m.requests, req)
+		// Capture both body and headers
+		m.requests = append(m.requests, capturedRequest{
+			Body:    req,
+			Headers: r.Header.Clone(),
+		})
 
 		// Handle Notifications (no ID) - return 204 or 200 OK immediately
 		if req.ID == nil {
@@ -113,6 +123,26 @@ func asRawMessage(v any) json.RawMessage {
 	return b
 }
 
+func TestHeaders_Presence(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	client, _ := New(server.URL, server.Client())
+	err := client.EnsureInitialized(context.Background())
+	require.NoError(t, err)
+
+	require.NotEmpty(t, server.requests)
+
+	// Check the Initialize request (first request)
+	req := server.requests[0]
+
+	// Requirement: MCP-Protocol-Version must be present
+	assert.Equal(t, "2025-06-18", req.Headers.Get("MCP-Protocol-Version"))
+
+	// Requirement: Accept header must be present and application/json
+	assert.Equal(t, "application/json", req.Headers.Get("Accept"))
+}
+
 func TestListTools(t *testing.T) {
 	server := newMockMCPServer(t)
 	defer server.Close()
@@ -152,11 +182,15 @@ func TestListTools(t *testing.T) {
 		assert.Equal(t, "location", tool.Parameters[0].Name)
 	})
 
-	t.Run("Verify Handshake Sequence", func(t *testing.T) {
+	t.Run("Verify Handshake Sequence and Headers", func(t *testing.T) {
 		require.GreaterOrEqual(t, len(server.requests), 3)
-		assert.Equal(t, "initialize", server.requests[0].Method)
-		assert.Equal(t, "notifications/initialized", server.requests[1].Method)
-		assert.Equal(t, "tools/list", server.requests[2].Method)
+		assert.Equal(t, "initialize", server.requests[0].Body.Method)
+		assert.Equal(t, "notifications/initialized", server.requests[1].Body.Method)
+
+		// Verify ListTools Request
+		listReq := server.requests[2]
+		assert.Equal(t, "tools/list", listReq.Body.Method)
+		assert.Equal(t, "2025-06-18", listReq.Headers.Get("MCP-Protocol-Version"))
 	})
 }
 
@@ -246,6 +280,12 @@ func TestInvokeTool(t *testing.T) {
 		resStr, ok := result.(string)
 		require.True(t, ok)
 		assert.Equal(t, "Echo: Hello MCP", resStr)
+
+		// Verify Headers on Invoke
+		// Last request in the slice
+		lastReq := server.requests[len(server.requests)-1]
+		assert.Equal(t, "tools/call", lastReq.Body.Method)
+		assert.Equal(t, "2025-06-18", lastReq.Headers.Get("MCP-Protocol-Version"))
 	})
 }
 
