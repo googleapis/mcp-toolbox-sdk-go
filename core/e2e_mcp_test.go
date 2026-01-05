@@ -1,6 +1,6 @@
 //go:build e2e
 
-// Copyright 2025 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package core_test
 
 import (
 	"context"
+	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,6 +37,32 @@ var protocolsToTest = []struct {
 	{"v20241105", core.MCPv20241105},
 	{"v20250326", core.MCPv20250326},
 	{"v20250618", core.MCPv20250618},
+}
+
+// CapturingTransport wraps http.RoundTripper to capture headers from the latest request.
+type CapturingTransport struct {
+	base        http.RoundTripper
+	lastHeaders http.Header
+	mu          sync.Mutex
+}
+
+func (c *CapturingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	c.mu.Lock()
+	c.lastHeaders = req.Header.Clone()
+	c.mu.Unlock()
+
+	// Delegate to the actual network transport
+	base := c.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	return base.RoundTrip(req)
+}
+
+func (c *CapturingTransport) CapturedHeaders() http.Header {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.lastHeaders
 }
 
 // helper factory to create a client with a specific protocol
@@ -60,6 +88,48 @@ func TestMCP_Basic(t *testing.T) {
 				require.Equal(t, "get-n-rows", tool.Name())
 				return tool
 			}
+
+			t.Run("test_mcp_client_headers", func(t *testing.T) {
+				// Setup the Transport to capture headers
+				capturer := &CapturingTransport{}
+				httpClient := &http.Client{
+					Transport: capturer,
+					Timeout:   30 * time.Second,
+				}
+
+				// Inject Transport into Client
+				client, err := core.NewToolboxClient("http://localhost:5000",
+					core.WithProtocol(proto.protocol),
+					core.WithHTTPClient(httpClient),
+				)
+				require.NoError(t, err)
+
+				// Trigger a request
+				_, err = client.LoadTool("get-n-rows", context.Background())
+				require.NoError(t, err)
+
+				// Verify Transport Compliance
+				headers := capturer.CapturedHeaders()
+
+				switch proto.protocol {
+				case core.MCPv20241105:
+					// Should NOT have new headers
+					assert.Empty(t, headers.Get("MCP-Protocol-Version"), "v20241105 should not send protocol version header")
+					assert.Empty(t, headers.Get("Mcp-Session-Id"), "v20241105 should not include Mcp-Session-Id")
+
+				case core.MCPv20250326:
+					// v2025-03-26: Must send Accept: application/json
+					assert.Equal(t, "application/json", headers.Get("Accept"), "v20250326 must request JSON only")
+					assert.NotEmpty(t, headers.Get("Mcp-Session-Id"), "v20250326 should include Mcp-Session-Id")
+					assert.Empty(t, headers.Get("MCP-Protocol-Version"), "v20250326 should not send protocol version header")
+
+				case core.MCPv20250618:
+					// v2025-06-18: Must send Accept AND Protocol Version
+					assert.Equal(t, "application/json", headers.Get("Accept"), "v20250618 must request JSON only")
+					assert.Empty(t, headers.Get("Mcp-Session-Id"), "v20250618 should not include Mcp-Session-Id")
+					assert.Equal(t, "2025-06-18", headers.Get("MCP-Protocol-Version"), "v20250618 must send correct protocol version header")
+				}
+			})
 
 			t.Run("test_load_toolset_specific", func(t *testing.T) {
 				testCases := []struct {
