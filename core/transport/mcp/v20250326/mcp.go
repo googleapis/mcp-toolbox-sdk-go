@@ -214,7 +214,7 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 	sessionId := respHeaders.Get("Mcp-Session-Id")
 
 	if sessionId == "" {
-		return fmt.Errorf("server did not return a Mcp-Session-Id in the headers")
+		return fmt.Errorf("server did not return an Mcp-Session-Id")
 	}
 	t.sessionId = sessionId
 
@@ -304,6 +304,9 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
+	// Set Accept header for MCP Spec 2025-03-26
+	// Since SSE is not supported, we only accept application/json
+	httpReq.Header.Set("Accept", "application/json")
 
 	// Apply resolved headers
 	for k, v := range headers {

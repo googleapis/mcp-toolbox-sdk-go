@@ -69,13 +69,11 @@ type initializeRequestParams struct {
 }
 
 // initializeResult holds the response from the 'initialize' handshake.
-// v2025-03-26: Includes an optional McpSessionId field.
 type initializeResult struct {
 	ProtocolVersion string             `json:"protocolVersion"`
 	Capabilities    serverCapabilities `json:"capabilities"`
 	ServerInfo      implementation     `json:"serverInfo"`
 	Instructions    string             `json:"instructions,omitempty"`
-	McpSessionId    string             `json:"Mcp-Session-Id,omitempty"`
 }
 
 // mcpTool represents a single tool definition from the server.
