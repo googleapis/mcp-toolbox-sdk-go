@@ -28,8 +28,8 @@ const (
 	MCPv20250326 Protocol = "2025-03-26"
 	MCPv20241105 Protocol = "2024-11-05"
 
-	// ProtocolMCP is the default alias pointing to the newest supported version.
-	ProtocolMCP = MCPv20250618
+	// MCP is the default alias pointing to the newest supported version.
+	MCP = MCPv20250618
 )
 
 // GetSupportedMcpVersions returns a list of supported MCP protocol versions.

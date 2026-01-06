@@ -265,18 +265,29 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 		return nil, fmt.Errorf("tool payload processing failed: %w", err)
 	}
 
-	finalTokenSources := make(map[string]oauth2.TokenSource)
+	resolvedHeaders := make(map[string]string)
 
-	// Apply client-wide headers.
-	maps.Copy(finalTokenSources, tt.clientHeaderSources)
-
-	for name, source := range tt.authTokenSources {
-		// Toolbox HTTP protocol expects the suffix "_token"
-		headerName := fmt.Sprintf("%s_token", name)
-		finalTokenSources[headerName] = source
+	// Resolve Client Headers
+	for k, source := range tt.clientHeaderSources {
+		token, err := source.Token()
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve client header %s: %w", k, err)
+		}
+		resolvedHeaders[k] = token.AccessToken
 	}
 
-	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, finalTokenSources)
+	// Resolve Auth Headers
+	for name, source := range tt.authTokenSources {
+		token, err := source.Token()
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve auth token %s: %w", name, err)
+		}
+		// Toolbox HTTP protocol expects the suffix "_token"
+		headerName := fmt.Sprintf("%s_token", name)
+		resolvedHeaders[headerName] = token.AccessToken
+	}
+
+	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, resolvedHeaders)
 	if err != nil {
 		return nil, err
 	}

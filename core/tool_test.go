@@ -36,13 +36,13 @@ import (
 type dummyTransport struct{}
 
 func (d *dummyTransport) BaseURL() string { return "" }
-func (d *dummyTransport) GetTool(ctx context.Context, name string, h map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+func (d *dummyTransport) GetTool(ctx context.Context, name string, h map[string]string) (*transport.ManifestSchema, error) {
 	return nil, nil
 }
-func (d *dummyTransport) ListTools(ctx context.Context, set string, h map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+func (d *dummyTransport) ListTools(ctx context.Context, set string, h map[string]string) (*transport.ManifestSchema, error) {
 	return nil, nil
 }
-func (d *dummyTransport) InvokeTool(ctx context.Context, name string, p map[string]any, h map[string]oauth2.TokenSource) (any, error) {
+func (d *dummyTransport) InvokeTool(ctx context.Context, name string, p map[string]any, h map[string]string) (any, error) {
 	return nil, nil
 }
 

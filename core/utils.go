@@ -144,6 +144,19 @@ func (s *customTokenSource) Token() (*oauth2.Token, error) {
 	}, nil
 }
 
+// Helper to resolve client-level headers
+func resolveClientHeaders(clientHeaderSources map[string]oauth2.TokenSource) (map[string]string, error) {
+	resolved := make(map[string]string)
+	for k, source := range clientHeaderSources {
+		token, err := source.Token()
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve client header '%s': %w", k, err)
+		}
+		resolved[k] = token.AccessToken
+	}
+	return resolved, nil
+}
+
 // schemaToMap recursively converts a ParameterSchema to a map with it's type and description.
 func schemaToMap(p *ParameterSchema) map[string]any {
 	// Basic schema with type and description

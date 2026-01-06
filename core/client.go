@@ -58,7 +58,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	tc := &ToolboxClient{
 		baseURL:             url,
 		httpClient:          &http.Client{},
-		protocol:            ProtocolMCP, // Default
+		protocol:            MCP, // Default
 		clientHeaderSources: make(map[string]oauth2.TokenSource),
 		defaultToolOptions:  []ToolOption{},
 	}
@@ -224,13 +224,13 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 		}
 	}
 
-	tokenSources := make(map[string]oauth2.TokenSource)
-	for k, v := range tc.clientHeaderSources {
-		tokenSources[k] = v
+	resolvedHeaders, err := resolveClientHeaders(tc.clientHeaderSources)
+	if err != nil {
+		return nil, err
 	}
 
 	// Fetch the manifest for the specified tool.
-	manifest, err := tc.transport.GetTool(ctx, name, tokenSources)
+	manifest, err := tc.transport.GetTool(ctx, name, resolvedHeaders)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tool manifest for '%s': %w", name, err)
@@ -317,13 +317,13 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 	}
 
 	// Fetch the manifest for the toolset.
-	tokenSources := make(map[string]oauth2.TokenSource)
-	for k, v := range tc.clientHeaderSources {
-		tokenSources[k] = v
+	resolvedHeaders, err := resolveClientHeaders(tc.clientHeaderSources)
+	if err != nil {
+		return nil, err
 	}
 
 	// Fetch Manifest via Transport
-	manifest, err := tc.transport.ListTools(ctx, name, tokenSources)
+	manifest, err := tc.transport.ListTools(ctx, name, resolvedHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load toolset manifest for '%s': %w", name, err)
 	}

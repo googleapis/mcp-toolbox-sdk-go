@@ -17,10 +17,13 @@
 package core
 
 import (
+	"errors"
 	"reflect"
 	"sort"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 )
 
@@ -118,6 +121,67 @@ func TestIdentifyAuthRequirements(t *testing.T) {
 		if !reflect.DeepEqual(unmetAuthz, []string{"github"}) {
 			t.Errorf("Expected unmet authz to be [github], got %v", unmetAuthz)
 		}
+	})
+}
+
+// mockTokenSource is a helper to simulate token generation behavior.
+type mockTokenSource struct {
+	token *oauth2.Token
+	err   error
+}
+
+func (m *mockTokenSource) Token() (*oauth2.Token, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.token, nil
+}
+
+func TestResolveClientHeaders(t *testing.T) {
+	t.Run("Success_MultipleHeaders", func(t *testing.T) {
+		// Setup input map directly
+		sources := map[string]oauth2.TokenSource{
+			"Authorization":   &mockTokenSource{token: &oauth2.Token{AccessToken: "bearer-token"}},
+			"X-Custom-Header": &mockTokenSource{token: &oauth2.Token{AccessToken: "custom-value"}},
+		}
+
+		// Execute function directly
+		headers, err := resolveClientHeaders(sources)
+
+		// Verify
+		require.NoError(t, err)
+		assert.Len(t, headers, 2)
+		assert.Equal(t, "bearer-token", headers["Authorization"])
+		assert.Equal(t, "custom-value", headers["X-Custom-Header"])
+	})
+
+	t.Run("Success_Empty", func(t *testing.T) {
+		sources := make(map[string]oauth2.TokenSource)
+
+		headers, err := resolveClientHeaders(sources)
+
+		require.NoError(t, err)
+		assert.Empty(t, headers)
+		assert.NotNil(t, headers) // Ensure we get a map, not nil
+	})
+
+	t.Run("Failure_SingleSourceError", func(t *testing.T) {
+		// Setup: One valid source, one failing source
+		sources := map[string]oauth2.TokenSource{
+			"Valid-Header":  &mockTokenSource{token: &oauth2.Token{AccessToken: "ok"}},
+			"Broken-Header": &mockTokenSource{err: errors.New("network timeout")},
+		}
+
+		// Execute
+		headers, err := resolveClientHeaders(sources)
+
+		// Verify
+		require.Error(t, err)
+		assert.Nil(t, headers, "Should return nil map on error")
+
+		// Check error wrapping
+		assert.Contains(t, err.Error(), "failed to resolve client header 'Broken-Header'")
+		assert.Contains(t, err.Error(), "network timeout")
 	})
 }
 

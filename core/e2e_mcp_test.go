@@ -37,6 +37,7 @@ var protocolsToTest = []struct {
 	{"v20241105", core.MCPv20241105},
 	{"v20250326", core.MCPv20250326},
 	{"v20250618", core.MCPv20250618},
+	{"Latest (alias MCP)", core.MCP},
 }
 
 // CapturingTransport wraps http.RoundTripper to capture headers from the latest request.
