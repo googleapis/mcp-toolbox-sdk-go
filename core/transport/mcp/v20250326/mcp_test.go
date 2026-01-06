@@ -27,7 +27,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/oauth2"
 )
 
 // mockMCPServer is a helper to mock MCP JSON-RPC responses
@@ -316,8 +315,7 @@ func TestListTools_WithAuthHeaders(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client())
-	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "secret"})
-	headers := map[string]oauth2.TokenSource{"Authorization": ts}
+	headers := map[string]string{"Authorization": "secret"}
 
 	_, err := client.ListTools(context.Background(), "", headers)
 	require.NoError(t, err)
@@ -440,31 +438,6 @@ func TestListTools_InitFailure(t *testing.T) {
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "http request failed")
-}
-
-type failingTokenSource struct{}
-
-func (f *failingTokenSource) Token() (*oauth2.Token, error) {
-	return nil, errors.New("token failure")
-}
-
-func TestHeaders_ResolutionError(t *testing.T) {
-	// Fix: Use mock server to pass initialization so we hit the header resolution logic
-	server := newMockMCPServer()
-	defer server.Close()
-
-	client, _ := New(server.URL, server.Client())
-	headers := map[string]oauth2.TokenSource{"auth": &failingTokenSource{}}
-
-	// ListTools: EnsureInitialized succeeds, then header resolution fails
-	_, err := client.ListTools(context.Background(), "", headers)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "token failure")
-
-	// InvokeTool: EnsureInitialized succeeds, then header resolution fails
-	_, err = client.InvokeTool(context.Background(), "tool", nil, headers)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "token failure")
 }
 
 func TestInit_NotificationFailure(t *testing.T) {
