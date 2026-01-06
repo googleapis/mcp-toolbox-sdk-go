@@ -29,15 +29,22 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type protocolTestCase struct {
+	name      string
+	protocol  core.Protocol
+	isDefault bool // If true, we do NOT pass WithProtocol() to verify default behavior
+}
+
 // protocolsToTest defines the matrix of MCP protocols we want to verify.
-var protocolsToTest = []struct {
-	name     string
-	protocol core.Protocol
-}{
-	{"v20241105", core.MCPv20241105},
-	{"v20250326", core.MCPv20250326},
-	{"v20250618", core.MCPv20250618},
-	{"Latest (alias MCP)", core.MCP},
+var protocolsToTest = []protocolTestCase{
+	//  The Default Case (User passes nothing, expects latest)
+	{name: "Default (Latest)", isDefault: true},
+
+	// Explicit Versions
+	{name: "v20241105", protocol: core.MCPv20241105},
+	{name: "v20250326", protocol: core.MCPv20250326},
+	{name: "v20250618", protocol: core.MCPv20250618},
+	{name: "MCP Alias (Latest)", protocol: core.MCP},
 }
 
 // CapturingTransport wraps http.RoundTripper to capture headers from the latest request.
@@ -67,10 +74,16 @@ func (c *CapturingTransport) CapturedHeaders() http.Header {
 }
 
 // helper factory to create a client with a specific protocol
-func getNewMCPToolboxClient(t *testing.T, p core.Protocol) *core.ToolboxClient {
-	client, err := core.NewToolboxClient("http://localhost:5000",
-		core.WithProtocol(p))
-	require.NoError(t, err, "Failed to create MCP ToolboxClient for protocol %s", p)
+func getNewMCPToolboxClient(t *testing.T, tc protocolTestCase) *core.ToolboxClient {
+	opts := []core.ClientOption{}
+
+	// Only add WithProtocol if it's NOT the default test case
+	if !tc.isDefault {
+		opts = append(opts, core.WithProtocol(tc.protocol))
+	}
+
+	client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+	require.NoError(t, err, "Failed to create MCP ToolboxClient for %s", tc.name)
 	return client
 }
 
@@ -79,7 +92,7 @@ func TestMCP_Basic(t *testing.T) {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto)
 			}
 
 			// Helper to load the get-n-rows tool
@@ -98,11 +111,17 @@ func TestMCP_Basic(t *testing.T) {
 					Timeout:   30 * time.Second,
 				}
 
-				// Inject Transport into Client
-				client, err := core.NewToolboxClient("http://localhost:5000",
-					core.WithProtocol(proto.protocol),
+				// Build options manually to inject HTTP client
+				opts := []core.ClientOption{
 					core.WithHTTPClient(httpClient),
-				)
+				}
+				// Logic to handle Default vs Explicit protocol
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+
+				// Inject Transport into Client
+				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
 				require.NoError(t, err)
 
 				// Trigger a request
@@ -112,7 +131,13 @@ func TestMCP_Basic(t *testing.T) {
 				// Verify Transport Compliance
 				headers := capturer.CapturedHeaders()
 
-				switch proto.protocol {
+				// Determine which protocol to check against
+				protocolToCheck := proto.protocol
+				if proto.isDefault {
+					protocolToCheck = core.MCPv20250618 // Default should match latest
+				}
+
+				switch protocolToCheck {
 				case core.MCPv20241105:
 					// Should NOT have new headers
 					assert.Empty(t, headers.Get("MCP-Protocol-Version"), "v20241105 should not send protocol version header")
@@ -225,7 +250,7 @@ func TestMCP_LoadErrors(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto)
 			}
 
 			t.Run("test_load_non_existent_tool", func(t *testing.T) {
@@ -250,7 +275,7 @@ func TestMCP_LoadErrors(t *testing.T) {
 	})
 
 	t.Run("test_load_tool_with_nil_option", func(t *testing.T) {
-		client := getNewMCPToolboxClient(t, protocolsToTest[0].protocol)
+		client := getNewMCPToolboxClient(t, protocolsToTest[0])
 		_, err := client.LoadTool("get-n-rows", context.Background(), nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "received a nil ToolOption")
@@ -261,7 +286,7 @@ func TestMCP_BindParams(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto)
 			}
 			getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
 				tool, err := client.LoadTool("get-n-rows", context.Background())
@@ -315,7 +340,7 @@ func TestMCP_BindParams(t *testing.T) {
 func TestMCP_BindParamErrors(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
-			client := getNewMCPToolboxClient(t, proto.protocol)
+			client := getNewMCPToolboxClient(t, proto)
 			tool, err := client.LoadTool("get-n-rows", context.Background())
 			require.NoError(t, err)
 
@@ -346,7 +371,7 @@ func TestMCP_Auth(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto)
 			}
 
 			t.Run("test_run_tool_unauth_with_auth", func(t *testing.T) {
@@ -457,7 +482,7 @@ func TestMCP_OptionalParams(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto)
 			}
 			searchRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
 				tool, err := client.LoadTool("search-rows", context.Background())
@@ -600,7 +625,7 @@ func TestMCP_MapParams(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto)
 			}
 			processDataTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
 				tool, err := client.LoadTool("process-data", context.Background())
@@ -700,7 +725,7 @@ func TestMCP_ContextHandling(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto.protocol)
+				return getNewMCPToolboxClient(t, proto)
 			}
 
 			t.Run("test_load_tool_with_cancelled_context", func(t *testing.T) {
