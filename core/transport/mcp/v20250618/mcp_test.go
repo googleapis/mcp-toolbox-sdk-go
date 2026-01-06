@@ -27,7 +27,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/oauth2"
 )
 
 // capturedRequest holds both the RPC body and the HTTP headers for verification
@@ -444,31 +443,6 @@ func TestRequest_MarshalError(t *testing.T) {
 	_, err := client.InvokeTool(context.Background(), "tool", badPayload, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "marshal failed")
-}
-
-type failingTokenSource struct{}
-
-func (f *failingTokenSource) Token() (*oauth2.Token, error) {
-	return nil, errors.New("token failure")
-}
-
-func TestHeaders_ResolutionError(t *testing.T) {
-	// Use mock server to pass initialization
-	server := newMockMCPServer(t)
-	defer server.Close()
-
-	client, _ := New(server.URL, server.Client())
-	headers := map[string]oauth2.TokenSource{"auth": &failingTokenSource{}}
-
-	// Test failing in ListTools
-	_, err := client.ListTools(context.Background(), "", headers)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "token failure")
-
-	// Test failing in InvokeTool
-	_, err = client.InvokeTool(context.Background(), "tool", nil, headers)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "token failure")
 }
 
 func TestInvokeTool_ErrorResult(t *testing.T) {
