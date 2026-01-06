@@ -26,7 +26,6 @@ import (
 	"strings"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
-	"golang.org/x/oauth2"
 )
 
 type ToolboxTransport struct {
@@ -43,7 +42,7 @@ func New(baseURL string, client *http.Client) transport.Transport {
 
 func (t *ToolboxTransport) BaseURL() string { return t.baseURL }
 
-func (t *ToolboxTransport) GetTool(ctx context.Context, toolName string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+func (t *ToolboxTransport) GetTool(ctx context.Context, toolName string, headers map[string]string) (*transport.ManifestSchema, error) {
 	url, err := url.JoinPath(t.baseURL, "api", "tool", toolName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct URL: %w", err)
@@ -51,8 +50,11 @@ func (t *ToolboxTransport) GetTool(ctx context.Context, toolName string, headers
 	return t.LoadManifest(ctx, url, headers)
 }
 
-func (t *ToolboxTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
-	url := fmt.Sprintf("%s/api/toolset/%s", t.baseURL, toolsetName)
+func (t *ToolboxTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]string) (*transport.ManifestSchema, error) {
+	url, err := url.JoinPath(t.baseURL, "api", "toolset", toolsetName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct URL: %w", err)
+	}
 	return t.LoadManifest(ctx, url, headers)
 }
 
@@ -68,16 +70,16 @@ func (t *ToolboxTransport) ListTools(ctx context.Context, toolsetName string, he
 //
 //	A pointer to the successfully parsed ManifestSchema and a nil error, or a
 //	nil ManifestSchema and a descriptive error if any part of the process fails.
-func (t *ToolboxTransport) LoadManifest(ctx context.Context, url string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+func (t *ToolboxTransport) LoadManifest(ctx context.Context, url string, headers map[string]string) (*transport.ManifestSchema, error) {
 	// Create a new GET request with a context for cancellation.
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request : %w", err)
 	}
 
-	// Add all client-level headers to the request
-	if err := ResolveAndApplyHeaders(req, headers); err != nil {
-		return nil, fmt.Errorf("failed to apply client headers: %w", err)
+	// Add all headers to the request
+	for k, v := range headers {
+		req.Header.Set(k, v)
 	}
 
 	//  Execute the HTTP request.
@@ -108,7 +110,7 @@ func (t *ToolboxTransport) LoadManifest(ctx context.Context, url string, headers
 	return &manifest, nil
 }
 
-func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
+func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error) {
 	if !strings.HasPrefix(t.baseURL, "https://") {
 		log.Println("WARNING: Sending ID token over HTTP. User data may be exposed. Use HTTPS for secure communication.")
 	}
@@ -130,9 +132,9 @@ func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payl
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	// Resolve and apply headers.
-	if err := ResolveAndApplyHeaders(req, headers); err != nil {
-		return nil, err
+	// Add all headers to the request
+	for k, v := range headers {
+		req.Header.Set(k, v)
 	}
 
 	// API call execution
@@ -166,27 +168,4 @@ func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payl
 		}
 	}
 	return string(responseBody), nil
-}
-
-// ResolveAndApplyHeaders iterates through a map of token sources, retrieves a
-// token from each, and applies it as a header to the given HTTP request.
-//
-// Inputs:
-//   - req: The HTTP request to which the headers will be added. This request is
-//     modified in place.
-//   - tokenSources: A map where the key is the HTTP header name and the
-//     value is the TokenSource that provides the header's value.
-//
-// Returns:
-//
-//	An error if retrieving a token from any source fails, otherwise nil.
-func ResolveAndApplyHeaders(req *http.Request, tokenSources map[string]oauth2.TokenSource) error {
-	for key, source := range tokenSources {
-		token, err := source.Token()
-		if err != nil {
-			return fmt.Errorf("failed to resolve token for header '%s': %w", key, err)
-		}
-		req.Header.Set(key, token.AccessToken)
-	}
-	return nil
 }

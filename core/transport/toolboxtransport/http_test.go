@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -31,32 +30,12 @@ import (
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/toolboxtransport"
-	"golang.org/x/oauth2"
 )
 
 const (
 	testBaseURL  = "http://fake-toolbox-server.com"
 	testToolName = "test_tool"
 )
-
-// failingTokenSource is a token source that always returns an error, for testing failure paths.
-type failingTokenSource struct{}
-
-func (f *failingTokenSource) Token() (*oauth2.Token, error) {
-	return nil, errors.New("token source failed as designed")
-}
-
-// makeTokenSources is a helper to create the auth map required by the interface.
-func makeTokenSources(headers map[string]string) map[string]oauth2.TokenSource {
-	if headers == nil {
-		return nil
-	}
-	res := make(map[string]oauth2.TokenSource)
-	for k, v := range headers {
-		res[k] = oauth2.StaticTokenSource(&oauth2.Token{AccessToken: v})
-	}
-	return res
-}
 
 func TestBaseURL(t *testing.T) {
 	tr := toolboxtransport.New(testBaseURL, http.DefaultClient)
@@ -95,7 +74,7 @@ func TestGetTool_Success(t *testing.T) {
 	defer server.Close()
 
 	tr := toolboxtransport.New(server.URL, server.Client())
-	headers := makeTokenSources(map[string]string{"X-Test-Header": "value"})
+	headers := map[string]string{"X-Test-Header": "value"}
 
 	result, err := tr.GetTool(context.Background(), testToolName, headers)
 	if err != nil {
@@ -188,7 +167,7 @@ func TestInvokeTool_Success(t *testing.T) {
 
 	tr := toolboxtransport.New(server.URL, server.Client())
 	payload := map[string]any{"param1": "value1"}
-	headers := makeTokenSources(map[string]string{"Authorization": "Bearer token"})
+	headers := map[string]string{"Authorization": "Bearer token"}
 
 	result, err := tr.InvokeTool(context.Background(), testToolName, payload, headers)
 	if err != nil {
@@ -279,53 +258,6 @@ func TestInvokeTool_HTTPWarning(t *testing.T) {
 	}
 }
 
-// --- Mock for Token Testing ---
-type mockTokenSource struct {
-	token *oauth2.Token
-	err   error
-}
-
-func (m *mockTokenSource) Token() (*oauth2.Token, error) {
-	return m.token, m.err
-}
-
-func TestResolveAndApplyHeaders(t *testing.T) {
-	t.Run("Success", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "http://example.com", nil)
-		sources := map[string]oauth2.TokenSource{
-			"Authorization": &mockTokenSource{token: &oauth2.Token{AccessToken: "secret"}},
-			"X-Custom":      &mockTokenSource{token: &oauth2.Token{AccessToken: "custom-val"}},
-		}
-
-		err := toolboxtransport.ResolveAndApplyHeaders(req, sources)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		if req.Header.Get("Authorization") != "secret" {
-			t.Errorf("Authorization header incorrect, got %s", req.Header.Get("Authorization"))
-		}
-		if req.Header.Get("X-Custom") != "custom-val" {
-			t.Errorf("X-Custom header incorrect, got %s", req.Header.Get("X-Custom"))
-		}
-	})
-
-	t.Run("Failure_TokenError", func(t *testing.T) {
-		req, _ := http.NewRequest("GET", "http://example.com", nil)
-		sources := map[string]oauth2.TokenSource{
-			"Authorization": &mockTokenSource{err: errors.New("token fetch failed")},
-		}
-
-		err := toolboxtransport.ResolveAndApplyHeaders(req, sources)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		if !strings.Contains(err.Error(), "token fetch failed") {
-			t.Errorf("expected error to contain underlying error, got: %v", err)
-		}
-	})
-}
-
 func TestLoadManifest(t *testing.T) {
 	mockJSON := `{"serverVersion":"1.0.0","tools":{"test":{"description":"foo"}}}`
 
@@ -341,7 +273,7 @@ func TestLoadManifest(t *testing.T) {
 
 		transportConcrete := toolboxtransport.New(server.URL, server.Client()).(*toolboxtransport.ToolboxTransport)
 
-		sources := makeTokenSources(map[string]string{"Authorization": "Bearer token"})
+		sources := map[string]string{"Authorization": "Bearer token"}
 
 		manifest, err := transportConcrete.LoadManifest(context.Background(), server.URL+"/some/path", sources)
 		if err != nil {
@@ -461,24 +393,6 @@ func TestLoadManifest_EdgeCases(t *testing.T) {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
-
-	t.Run("Header Resolution Failure", func(t *testing.T) {
-		// Use a failing token source
-		failingSource := map[string]oauth2.TokenSource{
-			"Authorization": &failingTokenSource{},
-		}
-
-		tr := toolboxtransport.New(testBaseURL, http.DefaultClient)
-		_, err := tr.GetTool(context.Background(), testToolName, failingSource)
-
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		// Matches: "failed to apply client headers"
-		if !strings.Contains(err.Error(), "failed to apply client headers") {
-			t.Errorf("unexpected error: %v", err)
-		}
-	})
 }
 
 func TestInvokeTool_EdgeCases(t *testing.T) {
@@ -550,21 +464,6 @@ func TestInvokeTool_EdgeCases(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "500") || !strings.Contains(err.Error(), "Fatal Database Error") {
 			t.Errorf("expected error to contain status and raw body, got: %v", err)
-		}
-	})
-
-	t.Run("ApplyHeaders_Error", func(t *testing.T) {
-		tr := toolboxtransport.New(testBaseURL, http.DefaultClient)
-		sources := map[string]oauth2.TokenSource{
-			"Auth": &failingTokenSource{},
-		}
-		_, err := tr.InvokeTool(ctx, "tool", map[string]any{}, sources)
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
-		// This error comes from ResolveAndApplyHeaders directly
-		if !strings.Contains(err.Error(), "failed to resolve token") {
-			t.Errorf("unexpected error: %v", err)
 		}
 	})
 
