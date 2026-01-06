@@ -27,7 +27,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/oauth2"
 )
 
 // mockMCPServer is a helper to mock MCP JSON-RPC responses
@@ -404,12 +403,6 @@ func TestRequest_MarshalError(t *testing.T) {
 	_, err := client.InvokeTool(context.Background(), "tool", badPayload, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "marshal failed")
-}
-
-type failingTokenSource struct{}
-
-func (f *failingTokenSource) Token() (*oauth2.Token, error) {
-	return nil, errors.New("token failure")
 }
 
 func TestInvokeTool_ErrorResult(t *testing.T) {
