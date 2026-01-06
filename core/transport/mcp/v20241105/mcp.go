@@ -27,7 +27,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
-	"golang.org/x/oauth2"
 )
 
 const (
@@ -62,13 +61,8 @@ func New(baseURL string, client *http.Client) (*McpTransport, error) {
 }
 
 // ListTools fetches available tools
-func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]string) (*transport.ManifestSchema, error) {
 	if err := t.EnsureInitialized(ctx); err != nil {
-		return nil, err
-	}
-
-	finalHeaders, err := t.resolveHeaders(headers)
-	if err != nil {
 		return nil, err
 	}
 
@@ -82,7 +76,7 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 	}
 
 	var result listToolsResult
-	if err := t.sendRequest(ctx, requestURL, "tools/list", map[string]any{}, finalHeaders, &result); err != nil {
+	if err := t.sendRequest(ctx, requestURL, "tools/list", map[string]any{}, headers, &result); err != nil {
 		return nil, fmt.Errorf("failed to list tools: %w", err)
 	}
 
@@ -118,7 +112,7 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 }
 
 // GetTool fetches a single tool
-func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map[string]oauth2.TokenSource) (*transport.ManifestSchema, error) {
+func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map[string]string) (*transport.ManifestSchema, error) {
 	manifest, err := t.ListTools(ctx, "", headers)
 	if err != nil {
 		return nil, err
@@ -136,13 +130,8 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 }
 
 // InvokeTool executes a tool
-func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]oauth2.TokenSource) (any, error) {
+func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error) {
 	if err := t.EnsureInitialized(ctx); err != nil {
-		return "", err
-	}
-
-	finalHeaders, err := t.resolveHeaders(headers)
-	if err != nil {
 		return "", err
 	}
 
@@ -152,7 +141,7 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 	}
 
 	var result callToolResult
-	if err := t.sendRequest(ctx, t.BaseURL(), "tools/call", params, finalHeaders, &result); err != nil {
+	if err := t.sendRequest(ctx, t.BaseURL(), "tools/call", params, headers, &result); err != nil {
 		return "", fmt.Errorf("failed to invoke tool '%s': %w", toolName, err)
 	}
 
@@ -206,27 +195,6 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 
 	// Confirm Handshake
 	return t.sendNotification(ctx, "notifications/initialized", map[string]any{})
-}
-
-// resolveHeaders converts a map of TokenSources into standard HTTP headers.
-func (t *McpTransport) resolveHeaders(sources map[string]oauth2.TokenSource) (map[string]string, error) {
-	if sources == nil {
-		return nil, nil
-	}
-
-	headers := make(map[string]string, len(sources))
-	for headerKey, source := range sources {
-		if source == nil {
-			continue
-		}
-
-		token, err := source.Token()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get token for header %s: %w", headerKey, err)
-		}
-		headers[headerKey] = token.AccessToken
-	}
-	return headers, nil
 }
 
 // sendRequest sends a standard JSON-RPC request to the server.
