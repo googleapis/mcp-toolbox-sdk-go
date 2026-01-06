@@ -43,19 +43,22 @@ func New(baseURL string, client *http.Client) transport.Transport {
 func (t *ToolboxTransport) BaseURL() string { return t.baseURL }
 
 func (t *ToolboxTransport) GetTool(ctx context.Context, toolName string, headers map[string]string) (*transport.ManifestSchema, error) {
-	url, err := url.JoinPath(t.baseURL, "api", "tool", toolName)
+	fullURL, err := url.JoinPath(t.baseURL, "api", "tool", toolName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct URL: %w", err)
 	}
-	return t.LoadManifest(ctx, url, headers)
+	return t.LoadManifest(ctx, fullURL, headers)
 }
 
 func (t *ToolboxTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]string) (*transport.ManifestSchema, error) {
-	url, err := url.JoinPath(t.baseURL, "api", "toolset", toolsetName)
+	fullURL, err := url.JoinPath(t.baseURL, "api", "toolset", toolsetName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct URL: %w", err)
 	}
-	return t.LoadManifest(ctx, url, headers)
+	if toolsetName == "" && !strings.HasSuffix(fullURL, "/") {
+		fullURL += "/"
+	}
+	return t.LoadManifest(ctx, fullURL, headers)
 }
 
 // LoadManifest is an internal helper for fetching manifests from the Toolbox server.
