@@ -81,11 +81,11 @@ func ToGenkitTool(tool *core.ToolboxTool, g *genkit.Genkit) (ai.Tool, error) {
 	}
 
 	// Create a Genkit Tool
-	return genkit.DefineToolWithInputSchema(
+	return genkit.DefineTool(
 		g,
 		tool.Name(),
 		tool.Description(),
-		schema,
 		executeFn,
+		ai.WithInputSchema(schema),
 	), nil
 }
