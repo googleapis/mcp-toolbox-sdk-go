@@ -472,7 +472,7 @@ func TestE2E_Auth(t *testing.T) {
 
 		_, err = tool.Run(testToolCtx, map[string]any{"id": "2"})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to get token for header my-test-auth_token")
+		assert.Contains(t, err.Error(), "failed to resolve auth token my-test-auth")
 		assert.Contains(t, err.Error(), "token source failed as designed")
 	})
 }
