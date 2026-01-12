@@ -123,9 +123,12 @@ func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payl
 	}
 
 	payloadBytes, err := json.Marshal(payload)
-	invocationURL := fmt.Sprintf("%s/api/tool/%s/invoke", t.baseURL, toolName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal tool payload for API call: %w", err)
+	}
+	invocationURL, err := url.JoinPath(t.baseURL, "api", "tool", toolName, "invoke")
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct URL: %w", err)
 	}
 
 	// Assemble the API request
