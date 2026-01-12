@@ -54,7 +54,7 @@ type ToolboxClient struct {
 //	and an error if configuration fails.
 func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) {
 	// Initialize the client with default values.
-	// We default to ProtocolMCP (the newest version alias) if not overridden.
+	// We default to MCP Protocol (the newest version alias) if not overridden.
 	tc := &ToolboxClient{
 		baseURL:             url,
 		httpClient:          &http.Client{},

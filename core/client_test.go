@@ -61,8 +61,8 @@ func TestNewToolboxClient(t *testing.T) {
 			t.Errorf("expected no timeout, got %v", client.httpClient.Timeout)
 		}
 
-		if client.protocol != ProtocolMCP {
-			t.Errorf("expected default protocol to be ProtocolMCP, got %v", client.protocol)
+		if client.protocol != MCP {
+			t.Errorf("expected default protocol to be MCP, got %v", client.protocol)
 		}
 
 	})

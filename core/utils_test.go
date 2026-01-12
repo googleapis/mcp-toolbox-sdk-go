@@ -124,18 +124,21 @@ func TestIdentifyAuthRequirements(t *testing.T) {
 	})
 }
 
-// mockTokenSource is a helper to simulate token generation behavior.
-type mockTokenSource struct {
+// mockingTokenSource is a helper to simulate token generation behavior.
+type mockingTokenSource struct {
 	token *oauth2.Token
 	err   error
 }
 
-func (m *mockTokenSource) Token() (*oauth2.Token, error) {
+func (m *mockingTokenSource) Token() (*oauth2.Token, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return m.token, nil
 }
+
+// Enforcing the TokenSource type on the mockingTokenSource
+var _ oauth2.TokenSource = &mockingTokenSource{}
 
 func TestResolveClientHeaders(t *testing.T) {
 	t.Run("Success_MultipleHeaders", func(t *testing.T) {
@@ -168,8 +171,8 @@ func TestResolveClientHeaders(t *testing.T) {
 	t.Run("Failure_SingleSourceError", func(t *testing.T) {
 		// Setup: One valid source, one failing source
 		sources := map[string]oauth2.TokenSource{
-			"Valid-Header":  &mockTokenSource{token: &oauth2.Token{AccessToken: "ok"}},
-			"Broken-Header": &mockTokenSource{err: errors.New("network timeout")},
+			"Valid-Header":  &mockingTokenSource{token: &oauth2.Token{AccessToken: "ok"}},
+			"Broken-Header": &mockingTokenSource{err: errors.New("network timeout")},
 		}
 
 		// Execute
