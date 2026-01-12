@@ -683,8 +683,19 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 		}
 
 		schema := genkitTool.Definition().InputSchema
-
-		assert.Equal(t, schema, expectedSchema)
+		// Extract 'required' fields for separate comparison
+		actualRequired := schema["required"]
+		expectedRequired := expectedSchema["required"]
+		
+		// Remove them from the maps to compare the rest of the structure
+		delete(schema, "required")
+		delete(expectedSchema, "required")
+		
+		// Compare the main structure
+		assert.Equal(t, expectedSchema, schema)
+		
+		// Compare the slices ignoring order
+		assert.ElementsMatch(t, expectedRequired, actualRequired)
 	})
 
 	t.Run("test_run_tool_with_all_map_params", func(t *testing.T) {
