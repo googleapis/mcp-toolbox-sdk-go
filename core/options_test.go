@@ -70,6 +70,62 @@ func TestWithHTTPClient(t *testing.T) {
 	})
 }
 
+func TestWithProtocol(t *testing.T) {
+	// Verify all protocols can be set individually
+	tests := []struct {
+		name     string
+		protocol Protocol
+	}{
+		{"Sets Toolbox Protocol", Toolbox},
+		{"Sets MCP v2025-06-18", MCPv20250618},
+		{"Sets MCP v2025-03-26", MCPv20250326},
+		{"Sets MCP v2024-11-05", MCPv20241105},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			client := newTestClient()
+			opt := WithProtocol(tc.protocol)
+
+			err := opt(client)
+
+			if err != nil {
+				t.Errorf("Expected no error, but got: %v", err)
+			}
+			if client.protocol != tc.protocol {
+				t.Errorf("Expected protocol to be %s, got %s", tc.protocol, client.protocol)
+			}
+			if !client.protocolSet {
+				t.Error("Expected protocolSet flag to be true")
+			}
+		})
+	}
+
+	// Verify error on duplicate setting
+	t.Run("Error when setting protocol twice", func(t *testing.T) {
+		client := newTestClient()
+
+		// First call (Should succeed)
+		firstOpt := WithProtocol(MCPv20241105)
+		if err := firstOpt(client); err != nil {
+			t.Fatalf("Unexpected error on first set: %v", err)
+		}
+
+		// Second call (Should fail)
+		secondOpt := WithProtocol(MCPv20250326)
+		err := secondOpt(client)
+
+		if err == nil {
+			t.Error("Expected error when setting protocol twice, but got nil")
+		}
+
+		// Verify the protocol wasn't overwritten
+		if client.protocol != MCPv20241105 {
+			t.Errorf("Expected protocol to remain %s, but changed to %s", MCPv20241105, client.protocol)
+		}
+	})
+}
+
 func TestWithClientHeaderString(t *testing.T) {
 	t.Run("Success case", func(t *testing.T) {
 		client := newTestClient()
