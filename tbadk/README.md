@@ -132,6 +132,10 @@ The SDK supports multiple transport protocols. By default, the client uses the l
 
 You can explicitly select a protocol using the `core.WithProtocol` option during client initialization.
 
+> [!NOTE]
+> * **Native Toolbox Transport**: This uses the service's native **REST over HTTP** API.
+> * **MCP Transports**: These options use the **Model Context Protocol over HTTP**.
+
 ### Supported Protocols
 
 | Constant | Description |

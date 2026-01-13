@@ -136,6 +136,10 @@ The SDK supports multiple transport protocols for communicating with the Toolbox
 
 You can explicitly select a protocol using the `core.WithProtocol` option during client initialization. This is useful if you need to use the native Toolbox HTTP protocol or pin the client to a specific legacy version of MCP.
 
+> [!NOTE]
+> * **Native Toolbox Transport**: This uses the service's native **REST over HTTP** API.
+> * **MCP Transports**: These options use the **Model Context Protocol over HTTP**.
+
 ### Supported Protocols
 
 | Constant | Description |
@@ -168,7 +172,6 @@ client, err := core.NewToolboxClient(
     core.WithProtocol(core.MCPv20250326),
 )
 ```
-
 
 ## Loading Tools
 
