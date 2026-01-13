@@ -16,35 +16,38 @@ involving Large Language Models (LLMs).
 <!-- TOC ignore:true -->
 <!-- TOC -->
 
-- [Installation](#installation)
-- [Quickstart](#quickstart)
-- [Usage](#usage)
-- [Loading Tools](#loading-tools)
+- [MCP Toolbox Core SDK](#mcp-toolbox-core-sdk)
+  - [Installation](#installation)
+  - [Quickstart](#quickstart)
+  - [Usage](#usage)
+  - [Transport Protocols](#transport-protocols)
+    - [Supported Protocols](#supported-protocols)
+    - [Example](#example)
+  - [Loading Tools](#loading-tools)
     - [Load a toolset](#load-a-toolset)
     - [Load a single tool](#load-a-single-tool)
-- [Invoking Tools](#invoking-tools)
-- [Synchronous Usage](#synchronous-usage)
-- [Client to Server Authentication](#client-to-server-authentication)
+  - [Invoking Tools](#invoking-tools)
+  - [Client to Server Authentication](#client-to-server-authentication)
     - [When is Client-to-Server Authentication Needed?](#when-is-client-to-server-authentication-needed)
     - [How it works](#how-it-works)
     - [Configuration](#configuration)
     - [Authenticating with Google Cloud Servers](#authenticating-with-google-cloud-servers)
     - [Step by Step Guide for Cloud Run](#step-by-step-guide-for-cloud-run)
-- [Authenticating Tools](#authenticating-tools)
+  - [Authenticating Tools](#authenticating-tools)
     - [When is Authentication Needed?](#when-is-authentication-needed)
     - [Supported Authentication Mechanisms](#supported-authentication-mechanisms)
     - [Step 1: Configure Tools in Toolbox Service](#step-1-configure-tools-in-toolbox-service)
     - [Step 2: Configure SDK Client](#step-2-configure-sdk-client)
-        - [Provide an ID Token Retriever Function](#provide-an-id-token-retriever-function)
-        - [Option A: Add Default Authentication to a Client](#option-a-add-default-authentication-to-a-client)
-        - [Option B: Add Authentication to a Loaded Tool](#option-b-add-authentication-to-a-loaded-tool)
-        - [Option C: Add Authentication While Loading Tools](#option-c-add-authentication-while-loading-tools)
-
+      - [Provide an ID Token Retriever Function](#provide-an-id-token-retriever-function)
+      - [Option A: Add Default Authentication to a Client](#option-a-add-default-authentication-to-a-client)
+      - [Option B: Add Authentication to a Loaded Tool](#option-b-add-authentication-to-a-loaded-tool)
+      - [Option C: Add Authentication While Loading Tools](#option-c-add-authentication-while-loading-tools)
     - [Complete Authentication Example](#complete-authentication-example)
-- [Binding Parameter Values](#binding-parameter-values)
+  - [Binding Parameter Values](#binding-parameter-values)
     - [Why Bind Parameters?](#why-bind-parameters)
-    - [Option A: Binding Parameters to a Loaded Tool](#option-a-binding-parameters-to-a-loaded-tool)
-    - [Option B: Binding Parameters While Loading Tools](#option-b-binding-parameters-while-loading-tools)
+      - [Option A: Add Default Bound Parameters to a Client](#option-a-add-default-bound-parameters-to-a-client)
+    - [Option B: Binding Parameters to a Loaded Tool](#option-b-binding-parameters-to-a-loaded-tool)
+    - [Option C: Binding Parameters While Loading Tools](#option-c-binding-parameters-while-loading-tools)
     - [Binding Dynamic Values](#binding-dynamic-values)
 - [Using with Orchestration Frameworks](#using-with-orchestration-frameworks)
 - [Contributing](#contributing)
@@ -126,6 +129,46 @@ All interactions for loading and invoking tools happen through this client.
 > all tools loaded from that client. As a result, any tool instances you have
 > loaded will cease to function and will raise an error if you attempt to invoke
 > them after the client is closed.
+
+## Transport Protocols
+
+The SDK supports multiple transport protocols for communicating with the Toolbox server. By default, the client uses the latest supported version of the **Model Context Protocol (MCP)**.
+
+You can explicitly select a protocol using the `core.WithProtocol` option during client initialization. This is useful if you need to use the native Toolbox HTTP protocol or pin the client to a specific legacy version of MCP.
+
+### Supported Protocols
+
+| Constant | Description |
+| :--- | :--- |
+| `core.MCP` | **(Default)** Alias for the latest supported MCP version (currently `v2025-06-18`). |
+| `core.Toolbox` | The native Toolbox HTTP protocol. |
+| `core.MCPv20250618` | MCP Protocol version 2025-06-18. |
+| `core.MCPv20250326` | MCP Protocol version 2025-03-26. |
+| `core.MCPv20241105` | MCP Protocol version 2024-11-05. |
+
+### Example
+
+If you wish to use the native Toolbox protocol:
+
+```go
+import "github.com/googleapis/mcp-toolbox-sdk-go/core"
+
+client, err := core.NewToolboxClient(
+    "http://localhost:5000",
+    core.WithProtocol(core.Toolbox),
+)
+```
+If you want to pin the MCP Version 2025-03-26:
+
+```go
+import "github.com/googleapis/mcp-toolbox-sdk-go/core"
+
+client, err := core.NewToolboxClient(
+    "http://localhost:5000",
+    core.WithProtocol(core.MCPv20250326),
+)
+```
+
 
 ## Loading Tools
 
