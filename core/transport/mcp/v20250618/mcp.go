@@ -61,7 +61,7 @@ func New(baseURL string, client *http.Client) (*McpTransport, error) {
 
 // ListTools fetches available tools
 func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]string) (*transport.ManifestSchema, error) {
-	if err := t.EnsureInitialized(ctx); err != nil {
+	if err := t.EnsureInitialized(ctx, headers); err != nil {
 		return nil, err
 	}
 
@@ -129,7 +129,7 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 
 // InvokeTool executes a tool
 func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error) {
-	if err := t.EnsureInitialized(ctx); err != nil {
+	if err := t.EnsureInitialized(ctx, headers); err != nil {
 		return "", err
 	}
 	params := callToolRequestParams{
@@ -163,7 +163,7 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 }
 
 // initializeSession performs the initial handshake with the server.
-func (t *McpTransport) initializeSession(ctx context.Context) error {
+func (t *McpTransport) initializeSession(ctx context.Context, headers map[string]string) error {
 	params := initializeRequestParams{
 		ProtocolVersion: t.protocolVersion,
 		Capabilities:    clientCapabilities{},
@@ -174,7 +174,7 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 	}
 
 	var result initializeResult
-	if err := t.sendRequest(ctx, t.BaseURL(), "initialize", params, nil, &result); err != nil {
+	if err := t.sendRequest(ctx, t.BaseURL(), "initialize", params, headers, &result); err != nil {
 		return err
 	}
 
@@ -191,7 +191,7 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 	t.ServerVersion = result.ServerInfo.Version
 
 	// Confirm Handshake
-	return t.sendNotification(ctx, "notifications/initialized", map[string]any{})
+	return t.sendNotification(ctx, "notifications/initialized", map[string]any{}, headers)
 }
 
 // sendRequest sends a standard JSON-RPC request to the server.
@@ -206,13 +206,13 @@ func (t *McpTransport) sendRequest(ctx context.Context, url string, method strin
 }
 
 // sendNotification sends a standard JSON-RPC notification (no response expected).
-func (t *McpTransport) sendNotification(ctx context.Context, method string, params any) error {
+func (t *McpTransport) sendNotification(ctx context.Context, method string, params any, headers map[string]string) error {
 	req := jsonRPCNotification{
 		JSONRPC: "2.0",
 		Method:  method,
 		Params:  params,
 	}
-	return t.doRPC(ctx, t.BaseURL(), req, nil, nil)
+	return t.doRPC(ctx, t.BaseURL(), req, headers, nil)
 }
 
 // doRPC performs the low-level HTTP POST and handles JSON-RPC wrapping/unwrapping.

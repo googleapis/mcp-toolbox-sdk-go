@@ -1,12 +1,10 @@
-//go:build unit
-
 // Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,6 +22,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"maps"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -149,7 +149,7 @@ func TestInitialize_Success(t *testing.T) {
 	client, _ := New(server.URL, server.Client())
 
 	// Trigger handshake via EnsureInitialized
-	err := client.EnsureInitialized(context.Background())
+	err := client.EnsureInitialized(context.Background(), nil)
 	require.NoError(t, err)
 
 	assert.Equal(t, "1.0.0", client.ServerVersion)
@@ -172,7 +172,7 @@ func TestInitialize_MissingSessionId(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client())
-	err := client.EnsureInitialized(context.Background())
+	err := client.EnsureInitialized(context.Background(), nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "server did not return an Mcp-Session-Id")
 }
@@ -334,7 +334,7 @@ func TestProtocolVersionMismatch(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client())
-	err := client.EnsureInitialized(context.Background())
+	err := client.EnsureInitialized(context.Background(), nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "MCP version mismatch")
 }
@@ -351,7 +351,7 @@ func TestInitialization_MissingCapabilities(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client())
-	err := client.EnsureInitialized(context.Background())
+	err := client.EnsureInitialized(context.Background(), nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "does not support the 'tools' capability")
 }
@@ -407,7 +407,7 @@ func TestRequest_MarshalError(t *testing.T) {
 	client, _ := New(server.URL, server.Client())
 
 	// Force initialization first
-	_ = client.EnsureInitialized(context.Background())
+	_ = client.EnsureInitialized(context.Background(), nil)
 
 	badPayload := map[string]any{"bad": make(chan int)}
 	_, err := client.InvokeTool(context.Background(), "tool", badPayload, nil)
@@ -468,7 +468,7 @@ func TestInit_NotificationFailure(t *testing.T) {
 	defer server.Close()
 
 	client, _ := New(server.URL, server.Client())
-	err := client.EnsureInitialized(context.Background())
+	err := client.EnsureInitialized(context.Background(), nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "server did not return an Mcp-Session-Id")
 }
@@ -517,7 +517,7 @@ func TestDoRPC_204_NoContent(t *testing.T) {
 	defer server.Close()
 
 	client, _ := New(server.URL, server.Client())
-	_, err := client.sendNotification(context.Background(), "test", nil)
+	_, err := client.sendNotification(context.Background(), "test", nil, nil)
 	require.NoError(t, err)
 }
 
@@ -540,4 +540,71 @@ func TestListTools_ErrorOnEmptyName(t *testing.T) {
 	// Assert that we get an error now
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "missing 'name' field")
+}
+
+func TestEnsureInitialized_PassesHeaders(t *testing.T) {
+	tr, err := New("http://fake.com", nil)
+	require.NoError(t, err)
+
+	capturedHeaders := make(map[string]string)
+
+	tr.BaseMcpTransport.HandshakeHook = func(ctx context.Context, headers map[string]string) error {
+		maps.Copy(capturedHeaders, headers)
+		return nil
+	}
+
+	testHeaders := map[string]string{"X-Test": "123"}
+	err = tr.EnsureInitialized(context.Background(), testHeaders)
+	require.NoError(t, err)
+
+	assert.Equal(t, "123", capturedHeaders["X-Test"], "EnsureInitialized failed to pass headers to the handshake hook")
+}
+
+func TestInitializeSession_PassesHeadersToWire(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		if auth != "Bearer token" {
+			t.Errorf("Missing Authorization header on request to %s", r.URL.Path)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		// Decode request to determine type
+		var req struct {
+			Method string `json:"method"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if req.Method == "initialize" {
+			resp := map[string]any{
+				"jsonrpc": "2.0",
+				"id":      "123",
+				"result": map[string]any{
+					"protocolVersion": "2025-03-26",
+					"capabilities":    map[string]any{"tools": map[string]any{}},
+					"serverInfo":      map[string]any{"name": "test", "version": "1.0"},
+				},
+			}
+			// Set Session ID header required for this version
+			w.Header().Set("Mcp-Session-Id", "session-123")
+			json.NewEncoder(w).Encode(resp)
+		} else if req.Method == "notifications/initialized" {
+			// Verify notification success
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	tr, err := New(ts.URL, ts.Client())
+	require.NoError(t, err)
+
+	testHeaders := map[string]string{"Authorization": "Bearer token"}
+
+	err = tr.initializeSession(context.Background(), testHeaders)
+	require.NoError(t, err)
 }

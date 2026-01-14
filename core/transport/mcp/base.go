@@ -35,7 +35,7 @@ type BaseMcpTransport struct {
 
 	// HandshakeHook is the abstract method _initialize_session.
 	// The specific version implementation will assign this function.
-	HandshakeHook func(context.Context) error
+	HandshakeHook func(ctx context.Context, headers map[string]string) error
 }
 
 // BaseURL returns the base URL for the transport.
@@ -76,10 +76,10 @@ func NewBaseTransport(baseURL string, client *http.Client) (*BaseMcpTransport, e
 }
 
 // EnsureInitialized guarantees the session is ready before making requests.
-func (b *BaseMcpTransport) EnsureInitialized(ctx context.Context) error {
+func (b *BaseMcpTransport) EnsureInitialized(ctx context.Context, headers map[string]string) error {
 	b.initOnce.Do(func() {
 		if b.HandshakeHook != nil {
-			b.initErr = b.HandshakeHook(ctx)
+			b.initErr = b.HandshakeHook(ctx, headers)
 		} else {
 			b.initErr = fmt.Errorf("transport initialization logic (HandshakeHook) not defined")
 		}
