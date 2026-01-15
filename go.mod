@@ -4,14 +4,14 @@ go 1.24.4
 
 require (
 	cloud.google.com/go/secretmanager v1.16.0
-	cloud.google.com/go/storage v1.59.0
-	github.com/firebase/genkit/go v1.3.0
+	cloud.google.com/go/storage v1.59.1
+	github.com/firebase/genkit/go v1.4.0
 	github.com/google/uuid v1.6.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.34.0
 	google.golang.org/adk v0.3.0
-	google.golang.org/api v0.259.0
-	google.golang.org/genai v1.41.0
+	google.golang.org/api v0.260.0
+	google.golang.org/genai v1.42.0
 )
 
 require (
@@ -40,7 +40,7 @@ require (
 	github.com/google/dotprompt/go v0.0.0-20251014011017-8d056e027254 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.7 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.9 // indirect
 	github.com/googleapis/gax-go/v2 v2.16.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
