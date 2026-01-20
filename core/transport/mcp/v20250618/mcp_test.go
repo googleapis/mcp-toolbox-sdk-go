@@ -127,7 +127,7 @@ func TestHeaders_Presence(t *testing.T) {
 	defer server.Close()
 
 	client, _ := New(server.URL, server.Client())
-	err := client.EnsureInitialized(context.Background())
+	err := client.EnsureInitialized(context.Background(), nil)
 	require.NoError(t, err)
 
 	require.NotEmpty(t, server.requests)
@@ -436,7 +436,7 @@ func TestRequest_MarshalError(t *testing.T) {
 	client, _ := New(server.URL, server.Client())
 
 	// Force initialization first
-	_ = client.EnsureInitialized(context.Background())
+	_ = client.EnsureInitialized(context.Background(), nil)
 
 	// Pass a type that cannot be marshaled to JSON (e.g. channel)
 	badPayload := map[string]any{"bad": make(chan int)}
@@ -510,4 +510,70 @@ func TestInvokeTool_EmptyResult(t *testing.T) {
 	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "null", res)
+}
+
+func TestEnsureInitialized_PassesHeaders(t *testing.T) {
+	tr, err := New("http://fake.com", nil)
+	require.NoError(t, err)
+
+	capturedHeaders := make(map[string]string)
+	tr.BaseMcpTransport.HandshakeHook = func(ctx context.Context, headers map[string]string) error {
+		for k, v := range headers {
+			capturedHeaders[k] = v
+		}
+		return nil
+	}
+
+	testHeaders := map[string]string{"X-Test": "123"}
+
+	err = tr.EnsureInitialized(context.Background(), testHeaders)
+	require.NoError(t, err)
+
+	assert.Equal(t, "123", capturedHeaders["X-Test"], "EnsureInitialized failed to pass headers to the handshake hook")
+}
+
+func TestInitializeSession_PassesHeadersToWire(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		if auth != "Bearer token" {
+			t.Errorf("Missing Authorization header on request to %s", r.URL.Path)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		var req struct {
+			Method string `json:"method"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		if req.Method == "initialize" {
+			resp := map[string]any{
+				"jsonrpc": "2.0",
+				"id":      "123",
+				"result": map[string]any{
+					"protocolVersion": "2025-06-18",
+					"capabilities":    map[string]any{"tools": map[string]any{}},
+					"serverInfo":      map[string]any{"name": "test", "version": "1.0"},
+				},
+			}
+			json.NewEncoder(w).Encode(resp)
+		} else if req.Method == "notifications/initialized" {
+			// Verify notification success
+			w.WriteHeader(http.StatusNoContent)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer ts.Close()
+
+	tr, err := New(ts.URL, ts.Client())
+	require.NoError(t, err)
+
+	testHeaders := map[string]string{"Authorization": "Bearer token"}
+
+	err = tr.initializeSession(context.Background(), testHeaders)
+	require.NoError(t, err)
 }
