@@ -1,3 +1,5 @@
+//go:build unit
+
 // Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -542,18 +544,18 @@ func TestListTools_ErrorOnEmptyName(t *testing.T) {
 
 func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 	t.Run("Multiple JSON Objects (Merge to Array)", func(t *testing.T) {
-		server := newMockMCPServer(t)
+		server := newMockMCPServer()
 		defer server.Close()
 
 		// Mock response with distinct JSON objects in separate text blocks
-		server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
+		server.handlers["tools/call"] = func(params json.RawMessage) (any, map[string]string, error) {
 			return callToolResult{
 				Content: []textContent{
 					{Type: "text", Text: `{"foo":"bar", "baz": "qux"}`},
 					{Type: "text", Text: `{"foo":"quux", "baz":"corge"}`},
 				},
 				IsError: false,
-			}, nil
+			}, nil, nil // Return nil for headers and nil for error
 		}
 
 		client, _ := New(server.URL, server.Client())
@@ -566,18 +568,18 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 	})
 
 	t.Run("Split Text (Concatenate)", func(t *testing.T) {
-		server := newMockMCPServer(t)
+		server := newMockMCPServer()
 		defer server.Close()
 
 		// Mock response where text is split across chunks but isn't JSON objects
-		server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
+		server.handlers["tools/call"] = func(params json.RawMessage) (any, map[string]string, error) {
 			return callToolResult{
 				Content: []textContent{
 					{Type: "text", Text: "Hello "},
 					{Type: "text", Text: "World"},
 				},
 				IsError: false,
-			}, nil
+			}, nil, nil
 		}
 
 		client, _ := New(server.URL, server.Client())
@@ -589,19 +591,18 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 	})
 
 	t.Run("Split JSON Object (Concatenate)", func(t *testing.T) {
-		server := newMockMCPServer(t)
+		server := newMockMCPServer()
 		defer server.Close()
 
 		// Mock response where a single JSON object is split across chunks.
-		// Since individual chunks are NOT valid JSON objects, it falls back to concatenation.
-		server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
+		server.handlers["tools/call"] = func(params json.RawMessage) (any, map[string]string, error) {
 			return callToolResult{
 				Content: []textContent{
 					{Type: "text", Text: `{"a": `},
 					{Type: "text", Text: `1}`},
 				},
 				IsError: false,
-			}, nil
+			}, nil, nil
 		}
 
 		client, _ := New(server.URL, server.Client())
