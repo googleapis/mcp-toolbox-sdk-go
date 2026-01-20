@@ -62,7 +62,7 @@ func New(baseURL string, client *http.Client) (*McpTransport, error) {
 
 // ListTools fetches available tools
 func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]string) (*transport.ManifestSchema, error) {
-	if err := t.EnsureInitialized(ctx); err != nil {
+	if err := t.EnsureInitialized(ctx, headers); err != nil {
 		return nil, err
 	}
 
@@ -129,7 +129,7 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 
 // InvokeTool executes a tool
 func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error) {
-	if err := t.EnsureInitialized(ctx); err != nil {
+	if err := t.EnsureInitialized(ctx, headers); err != nil {
 		return "", err
 	}
 
@@ -160,7 +160,7 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 }
 
 // initializeSession performs the initial handshake and extracts the Session ID.
-func (t *McpTransport) initializeSession(ctx context.Context) error {
+func (t *McpTransport) initializeSession(ctx context.Context, headers map[string]string) error {
 	params := initializeRequestParams{
 		ProtocolVersion: t.protocolVersion,
 		Capabilities:    clientCapabilities{},
@@ -178,7 +178,7 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 	}
 
 	// Capture headers to check for Session ID
-	respHeaders, err := t.doRPC(ctx, t.BaseURL(), req, nil, &result)
+	respHeaders, err := t.doRPC(ctx, t.BaseURL(), req, headers, &result)
 	if err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func (t *McpTransport) initializeSession(ctx context.Context) error {
 	t.sessionId = sessionId
 
 	// Confirm Handshake
-	_, err = t.sendNotification(ctx, "notifications/initialized", map[string]any{})
+	_, err = t.sendNotification(ctx, "notifications/initialized", map[string]any{}, headers)
 	return err
 }
 
@@ -233,10 +233,12 @@ func (t *McpTransport) sendRequest(ctx context.Context, url string, method strin
 }
 
 // sendNotification sends a JSON-RPC notification and injects the Session ID if active.
-func (t *McpTransport) sendNotification(ctx context.Context, method string, params any) (http.Header, error) {
+func (t *McpTransport) sendNotification(ctx context.Context, method string, params any, headers map[string]string) (http.Header, error) {
 
 	// Initialize headers map
-	headers := make(map[string]string)
+	if headers == nil {
+		headers = make(map[string]string)
+	}
 
 	// Spec Requirement: Inject Session ID as a HEADER
 	if t.sessionId != "" {

@@ -72,18 +72,25 @@ func TestEnsureInitialized(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		tr, _ := NewBaseTransport("http://example.com", nil)
 		called := 0
-		tr.HandshakeHook = func(ctx context.Context) error {
+
+		testHeaders := map[string]string{"Authorization": "Bearer test"}
+		tr.HandshakeHook = func(ctx context.Context, headers map[string]string) error {
 			called++
+
+			// Verify headers were passed through
+			if headers["Authorization"] != "Bearer test" {
+				t.Errorf("Expected Authorization header 'Bearer test', got %s", headers["Authorization"])
+			}
 			return nil
 		}
 
 		// First call should trigger hook
-		if err := tr.EnsureInitialized(context.Background()); err != nil {
+		if err := tr.EnsureInitialized(context.Background(), testHeaders); err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
 
 		// Second call should NOT trigger hook
-		if err := tr.EnsureInitialized(context.Background()); err != nil {
+		if err := tr.EnsureInitialized(context.Background(), testHeaders); err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
 
@@ -95,16 +102,16 @@ func TestEnsureInitialized(t *testing.T) {
 	t.Run("Failure", func(t *testing.T) {
 		tr, _ := NewBaseTransport("http://example.com", nil)
 		expectedErr := errors.New("handshake failed")
-		tr.HandshakeHook = func(ctx context.Context) error {
+		tr.HandshakeHook = func(ctx context.Context, headers map[string]string) error {
 			return expectedErr
 		}
 
-		if err := tr.EnsureInitialized(context.Background()); err != expectedErr {
+		if err := tr.EnsureInitialized(context.Background(), nil); err != expectedErr {
 			t.Errorf("Expected error %v, got %v", expectedErr, err)
 		}
 
 		// verify error is cached
-		if err := tr.EnsureInitialized(context.Background()); err != expectedErr {
+		if err := tr.EnsureInitialized(context.Background(), nil); err != expectedErr {
 			t.Errorf("Expected cached error %v, got %v", expectedErr, err)
 		}
 	})
@@ -112,7 +119,7 @@ func TestEnsureInitialized(t *testing.T) {
 	t.Run("MissingHook", func(t *testing.T) {
 		tr, _ := NewBaseTransport("http://example.com", nil)
 		// No hook defined
-		err := tr.EnsureInitialized(context.Background())
+		err := tr.EnsureInitialized(context.Background(), nil)
 		if err == nil {
 			t.Error("Expected error when HandshakeHook is missing, got nil")
 		}
