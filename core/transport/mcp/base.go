@@ -16,6 +16,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -24,6 +25,12 @@ import (
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 )
+
+// ToolContent represents a single item in the tool result content list.
+type ToolContent struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
 
 // BaseMcpTransport holds the common state and logic for MCP HTTP transports.
 type BaseMcpTransport struct {
@@ -85,6 +92,45 @@ func (b *BaseMcpTransport) EnsureInitialized(ctx context.Context) error {
 		}
 	})
 	return b.initErr
+}
+
+// ProcessToolResultContent processes the tool result content, handling multiple JSON objects.
+// It filters for text content, attempts to merge valid JSON objects into an array,
+// or falls back to concatenation.
+func (b *BaseMcpTransport) ProcessToolResultContent(content []ToolContent) string {
+	// Filter content where type is "text"
+	var texts []string
+	for _, c := range content {
+		if c.Type == "text" {
+			texts = append(texts, c.Text)
+		}
+	}
+
+	// Handle multiple JSON objects
+	if len(texts) > 1 {
+		allValidObjects := true
+		for _, t := range texts {
+			var js map[string]any
+			if err := json.Unmarshal([]byte(t), &js); err != nil {
+				allValidObjects = false
+				break
+			}
+		}
+
+		if allValidObjects {
+			// Join with commas and wrap in brackets to create a JSON array string
+			return "[" + strings.Join(texts, ",") + "]"
+		}
+	}
+
+	finalStr := strings.Join(texts, "")
+
+	// 4. Handle empty result case
+	if finalStr == "" {
+		return "null"
+	}
+
+	return finalStr
 }
 
 // ConvertToolDefinition converts the raw tool dictionary into a transport.ToolSchema.
