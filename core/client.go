@@ -24,6 +24,7 @@ import (
 	mcp20241105 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20241105"
 	mcp20250326 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250326"
 	mcp20250618 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250618"
+	mcp20251125 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20251125"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/toolboxtransport"
 	"golang.org/x/oauth2"
 )
@@ -76,6 +77,8 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	// Initialize the Transport based on the selected Protocol.
 	var transportErr error = nil
 	switch tc.protocol {
+	case MCPv20251125:
+		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient)
 	case MCPv20250618:
 		tc.transport, transportErr = mcp20250618.New(tc.baseURL, tc.httpClient)
 	case MCPv20250326:

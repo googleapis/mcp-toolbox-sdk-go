@@ -44,6 +44,7 @@ var protocolsToTest = []protocolTestCase{
 	{name: "v20241105", protocol: core.MCPv20241105},
 	{name: "v20250326", protocol: core.MCPv20250326},
 	{name: "v20250618", protocol: core.MCPv20250618},
+	{name: "v20251125", protocol: core.MCPv20251125},
 	{name: "MCP Alias (Latest)", protocol: core.MCP},
 }
 

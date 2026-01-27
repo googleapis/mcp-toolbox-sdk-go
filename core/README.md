@@ -144,8 +144,9 @@ You can explicitly select a protocol using the `core.WithProtocol` option during
 
 | Constant | Description |
 | :--- | :--- |
-| `core.MCP` | **(Default)** Alias for the latest supported MCP version (currently `v2025-06-18`). |
+| `core.MCP` | **(Default)** Alias for the latest supported MCP version (currently `v2025-11-25`). |
 | `core.Toolbox` | The native Toolbox HTTP protocol. |
+| `core.MCPv20251125` | MCP Protocol version 2025-11-25. |
 | `core.MCPv20250618` | MCP Protocol version 2025-06-18. |
 | `core.MCPv20250326` | MCP Protocol version 2025-03-26. |
 | `core.MCPv20241105` | MCP Protocol version 2024-11-05. |
