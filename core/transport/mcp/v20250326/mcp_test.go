@@ -614,6 +614,8 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 		// Expectation: Concatenated to form the valid JSON string
 		assert.Equal(t, `{"a": 1}`, result)
 	})
+}
+
 func TestEnsureInitialized_PassesHeaders(t *testing.T) {
 	tr, err := New("http://fake.com", nil)
 	require.NoError(t, err)
