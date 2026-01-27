@@ -222,3 +222,77 @@ func TestConvertToolDefinition(t *testing.T) {
 		t.Error("Parameter 'simple_str' not found in converted schema")
 	}
 }
+func TestProcessToolResultContent(t *testing.T) {
+	// Setup a dummy transport (ProcessToolResultContent is a pure function, so state doesn't matter)
+	tr, _ := NewBaseTransport("http://example.com", nil)
+
+	tests := []struct {
+		name     string
+		content  []ToolContent
+		expected string
+	}{
+		{
+			// Single text
+			name: "Single text",
+			content: []ToolContent{
+				{Type: "text", Text: "hello"},
+			},
+			expected: "hello",
+		},
+		{
+			// Multiple valid JSON objects
+			// Should be merged into a JSON array string
+			name: "Multiple valid JSON objects",
+			content: []ToolContent{
+				{Type: "text", Text: `{"a": 1}`},
+				{Type: "text", Text: `{"b": 2}`},
+			},
+			expected: `[{"a": 1},{"b": 2}]`,
+		},
+		{
+			// Invalid JSON fallback
+			// One chunk is valid JSON, the other is not -> Fall back to concatenation
+			name: "Invalid JSON fallback",
+			content: []ToolContent{
+				{Type: "text", Text: `{"a": 1}`},
+				{Type: "text", Text: "invalid"},
+			},
+			expected: `{"a": 1}invalid`,
+		},
+		{
+			// Valid JSON but not objects (heuristic check)
+			// Numbers are valid JSON, but not "dictionaries", so they should be concatenated
+			name: "Valid JSON but not objects",
+			content: []ToolContent{
+				{Type: "text", Text: "1"},
+				{Type: "text", Text: "2"},
+			},
+			expected: "12",
+		},
+		{
+			// Empty
+			name:     "Empty",
+			content:  []ToolContent{},
+			expected: "null",
+		},
+		{
+			// Non-text ignored
+			// Image type should be skipped, leaving only "kept"
+			name: "Non-text ignored",
+			content: []ToolContent{
+				{Type: "image", Text: "ignored"},
+				{Type: "text", Text: "kept"},
+			},
+			expected: "kept",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tr.ProcessToolResultContent(tc.content)
+			if result != tc.expected {
+				t.Errorf("\nExpected: %s\nGot:      %s", tc.expected, result)
+			}
+		})
+	}
+}
