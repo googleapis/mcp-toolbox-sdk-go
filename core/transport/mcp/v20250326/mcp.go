@@ -22,7 +22,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
@@ -147,19 +146,16 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 		return "", fmt.Errorf("tool execution resulted in error")
 	}
 
-	// Concatenate all text content blocks
-	var sb strings.Builder
-	for _, content := range result.Content {
-		if content.Type == "text" {
-			sb.WriteString(content.Text)
+	baseContent := make([]mcp.ToolContent, len(result.Content))
+	for i, item := range result.Content {
+		baseContent[i] = mcp.ToolContent{
+			Type: item.Type,
+			Text: item.Text,
 		}
 	}
 
-	output := sb.String()
-	if output == "" {
-		// Return null if no text content found but not an error
-		return "null", nil
-	}
+	output := t.ProcessToolResultContent(baseContent)
+
 	return output, nil
 }
 

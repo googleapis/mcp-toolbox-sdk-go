@@ -511,6 +511,77 @@ func TestInvokeTool_EmptyResult(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "null", res)
 }
+func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
+	t.Run("Multiple JSON Objects (Merge to Array)", func(t *testing.T) {
+		server := newMockMCPServer(t)
+		defer server.Close()
+
+		// Mock response with distinct JSON objects in separate text blocks
+		server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
+			return callToolResult{
+				Content: []textContent{
+					{Type: "text", Text: `{"foo":"bar", "baz": "qux"}`},
+					{Type: "text", Text: `{"foo":"quux", "baz":"corge"}`},
+				},
+				IsError: false,
+			}, nil
+		}
+
+		client, _ := New(server.URL, server.Client())
+		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+		require.NoError(t, err)
+
+		// Expectation: The transport should merge these into a single JSON array string
+		expected := `[{"foo":"bar", "baz": "qux"},{"foo":"quux", "baz":"corge"}]`
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Split Text (Concatenate)", func(t *testing.T) {
+		server := newMockMCPServer(t)
+		defer server.Close()
+
+		// Mock response where text is split across chunks but isn't JSON objects
+		server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
+			return callToolResult{
+				Content: []textContent{
+					{Type: "text", Text: "Hello "},
+					{Type: "text", Text: "World"},
+				},
+				IsError: false,
+			}, nil
+		}
+
+		client, _ := New(server.URL, server.Client())
+		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+		require.NoError(t, err)
+
+		// Expectation: Simple concatenation
+		assert.Equal(t, "Hello World", result)
+	})
+
+	t.Run("Split JSON Object (Concatenate)", func(t *testing.T) {
+		server := newMockMCPServer(t)
+		defer server.Close()
+
+		// Mock response where a single JSON object is split across chunks.
+		server.handlers["tools/call"] = func(params json.RawMessage) (any, error) {
+			return callToolResult{
+				Content: []textContent{
+					{Type: "text", Text: `{"a": `},
+					{Type: "text", Text: `1}`},
+				},
+				IsError: false,
+			}, nil
+		}
+
+		client, _ := New(server.URL, server.Client())
+		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+		require.NoError(t, err)
+
+		// Expectation: Concatenated to form the valid JSON string
+		assert.Equal(t, `{"a": 1}`, result)
+	})
+}
 
 func TestEnsureInitialized_PassesHeaders(t *testing.T) {
 	tr, err := New("http://fake.com", nil)
