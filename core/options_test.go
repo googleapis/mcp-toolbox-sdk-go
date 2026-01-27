@@ -78,6 +78,7 @@ func TestWithProtocol(t *testing.T) {
 	}{
 		{"Sets Toolbox Protocol", Toolbox},
 		{"Sets MCP v2025-06-18", MCPv20250618},
+		{"Sets MCP v2025-11-25", MCPv20251125},
 		{"Sets MCP v2025-03-26", MCPv20250326},
 		{"Sets MCP v2024-11-05", MCPv20241105},
 	}
