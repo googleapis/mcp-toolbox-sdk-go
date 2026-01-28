@@ -24,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -88,6 +89,101 @@ func TestNewToolboxClient(t *testing.T) {
 		}
 	})
 
+}
+
+func TestNewToolboxClient_ProtocolWarnings(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer func() {
+		log.SetOutput(os.Stderr)
+	}()
+
+	withProtocol := func(p Protocol) ClientOption {
+		return func(tc *ToolboxClient) error {
+			tc.protocol = p
+			return nil
+		}
+	}
+
+	t.Run("Logs warning for older MCP versions", func(t *testing.T) {
+		buf.Reset()
+
+		// Initialize with an OLD version (e.g., MCPv20250618)
+		_, err := NewToolboxClient("https://api.example.com", withProtocol(MCPv20250618))
+		if err != nil {
+			t.Fatalf("Unexpected error creating client: %v", err)
+		}
+
+		expectedMsg := "A newer version of MCP: v2025-11-25 is available"
+		if !strings.Contains(buf.String(), expectedMsg) {
+			t.Errorf("Expected log to contain %q, but got: %q", expectedMsg, buf.String())
+		}
+	})
+
+	t.Run("Does not log warning for the latest MCP version", func(t *testing.T) {
+		buf.Reset()
+
+		// Initialize with the LATEST version (MCPv20251125)
+		_, err := NewToolboxClient("https://api.example.com", withProtocol(MCPv20251125))
+		if err != nil {
+			t.Fatalf("Unexpected error creating client: %v", err)
+		}
+
+		forbiddenMsg := "A newer version of MCP"
+		if strings.Contains(buf.String(), forbiddenMsg) {
+			t.Errorf("Did not expect warning for latest version, but log contained: %q", buf.String())
+		}
+	})
+
+	t.Run("Does not log warning for non-MCP protocols (e.g. Toolbox)", func(t *testing.T) {
+		buf.Reset()
+
+		// Initialize with Toolbox protocol
+		_, err := NewToolboxClient("https://api.example.com", withProtocol(Toolbox))
+		if err != nil {
+			t.Fatalf("Unexpected error creating client: %v", err)
+		}
+
+		if strings.Contains(buf.String(), "A newer version of MCP") {
+			t.Errorf("Should not warn about MCP versions when using Toolbox protocol")
+		}
+	})
+}
+
+func TestNewToolboxClient_HTTPWarning(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer func() {
+		log.SetOutput(os.Stderr)
+	}()
+
+	t.Run("Logs warning for insecure HTTP URL", func(t *testing.T) {
+		buf.Reset()
+
+		// Initialize with an insecure HTTP URL
+		_, err := NewToolboxClient("http://insecure-api.example.com")
+
+		if err != nil {
+			t.Logf("Client creation returned error: %v", err)
+		}
+
+		expectedMsg := "WARNING: Sending ID token over HTTP"
+		if !strings.Contains(buf.String(), expectedMsg) {
+			t.Errorf("Expected log to contain HTTP warning %q, but got: %q", expectedMsg, buf.String())
+		}
+	})
+
+	t.Run("Does not log warning for secure HTTPS URL", func(t *testing.T) {
+		buf.Reset()
+
+		// Initialize with a secure HTTPS URL
+		_, _ = NewToolboxClient("https://secure-api.example.com")
+
+		forbiddenMsg := "WARNING: Sending ID token over HTTP"
+		if strings.Contains(buf.String(), forbiddenMsg) {
+			t.Errorf("Did not expect HTTP warning for HTTPS URL, but log contained: %q", buf.String())
+		}
+	})
 }
 
 // TestClientOptions contains unit tests for each ClientOption constructor

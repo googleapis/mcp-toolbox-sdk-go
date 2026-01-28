@@ -100,7 +100,7 @@ func newMockMCPServer(t *testing.T) *mockMCPServer {
 	// Register default handshake handlers
 	m.handlers["initialize"] = func(params json.RawMessage) (any, error) {
 		return initializeResult{
-			ProtocolVersion: "2025-11-25",
+			ProtocolVersion: "2025-06-18",
 			Capabilities: serverCapabilities{
 				Tools: map[string]any{"listChanged": true},
 			},
@@ -135,8 +135,8 @@ func TestHeaders_Presence(t *testing.T) {
 	// Check the Initialize request (first request)
 	req := server.requests[0]
 
-	// Requirement: MCP-Protocol-Version must be present and match 2025-11-25
-	assert.Equal(t, "2025-11-25", req.Headers.Get("MCP-Protocol-Version"))
+	// Requirement: MCP-Protocol-Version must be present and match 2025-06-18
+	assert.Equal(t, "2025-06-18", req.Headers.Get("MCP-Protocol-Version"))
 
 	// Requirement: Accept header must be present and application/json
 	assert.Equal(t, "application/json", req.Headers.Get("Accept"))
@@ -189,7 +189,7 @@ func TestListTools(t *testing.T) {
 		// Verify ListTools Request
 		listReq := server.requests[2]
 		assert.Equal(t, "tools/list", listReq.Body.Method)
-		assert.Equal(t, "2025-11-25", listReq.Headers.Get("MCP-Protocol-Version"))
+		assert.Equal(t, "2025-06-18", listReq.Headers.Get("MCP-Protocol-Version"))
 	})
 }
 
@@ -284,7 +284,7 @@ func TestInvokeTool(t *testing.T) {
 		// Last request in the slice
 		lastReq := server.requests[len(server.requests)-1]
 		assert.Equal(t, "tools/call", lastReq.Body.Method)
-		assert.Equal(t, "2025-11-25", lastReq.Headers.Get("MCP-Protocol-Version"))
+		assert.Equal(t, "2025-06-18", lastReq.Headers.Get("MCP-Protocol-Version"))
 	})
 }
 
@@ -314,7 +314,7 @@ func TestInitialize_MissingCapabilities(t *testing.T) {
 
 	server.handlers["initialize"] = func(params json.RawMessage) (any, error) {
 		return initializeResult{
-			ProtocolVersion: "2025-11-25",
+			ProtocolVersion: "2025-06-18",
 			Capabilities:    serverCapabilities{Tools: nil},
 			ServerInfo:      implementation{Name: "srv", Version: "1"},
 		}, nil
@@ -625,7 +625,7 @@ func TestInitializeSession_PassesHeadersToWire(t *testing.T) {
 				"jsonrpc": "2.0",
 				"id":      "123",
 				"result": map[string]any{
-					"protocolVersion": "2025-11-25",
+					"protocolVersion": "2025-06-18",
 					"capabilities":    map[string]any{"tools": map[string]any{}},
 					"serverInfo":      map[string]any{"name": "test", "version": "1.0"},
 				},

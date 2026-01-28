@@ -17,14 +17,10 @@
 package toolboxtransport_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -205,57 +201,6 @@ type mockTransport struct {
 
 func (m *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return m.RoundTripFunc(req)
-}
-
-func TestInvokeTool_HTTPWarning(t *testing.T) {
-	// Capture logs to verify the warning
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer log.SetOutput(os.Stderr)
-
-	// Mock a successful response so InvokeTool completes (or fails gracefully after the log)
-	dummyResponse := func(req *http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: 200,
-			Body:       io.NopCloser(bytes.NewBufferString("ok")),
-			Header:     make(http.Header),
-		}, nil
-	}
-
-	testCases := []struct {
-		name       string
-		baseURL    string
-		shouldWarn bool
-	}{
-		{"HTTP", "http://insecure.com", true},
-		{"HTTPS", "https://secure.com", false},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			buf.Reset()
-
-			client := &http.Client{
-				Transport: &mockTransport{RoundTripFunc: dummyResponse},
-			}
-
-			tr := toolboxtransport.New(tc.baseURL, client)
-
-			payload := map[string]any{"param": "val"}
-
-			_, _ = tr.InvokeTool(context.Background(), testToolName, payload, nil)
-
-			logOutput := buf.String()
-			hasWarning := strings.Contains(logOutput, "Sending ID token over HTTP")
-
-			if tc.shouldWarn && !hasWarning {
-				t.Errorf("expected warning for %s, but got none", tc.name)
-			}
-			if !tc.shouldWarn && hasWarning {
-				t.Errorf("unexpected warning for %s", tc.name)
-			}
-		})
-	}
 }
 
 func TestLoadManifest(t *testing.T) {

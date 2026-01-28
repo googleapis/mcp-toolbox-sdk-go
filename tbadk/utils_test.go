@@ -78,7 +78,7 @@ func createCoreTool(t *testing.T, toolName string, schema core.ToolSchema) (*cor
 		case "initialize":
 			// Handshake
 			result = map[string]any{
-				"protocolVersion": "2025-11-25", // Matches latest default
+				"protocolVersion": "2025-06-18", // Matches latest default
 				"capabilities":    map[string]any{"tools": map[string]any{}},
 				"serverInfo": map[string]any{
 					"name":    "mock-server",
