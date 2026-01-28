@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -114,10 +113,6 @@ func (t *ToolboxTransport) LoadManifest(ctx context.Context, url string, headers
 }
 
 func (t *ToolboxTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error) {
-	if !strings.HasPrefix(t.baseURL, "https://") {
-		log.Println("WARNING: Sending ID token over HTTP. User data may be exposed. Use HTTPS for secure communication.")
-	}
-
 	if t.httpClient == nil {
 		return nil, fmt.Errorf("http client is not set for toolbox tool '%s'", toolName)
 	}

@@ -17,8 +17,11 @@ package core
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
+
+	"slices"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	mcp20241105 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20241105"
@@ -74,8 +77,17 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 		}
 	}
 
+	if !strings.HasPrefix(tc.baseURL, "https://") {
+		log.Println("WARNING: Sending ID token over HTTP. User data may be exposed. Use HTTPS for secure communication.")
+	}
+
 	// Initialize the Transport based on the selected Protocol.
 	var transportErr error = nil
+
+	if slices.Contains(GetSupportedMcpVersions(), string(tc.protocol)) && tc.protocol != MCPv20251125 {
+		log.Printf("A newer version of MCP: v2025-11-25 is available. Please use MCPv20251125 to use the latest features.")
+	}
+
 	switch tc.protocol {
 	case MCPv20251125:
 		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient)
