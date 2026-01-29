@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.5.0...v0.5.1) (2026-01-29)
+
+
+### Bug Fixes
+
+* Trigger patch release to fix corrupt filename ([#151](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/151)) ([8c725b8](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/8c725b862cfcc3da952c18c76d2b5bb19695ab1a))
+
 ## [0.5.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.4.0...v0.5.0) (2026-01-29)
 
 
