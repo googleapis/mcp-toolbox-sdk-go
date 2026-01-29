@@ -1,22 +1,18 @@
 # Changelog
 
-## [0.5.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.5.0...v0.5.1) (2026-01-29)
 
+## [0.5.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.4.0...v0.5.1) (2026-01-29)
 
-### Bug Fixes
+### ⚠ BREAKING CHANGES
 
-* Fix filename causing errored download of newest version ([#151](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/151)) ([8c725b8](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/8c725b862cfcc3da952c18c76d2b5bb19695ab1a))
-
-## [0.5.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.4.0...v0.5.0) (2026-01-29)
-
+* Add support for MCP protocol in core SDK ([#133](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/133)) ([240c976](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/240c9767d10ab08505ef3d6ad95412f8b5d9cdb8))
 
 ### Features
 
-* Add support for MCP protocol in core SDK ([#133](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/133)) ([240c976](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/240c9767d10ab08505ef3d6ad95412f8b5d9cdb8))
 * Add MCP Transport version 2024-11-05 ([#128](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/128)) ([f4784ea](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/f4784ea4fc43e7e9d3dcd36fb78c22e217145495))
 * Add MCP Transport version 2025-03-26 ([#131](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/131)) ([dba6000](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/dba6000ae3031881f88e5fd33c4de01b93bce938))
 * Add MCP Transport version 2025-06-18 ([#132](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/132)) ([8e70cd3](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/8e70cd3595efdf459078c0ca64c9eeb9a28d1789))
-* * Add support for MCP Version 2025-11-25 ([#146](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/146)) ([92defe2](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/92defe2a3d3645709e95d118a210616d058d8da3))
+* Add support for MCP Version 2025-11-25 ([#146](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/146)) ([92defe2](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/92defe2a3d3645709e95d118a210616d058d8da3))
 
 
 ## [0.4.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.3.0...v0.4.0) (2025-11-06)
