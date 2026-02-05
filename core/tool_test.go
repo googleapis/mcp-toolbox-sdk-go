@@ -35,9 +35,11 @@ import (
 )
 
 // Dummy transport for tests
-type dummyTransport struct{}
+type dummyTransport struct{
+	baseURL string
+}
 
-func (d *dummyTransport) BaseURL() string { return "" }
+func (d *dummyTransport) BaseURL() string { return d.baseURL }
 func (d *dummyTransport) GetTool(ctx context.Context, name string, h map[string]string) (*transport.ManifestSchema, error) {
 	return nil, nil
 }
@@ -58,7 +60,7 @@ func TestToolboxTool_Getters(t *testing.T) {
 		name:        "my-test-tool",
 		description: "A tool specifically for testing purposes.",
 		parameters:  sampleParams,
-		transport:   &dummyTransport{},
+		transport:   &dummyTransport{baseURL: "http://example.com"},
 	}
 
 	t.Run("Name Method Returns Correct Value", func(t *testing.T) {
@@ -97,7 +99,7 @@ func TestToolboxTool_Getters(t *testing.T) {
 		t.Run("Handles Case With No Parameters", func(t *testing.T) {
 			emptyTool := &ToolboxTool{
 				parameters: []ParameterSchema{},
-				transport:  &dummyTransport{},
+				transport:  &dummyTransport{baseURL: "http://example.com"},
 			}
 
 			params := emptyTool.Parameters()
@@ -180,7 +182,7 @@ func TestToolFrom(t *testing.T) {
 		authTokenSources: map[string]oauth2.TokenSource{
 			"google": &mockTokenSource{}, // Auth source already set on parent
 		},
-		transport: &dummyTransport{},
+		transport:&dummyTransport{baseURL: "http://example.com"},,
 	}
 
 	getTestTool := func() *ToolboxTool {
@@ -262,7 +264,7 @@ func TestToolFrom(t *testing.T) {
 
 func TestCloneToolboxTool(t *testing.T) {
 	// 1. Setup an original tool with populated maps and slices to test deep copying.
-	originalTransport := &dummyTransport{}
+	originalTransport :=&dummyTransport{baseURL: "http://example.com"},
 	originalTool := &ToolboxTool{
 		name:        "original_tool",
 		description: "An original tool to be cloned.",
