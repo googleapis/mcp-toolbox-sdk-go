@@ -1,5 +1,3 @@
-//go:build unit
-
 // Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,7 +33,7 @@ import (
 )
 
 // Dummy transport for tests
-type dummyTransport struct{
+type dummyTransport struct {
 	baseURL string
 }
 
@@ -182,7 +180,7 @@ func TestToolFrom(t *testing.T) {
 		authTokenSources: map[string]oauth2.TokenSource{
 			"google": &mockTokenSource{}, // Auth source already set on parent
 		},
-		transport:&dummyTransport{baseURL: "http://example.com"},
+		transport: &dummyTransport{baseURL: "http://example.com"},
 	}
 
 	getTestTool := func() *ToolboxTool {
@@ -264,7 +262,7 @@ func TestToolFrom(t *testing.T) {
 
 func TestCloneToolboxTool(t *testing.T) {
 	// 1. Setup an original tool with populated maps and slices to test deep copying.
-	originalTransport :=&dummyTransport{baseURL: "http://example.com"},
+	originalTransport := &dummyTransport{baseURL: "http://example.com"}
 	originalTool := &ToolboxTool{
 		name:        "original_tool",
 		description: "An original tool to be cloned.",
