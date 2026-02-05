@@ -39,7 +39,8 @@ type ToolboxClient struct {
 //	A configured ToolboxClient and a nil error on success, or an empty client
 //	and an error if configuration fails.
 func NewToolboxClient(url string, opts ...core.ClientOption) (ToolboxClient, error) {
-	coreClient, err := core.NewToolboxClient(url, opts...)
+	finalOpts := append(opts, core.WithClientName("toolbox-adk-go"))
+	coreClient, err := core.NewToolboxClient(url, finalOpts...)
 	if err != nil {
 		return ToolboxClient{}, err
 	}

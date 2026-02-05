@@ -42,6 +42,7 @@ type ToolboxClient struct {
 	clientHeaderSources map[string]oauth2.TokenSource
 	defaultToolOptions  []ToolOption
 	defaultOptionsSet   bool
+	clientName          string
 }
 
 // NewToolboxClient creates and configures a new, immutable client for interacting with a
@@ -65,6 +66,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 		protocol:            MCP, // Default
 		clientHeaderSources: make(map[string]oauth2.TokenSource),
 		defaultToolOptions:  []ToolOption{},
+		clientName:          "toolbox-core-go",
 	}
 
 	// Apply each functional option to customize the client configuration.
@@ -90,13 +92,13 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 
 	switch tc.protocol {
 	case MCPv20251125:
-		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient)
+		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName)
 	case MCPv20250618:
-		tc.transport, transportErr = mcp20250618.New(tc.baseURL, tc.httpClient)
+		tc.transport, transportErr = mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName)
 	case MCPv20250326:
-		tc.transport, transportErr = mcp20250326.New(tc.baseURL, tc.httpClient)
+		tc.transport, transportErr = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName)
 	case MCPv20241105:
-		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient)
+		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName)
 	case Toolbox:
 		tc.transport = toolboxtransport.New(tc.baseURL, tc.httpClient)
 	default:

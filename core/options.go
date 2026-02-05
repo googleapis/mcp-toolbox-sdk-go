@@ -34,6 +34,15 @@ func newToolConfig() *ToolConfig {
 	}
 }
 
+// WithClientName sets the client name used in the MCP protocol handshake.
+// Defaults to "toolbox-core-go" if not set.
+func WithClientName(name string) ClientOption {
+	return func(tc *ToolboxClient) error {
+		tc.clientName = name
+		return nil
+	}
+}
+
 // WithProtocol provides a the underlying transport protocol to the ToolboxClient..
 func WithProtocol(p Protocol) ClientOption {
 	return func(tc *ToolboxClient) error {

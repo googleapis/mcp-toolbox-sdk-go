@@ -30,7 +30,6 @@ import (
 
 const (
 	ProtocolVersion = "2025-11-25"
-	ClientName      = "toolbox-go-sdk"
 	ClientVersion   = mcp.SDKVersion
 )
 
@@ -41,10 +40,11 @@ var _ transport.Transport = &McpTransport{}
 type McpTransport struct {
 	*mcp.BaseMcpTransport
 	protocolVersion string
+	clientName      string
 }
 
 // New creates a new version-specific transport instance.
-func New(baseURL string, client *http.Client) (*McpTransport, error) {
+func New(baseURL string, client *http.Client, clientName string) (*McpTransport, error) {
 	baseTransport, err := mcp.NewBaseTransport(baseURL, client)
 	if err != nil {
 		return nil, err
@@ -52,6 +52,7 @@ func New(baseURL string, client *http.Client) (*McpTransport, error) {
 	t := &McpTransport{
 		BaseMcpTransport: baseTransport,
 		protocolVersion:  ProtocolVersion,
+		clientName:       clientName,
 	}
 	t.BaseMcpTransport.HandshakeHook = t.initializeSession
 
@@ -164,7 +165,7 @@ func (t *McpTransport) initializeSession(ctx context.Context, headers map[string
 		ProtocolVersion: t.protocolVersion,
 		Capabilities:    clientCapabilities{},
 		ClientInfo: implementation{
-			Name:    ClientName,
+			Name:    t.clientName,
 			Version: ClientVersion,
 		},
 	}
