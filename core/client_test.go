@@ -100,12 +100,8 @@ func TestNewToolboxClient_ToolboxDeprecationWarning(t *testing.T) {
 
 	t.Run("Warning is logged when using Toolbox protocol", func(t *testing.T) {
 		buf.Reset()
-		withToolbox := func(tc *ToolboxClient) error {
-			tc.protocol = Toolbox
-			return nil
-		}
 
-		_, err := NewToolboxClient(testURL, withProtocol(Toolbox))
+		_, err := NewToolboxClient(testURL, WithProtocol(Toolbox))
 		if err != nil {
 			t.Fatalf("NewToolboxClient failed: %v", err)
 		}
