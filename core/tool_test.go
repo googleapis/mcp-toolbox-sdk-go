@@ -814,7 +814,7 @@ func TestToolboxTool_Invoke_HttpsWarning(t *testing.T) {
 
 			tool := &ToolboxTool{
 				name:      "test-tool",
-				transport: &MockTransport{baseURL: tt.baseURL},
+				transport: &dummyTransport{baseURL: tt.baseURL},
 				authTokenSources: map[string]oauth2.TokenSource{
 					"service_a": mockTokenSource,
 				},
