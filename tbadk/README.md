@@ -139,7 +139,7 @@ You can explicitly select a protocol using the `core.WithProtocol` option during
 ### Supported Protocols
 
 > [!WARNING]
-> The native Toolbox protocol (`core.Toolbox`) is deprecated and will be removed on March 4, 2026. Please use `Protocol.MCP` or specific MCP versions.
+> The native Toolbox protocol (`core.Toolbox`) is deprecated and will be removed on March 4, 2026. Please use `core.MCP` or specific MCP versions.
 
 | Constant | Description |
 | :--- | :--- |
