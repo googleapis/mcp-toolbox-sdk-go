@@ -161,7 +161,7 @@ func TestNewToolboxClient_HTTPWarning(t *testing.T) {
 		buf.Reset()
 
 		// Initialize with an insecure HTTP URL
-		_, err := NewToolboxClient("http://insecure-api.example.com")
+		_, err := NewToolboxClient("http://insecure-api.example.com", core.WithClientHeaderString("Authorization", "secure-token"))
 
 		if err != nil {
 			t.Logf("Client creation returned error: %v", err)
@@ -177,7 +177,7 @@ func TestNewToolboxClient_HTTPWarning(t *testing.T) {
 		buf.Reset()
 
 		// Initialize with a secure HTTPS URL
-		_, _ = NewToolboxClient("https://secure-api.example.com")
+		_, _ = NewToolboxClient("https://secure-api.example.com", core.WithClientHeaderString("Authorization", "secure-token"))
 
 		forbiddenMsg := "WARNING: Sending ID token over HTTP"
 		if strings.Contains(buf.String(), forbiddenMsg) {

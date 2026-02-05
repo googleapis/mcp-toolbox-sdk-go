@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 
@@ -285,6 +286,10 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 		// Toolbox HTTP protocol expects the suffix "_token"
 		headerName := fmt.Sprintf("%s_token", name)
 		resolvedHeaders[headerName] = token.AccessToken
+	}
+
+	if !strings.HasPrefix(tt.transport.BaseURL(), "https://") && len(tt.authTokenSources) > 0 {
+		log.Println("WARNING: Sending ID token over HTTP. User data may be exposed. Use HTTPS for secure communication.")
 	}
 
 	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, resolvedHeaders)

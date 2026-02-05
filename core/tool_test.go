@@ -17,10 +17,12 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -782,6 +784,59 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		}
 	})
 
+}
+func TestToolboxTool_Invoke_HttpsWarning(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer log.SetOutput(nil)
+	mockTokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "secret-token"})
+
+	tests := []struct {
+		name          string
+		baseURL       string
+		expectWarning bool
+	}{
+		{
+			name:          "Warning triggered for HTTP",
+			baseURL:       "http://api.example.com",
+			expectWarning: true,
+		},
+		{
+			name:          "No warning for HTTPS",
+			baseURL:       "https://api.example.com",
+			expectWarning: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf.Reset()
+
+			tool := &ToolboxTool{
+				name:      "test-tool",
+				transport: &MockTransport{baseURL: tt.baseURL},
+				authTokenSources: map[string]oauth2.TokenSource{
+					"service_a": mockTokenSource,
+				},
+				boundParams: make(map[string]any),
+			}
+
+			_, err := tool.Invoke(context.Background(), nil)
+			if err != nil {
+				t.Fatalf("Invoke failed: %v", err)
+			}
+
+			logOutput := buf.String()
+			hasWarning := strings.Contains(logOutput, "WARNING: Sending ID token over HTTP")
+
+			if tt.expectWarning && !hasWarning {
+				t.Errorf("Expected warning for URL %s, but none was logged", tt.baseURL)
+			}
+			if !tt.expectWarning && hasWarning {
+				t.Errorf("Did not expect warning for URL %s, but one was logged: %s", tt.baseURL, logOutput)
+			}
+		})
+	}
 }
 
 // TestInputSchema tests the JSON output of the InputSchema method.

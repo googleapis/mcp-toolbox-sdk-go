@@ -79,7 +79,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 		}
 	}
 
-	if !strings.HasPrefix(tc.baseURL, "https://") {
+	if !strings.HasPrefix(tc.baseURL, "https://") && len(tc.clientHeaderSources) > 0 {
 		log.Println("WARNING: Sending ID token over HTTP. User data may be exposed. Use HTTPS for secure communication.")
 	}
 
