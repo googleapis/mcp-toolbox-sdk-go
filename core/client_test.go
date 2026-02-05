@@ -107,7 +107,7 @@ func TestNewToolboxClient_ToolboxDeprecationWarning(t *testing.T) {
 		}
 
 		logOutput := buf.String()
-		expectedWarning := "WARNING:The native Toolbox protocol is deprecated"
+		expectedWarning := "The native Toolbox protocol is deprecated"
 
 		if !strings.Contains(logOutput, expectedWarning) {
 			t.Errorf("Expected deprecation warning not found in logs.\nLogged: %s", logOutput)
