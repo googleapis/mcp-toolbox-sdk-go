@@ -24,7 +24,6 @@ const (
 	// Deprecated: Toolbox protocol is no longer supported and will be removed on March 4, 2026.
 	// Use MCP or a specific MCP version instead.
 	Toolbox Protocol = "toolbox"
-	Toolbox Protocol = "toolbox"
 
 	// MCP Version Constants
 	MCPv20251125 Protocol = "2025-11-25"
