@@ -182,7 +182,7 @@ func TestToolFrom(t *testing.T) {
 		authTokenSources: map[string]oauth2.TokenSource{
 			"google": &mockTokenSource{}, // Auth source already set on parent
 		},
-		transport:&dummyTransport{baseURL: "http://example.com"},,
+		transport:&dummyTransport{baseURL: "http://example.com"},
 	}
 
 	getTestTool := func() *ToolboxTool {
