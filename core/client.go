@@ -100,6 +100,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	case MCPv20241105:
 		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName)
 	case Toolbox:
+		log.Println("WARNING: The native Toolbox protocol is deprecated and will be removed on March 4, 2026. Please use core.MCP or specific MCP versions.")
 		tc.transport = toolboxtransport.New(tc.baseURL, tc.httpClient)
 	default:
 		return nil, fmt.Errorf("unsupported protocol version: %s", tc.protocol)
