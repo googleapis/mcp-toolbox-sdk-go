@@ -29,7 +29,7 @@ involving Large Language Models (LLMs).
 ## Installation
 
 ```bash
-go get github.com/googleapis/mcp-toolbox-sdk-go
+go get github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit
 ```
 This SDK is supported on Go version 1.24.4 and higher.
 

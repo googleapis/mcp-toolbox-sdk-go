@@ -1,5 +1,12 @@
 # Changelog
 
+> **Note**: This repository has been split into multiple modules. Please refer to the specific package changelogs for updates after version 0.5.1:
+> * [core/CHANGELOG.md](core/CHANGELOG.md)
+> * [tbadk/CHANGELOG.md](tbadk/CHANGELOG.md)
+> * [tbgenkit/CHANGELOG.md](tbgenkit/CHANGELOG.md)
+
+
+
 
 ## [0.5.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.4.0...v0.5.1) (2026-01-29)
 

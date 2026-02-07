@@ -45,7 +45,7 @@
     {
       customType: 'regex',
       managerFilePatterns: [
-        '/integration.cloudbuild.yaml/',
+        '**/integration.cloudbuild.yaml',
       ],
       matchStrings: [
         '_TOOLBOX_VERSION: [\'|"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)[\'|"]?',
