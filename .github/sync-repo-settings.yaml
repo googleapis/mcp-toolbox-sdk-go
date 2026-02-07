@@ -28,9 +28,11 @@ branchProtectionRules:
       - "cla/google"
       - "conventionalcommits.org"
       - "header-check"
-    #  - "lint" // disabling lint until all code is checked in
+      - "lint" 
     # - Add required status checks like presubmit tests
       - "core-go-sdk-pr (toolbox-testing-438616)"
+      - "tbadk-go-sdk-pr (toolbox-testing-438616)"
+      - "tbgenkit-go-sdk-pr (toolbox-testing-438616)"
     requiredApprovingReviewCount: 1
     requiresCodeOwnerReviews: true
     requiresStrictStatusChecks: true
