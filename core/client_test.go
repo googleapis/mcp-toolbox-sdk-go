@@ -201,13 +201,13 @@ func TestNewToolboxClient_HTTPWarning(t *testing.T) {
 		buf.Reset()
 
 		// Initialize with an insecure HTTP URL
-		_, err := NewToolboxClient("http://insecure-api.example.com")
+		_, err := NewToolboxClient("http://insecure-api.example.com", WithClientHeaderString("Authorization", "secure-token"))
 
 		if err != nil {
 			t.Logf("Client creation returned error: %v", err)
 		}
 
-		expectedMsg := "WARNING: Sending ID token over HTTP"
+		expectedMsg := "WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS."
 		if !strings.Contains(buf.String(), expectedMsg) {
 			t.Errorf("Expected log to contain HTTP warning %q, but got: %q", expectedMsg, buf.String())
 		}
@@ -217,9 +217,9 @@ func TestNewToolboxClient_HTTPWarning(t *testing.T) {
 		buf.Reset()
 
 		// Initialize with a secure HTTPS URL
-		_, _ = NewToolboxClient("https://secure-api.example.com")
+		_, _ = NewToolboxClient("https://secure-api.example.com", WithClientHeaderString("Authorization", "secure-token"))
 
-		forbiddenMsg := "WARNING: Sending ID token over HTTP"
+		forbiddenMsg := "WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS."
 		if strings.Contains(buf.String(), forbiddenMsg) {
 			t.Errorf("Did not expect HTTP warning for HTTPS URL, but log contained: %q", buf.String())
 		}
@@ -491,6 +491,75 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 		}
 	})
 }
+
+func TestLoadTool_HTTPWarning(t *testing.T) {
+	// Setup a mock HTTP server (not HTTPS)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Respond with a valid manifest so LoadTool succeeds
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"tools": {
+				"test-tool": {
+					"description": "A test tool",
+					"parameters": []
+				}
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewToolboxClient(server.URL)
+	require.NoError(t, err)
+
+	t.Run("Warning logged when auth tokens are provided over HTTP", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			_, err := client.LoadTool("test-tool", context.Background(), WithAuthTokenString("service", "token"))
+			// We expect no error, or at least we don't care about the error for the warning test
+			// ignoring error check as we only care about the log
+			_ = err
+		})
+		assert.Contains(t, output, "WARNING: This connection is using HTTP")
+	})
+
+	t.Run("No warning when no auth tokens provided", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			_, _ = client.LoadTool("test-tool", context.Background())
+		})
+		assert.NotContains(t, output, "WARNING: This connection is using HTTP")
+	})
+}
+
+func TestLoadToolset_HTTPWarning(t *testing.T) {
+	// Setup a mock HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"tools": {
+				"tool1": { "description": "d1", "parameters": [] },
+				"tool2": { "description": "d2", "parameters": [] }
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewToolboxClient(server.URL)
+	require.NoError(t, err)
+
+	t.Run("Warning logged when auth tokens are provided over HTTP", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			_, _ = client.LoadToolset("test-toolset", context.Background(), WithAuthTokenString("service", "token"))
+		})
+		assert.Contains(t, output, "WARNING: This connection is using HTTP")
+	})
+
+	t.Run("No warning when no auth tokens provided", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			_, _ = client.LoadToolset("test-toolset", context.Background())
+		})
+		assert.NotContains(t, output, "WARNING: This connection is using HTTP")
+	})
+}
+
 
 func TestDefaultOptionOverwriting(t *testing.T) {
 	// Setup a mock server

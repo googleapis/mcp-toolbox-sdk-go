@@ -17,7 +17,12 @@
 package core
 
 import (
+	"bytes"
+	"context"
 	"errors"
+	"log"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"sort"
 	"testing"
@@ -144,8 +149,8 @@ func TestResolveClientHeaders(t *testing.T) {
 	t.Run("Success_MultipleHeaders", func(t *testing.T) {
 		// Setup input map directly
 		sources := map[string]oauth2.TokenSource{
-			"Authorization":   &mockTokenSource{token: &oauth2.Token{AccessToken: "bearer-token"}},
-			"X-Custom-Header": &mockTokenSource{token: &oauth2.Token{AccessToken: "custom-value"}},
+			"Authorization":   &mockingTokenSource{token: &oauth2.Token{AccessToken: "bearer-token"}},
+			"X-Custom-Header": &mockingTokenSource{token: &oauth2.Token{AccessToken: "custom-value"}},
 		}
 
 		// Execute function directly
@@ -369,4 +374,36 @@ func TestMapToSchema(t *testing.T) {
 			}
 		})
 	}
+}
+
+func captureLogOutput(f func()) string {
+	var buf bytes.Buffer
+	original := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(original) // Restore original logger
+	f()
+	return buf.String()
+}
+
+func TestLogHTTPWarning(t *testing.T) {
+	t.Run("Logs warning when HTTP and sensitive data presence", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			logHTTPWarning("http://example.com", true)
+		})
+		assert.Contains(t, output, "WARNING: This connection is using HTTP")
+	})
+
+	t.Run("Does not log warning when HTTPS", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			logHTTPWarning("https://example.com", true)
+		})
+		assert.NotContains(t, output, "WARNING: This connection is using HTTP")
+	})
+
+	t.Run("Does not log warning when no sensitive data", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			logHTTPWarning("http://example.com", false)
+		})
+		assert.NotContains(t, output, "WARNING: This connection is using HTTP")
+	})
 }
