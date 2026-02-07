@@ -21,6 +21,8 @@ type Protocol string
 
 const (
 	// Toolbox represents the Native Toolbox protocol.
+	// Deprecated: Toolbox protocol is no longer supported and will be removed on March 4, 2026.
+	// Use MCP or a specific MCP version instead.
 	Toolbox Protocol = "toolbox"
 
 	// MCP Version Constants

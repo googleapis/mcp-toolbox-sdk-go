@@ -91,6 +91,46 @@ func TestNewToolboxClient(t *testing.T) {
 
 }
 
+
+func TestNewToolboxClient_ToolboxDeprecationWarning(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer log.SetOutput(nil)
+	testURL := "https://api.example.com"
+
+	t.Run("Warning is logged when using Toolbox protocol", func(t *testing.T) {
+		buf.Reset()
+
+		_, err := NewToolboxClient(testURL, WithProtocol(Toolbox))
+		if err != nil {
+			t.Fatalf("NewToolboxClient failed: %v", err)
+		}
+
+		logOutput := buf.String()
+		expectedWarning := "The native Toolbox protocol is deprecated"
+
+		if !strings.Contains(logOutput, expectedWarning) {
+			t.Errorf("Expected deprecation warning not found in logs.\nLogged: %s", logOutput)
+		}
+	})
+
+	t.Run("Warning is NOT logged when using MCP protocol", func(t *testing.T) {
+		buf.Reset()
+
+		_, err := NewToolboxClient(testURL)
+		if err != nil {
+			t.Fatalf("NewToolboxClient failed: %v", err)
+		}
+
+		logOutput := buf.String()
+		deprecationWarning := "The native Toolbox protocol is deprecated"
+
+		if strings.Contains(logOutput, deprecationWarning) {
+			t.Error("Did not expect a deprecation warning for MCP protocol, but one was logged.")
+		}
+	})
+}
+
 func TestNewToolboxClient_ProtocolWarnings(t *testing.T) {
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
