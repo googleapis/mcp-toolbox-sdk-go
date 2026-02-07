@@ -829,7 +829,7 @@ func TestToolboxTool_Invoke_HttpsWarning(t *testing.T) {
 			}
 
 			logOutput := buf.String()
-			hasWarning := strings.Contains(logOutput, "WARNING: Sending ID token over HTTP")
+			hasWarning := strings.Contains(logOutput, "WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
 
 			if tt.expectWarning && !hasWarning {
 				t.Errorf("Expected warning for URL %s, but none was logged", tt.baseURL)

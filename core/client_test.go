@@ -167,7 +167,7 @@ func TestNewToolboxClient_HTTPWarning(t *testing.T) {
 			t.Logf("Client creation returned error: %v", err)
 		}
 
-		expectedMsg := "WARNING: Sending ID token over HTTP"
+		expectedMsg := "WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS."
 		if !strings.Contains(buf.String(), expectedMsg) {
 			t.Errorf("Expected log to contain HTTP warning %q, but got: %q", expectedMsg, buf.String())
 		}
@@ -179,7 +179,7 @@ func TestNewToolboxClient_HTTPWarning(t *testing.T) {
 		// Initialize with a secure HTTPS URL
 		_, _ = NewToolboxClient("https://secure-api.example.com", WithClientHeaderString("Authorization", "secure-token"))
 
-		forbiddenMsg := "WARNING: Sending ID token over HTTP"
+		forbiddenMsg := "WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS."
 		if strings.Contains(buf.String(), forbiddenMsg) {
 			t.Errorf("Did not expect HTTP warning for HTTPS URL, but log contained: %q", buf.String())
 		}

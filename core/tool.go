@@ -289,7 +289,7 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 	}
 
 	if !strings.HasPrefix(tt.transport.BaseURL(), "https://") && len(tt.authTokenSources) > 0 {
-		log.Println("WARNING: Sending ID token over HTTP. User data may be exposed. Use HTTPS for secure communication.")
+		log.Println("WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
 	}
 
 	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, resolvedHeaders)

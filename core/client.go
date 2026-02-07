@@ -80,7 +80,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	}
 
 	if !strings.HasPrefix(tc.baseURL, "https://") && len(tc.clientHeaderSources) > 0 {
-		log.Println("WARNING: Sending ID token over HTTP. User data may be exposed. Use HTTPS for secure communication.")
+		log.Println("WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
 	}
 
 	// Initialize the Transport based on the selected Protocol.
@@ -241,6 +241,10 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 		}
 	}
 
+	if !strings.HasPrefix(tc.baseURL, "https://") && len(finalConfig.AuthTokenSources) > 0 {
+		log.Println("WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
+	}
+
 	resolvedHeaders, err := resolveClientHeaders(tc.clientHeaderSources)
 	if err != nil {
 		return nil, err
@@ -331,6 +335,10 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 		if err := opt(finalConfig); err != nil {
 			return nil, err
 		}
+	}
+
+	if !strings.HasPrefix(tc.baseURL, "https://") && len(finalConfig.AuthTokenSources) > 0 {
+		log.Println("WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
 	}
 
 	// Fetch the manifest for the toolset.
