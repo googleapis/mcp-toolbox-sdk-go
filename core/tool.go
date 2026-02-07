@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 
@@ -288,9 +287,7 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 		resolvedHeaders[headerName] = token.AccessToken
 	}
 
-	if !strings.HasPrefix(tt.transport.BaseURL(), "https://") && len(tt.authTokenSources) > 0 {
-		log.Println("WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
-	}
+	logHTTPWarning(tt.transport.BaseURL(), len(tt.authTokenSources) > 0)
 
 	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, resolvedHeaders)
 	if err != nil {
