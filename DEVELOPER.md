@@ -1,102 +1,90 @@
 # Development
 
 This guide provides instructions for setting up your development environment to
-contribute to the `core` package, which is part of the
-`mcp-toolbox-sdk-go` monorepo.
+contribute to the `mcp-toolbox-sdk-go` repository, which is a multi-module workspace.
 
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
 
-* [Go](https://go.dev/doc/install)
+*   [Go](https://go.dev/doc/install) (v1.24.4 or higher)
 
 ## Setup
 
-These steps will guide you through setting up the monorepo and this specific package for development.
+This repository contains multiple Go modules:
+*   `core`: The core SDK.
+*   `tbadk`: ADK Go integration.
+*   `tbgenkit`: Genkit Go integration.
 
-1. Clone the repository:
+### Working with the Workspace
 
+We use a `go.work` file to manage local development across these modules.
+
+1.  **Clone the repository**:
     ```bash
     git clone https://github.com/googleapis/mcp-toolbox-sdk-go.git
+    cd mcp-toolbox-sdk-go
     ```
 
-2. Navigate to the **package directory**:
-
+2.  **Initialize Workspace (Optional but Recommended)**:
+    Create a `go.work` file in the root to easily work with all modules simultaneously.
     ```bash
-    cd mcp-toolbox-sdk-go/core
+    go work init ./core ./tbadk ./tbgenkit
     ```
+    *Note: `go.work` is git-ignored to prevent conflicts between developers.*
 
-3. Install dependencies for your package:
-
+3.  **Install Dependencies**:
+    Navigate to each module and install dependencies if needed:
     ```bash
-    go get
-    go mod tidy
+    cd core && go mod tidy
+    cd ../tbadk && go mod tidy
+    cd ../tbgenkit && go mod tidy
     ```
-
-4. Local Testing
-    If you need to test changes in `mcp-toolbox-sdk-go` against another package that consumes `mcp-toolbox-sdk-go`, you can use:
-
-    * Replace Directives
-
-        In the go.mod of the consuming project, add the line
-        ```go
-        replace github.com/googleapis/mcp-toolbox-sdk-go => ../path/to/your/local/mcp-toolbox-sdk-go
-        ```
-        And reinstall the dependencies
-        ```bash
-        go mod tidy
-        ```
-
-      Remember to remove the replace directive before committing your changes!
-
-    * Go Workspaces
-
-      Clone the `mcp-toolbox-sdk-go` and your package in the same directory
-      (ex. /development).
-
-        ```bash
-        cd /development
-        go work init
-        go work use ./my-consuming-project ./mcp-toolbox-sdk-go
-        ```
-
-      Remember, the generated go.work file should not be committed with your changes!
-
-    Using either of these approaches will make sure any change in the `mcp-toolbox-sdk-go` will be reflected in the consuming project.
 
 ## Testing
 
-Ensure all tests pass before submitting your changes. Tests are typically run from within the root directory.
+Tests are separated into **Unit Tests** and **End-to-End (E2E) Tests**.
 
-> [!IMPORTANT]
-> Dependencies (including testing tools) should have been installed during the initial `go get` at the monorepo root.
-
-1. **Run Unit & Integration Tests:**
-
+### Unit Tests
+Unit tests are fast and do not require external dependencies.
+*   **Run all unit tests**:
     ```bash
-    go test ./... -v -race
+    go test -tags=unit ./core/... ./tbadk/... ./tbgenkit/...
+    ```
+    *Note: If using `go.work`, this runs tests for all modules.*
+
+### E2E Tests
+E2E tests require a running Toolbox server and specific environment variables. They are guarded by the `e2e` build tag.
+*   **Run E2E tests**:
+    ```bash
+    go test -tags=e2e -p 1 ./core/... ./tbadk/... ./tbgenkit/...
     ```
 
 ## Linting and Formatting
 
-This project uses golangci to maintain code quality and consistency.
+This project uses `golangci-lint`.
 
-1. **Run Linter & Fix Issues:**
-    Check your code for linting errors and fix fixable linting and formatting issues:
-
+1.  **Run Linter**:
+    You generally need to run this within each module directory:
     ```bash
-    golangci-lint run
+    cd core && golangci-lint run
+    cd ../tbadk && golangci-lint run
+    cd ../tbgenkit && golangci-lint run
     ```
 
 ## Committing Changes
 
-* **Branching:** Create a new branch for your feature or bug fix (e.g., `feature/my-new-feature` or `fix/issue-123`).
-* **Commit Messages:** Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for commit message conventions.
-* **Pre-submit checks:** On any PRs, presubmit checks like linters, unit tests
-  and integration tests etc. are run. Make sure all checks are green before
-  proceeding.
-* **Submitting a PR:** On approval by a repo maintainer, *Squash and Merge* your PR.
+*   **Conventional Commits**: Please follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+    *   Prefix keys: `core:`, `tbadk:`, `tbgenkit:`, `chore:`, `docs:`.
+    *   Example: `feat(core): add new transport protocol`
+*   **Pre-submit checks**: Ensure all tests (unit) pass before sending a PR.
+
+## Release Process
+
+Releases are managed by **Release Please**.
+*   Each module (`core`, `tbadk`, `tbgenkit`) is released independently.
+*   Tags will be in the format `module/vX.Y.Z` (e.g., `core/v0.6.0`).
 
 ## Further Information
 
-* If you encounter issues or have questions, please open an [issue](https://github.com/googleapis/mcp-toolbox-sdk-go/issues) on the GitHub repository.
+*   If you encounter issues, please open an [issue](https://github.com/googleapis/mcp-toolbox-sdk-go/issues).
