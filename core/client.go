@@ -79,7 +79,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 		}
 	}
 
-	logHTTPWarning(tc.baseURL, len(tc.clientHeaderSources) > 0)
+	checkSecureHeaders(tc.baseURL, len(tc.clientHeaderSources) > 0)
 
 	// Initialize the Transport based on the selected Protocol.
 	var transportErr error = nil
@@ -240,7 +240,7 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 		}
 	}
 
-	logHTTPWarning(tc.baseURL, len(finalConfig.AuthTokenSources) > 0)
+	checkSecureHeaders(tc.baseURL, len(finalConfig.AuthTokenSources) > 0)
 
 	resolvedHeaders, err := resolveClientHeaders(tc.clientHeaderSources)
 	if err != nil {
@@ -334,7 +334,7 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 		}
 	}
 
-	logHTTPWarning(tc.baseURL, len(finalConfig.AuthTokenSources) > 0)
+	checkSecureHeaders(tc.baseURL, len(finalConfig.AuthTokenSources) > 0)
 
 	// Fetch the manifest for the toolset.
 	resolvedHeaders, err := resolveClientHeaders(tc.clientHeaderSources)

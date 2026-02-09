@@ -18,11 +18,8 @@ package core
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"log"
-	"net/http"
-	"net/http/httptest"
 	"reflect"
 	"sort"
 	"testing"
@@ -385,24 +382,24 @@ func captureLogOutput(f func()) string {
 	return buf.String()
 }
 
-func TestLogHTTPWarning(t *testing.T) {
+func TestcheckSecureHeaders(t *testing.T) {
 	t.Run("Logs warning when HTTP and sensitive data presence", func(t *testing.T) {
 		output := captureLogOutput(func() {
-			logHTTPWarning("http://example.com", true)
+			checkSecureHeaders("http://example.com", true)
 		})
 		assert.Contains(t, output, "WARNING: This connection is using HTTP")
 	})
 
 	t.Run("Does not log warning when HTTPS", func(t *testing.T) {
 		output := captureLogOutput(func() {
-			logHTTPWarning("https://example.com", true)
+			checkSecureHeaders("https://example.com", true)
 		})
 		assert.NotContains(t, output, "WARNING: This connection is using HTTP")
 	})
 
 	t.Run("Does not log warning when no sensitive data", func(t *testing.T) {
 		output := captureLogOutput(func() {
-			logHTTPWarning("http://example.com", false)
+			checkSecureHeaders("http://example.com", false)
 		})
 		assert.NotContains(t, output, "WARNING: This connection is using HTTP")
 	})

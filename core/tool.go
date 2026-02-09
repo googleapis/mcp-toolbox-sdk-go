@@ -287,7 +287,7 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 		resolvedHeaders[headerName] = token.AccessToken
 	}
 
-	logHTTPWarning(tt.transport.BaseURL(), len(tt.authTokenSources) > 0)
+	checkSecureHeaders(tt.transport.BaseURL(), len(tt.authTokenSources) > 0)
 
 	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, resolvedHeaders)
 	if err != nil {

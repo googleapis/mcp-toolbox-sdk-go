@@ -206,10 +206,10 @@ func mapToSchema(m map[string]any) (*ParameterSchema, error) {
 	return &tempSchema, nil
 }
 
-// logHTTPWarning checks if the URL provided is using HTTP and if there are
+// checkSecureHeaders checks if the URL provided is using HTTP and if there are
 // sensitive headers/tokens involved. If both conditions are met, it logs a warning
 // to the standard logger.
-func logHTTPWarning(url string, hasSensitiveData bool) {
+func checkSecureHeaders(url string, hasSensitiveData bool) {
 	if !strings.HasPrefix(url, "https://") && hasSensitiveData {
 		log.Println("WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
 	}
