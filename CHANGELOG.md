@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [0.6.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.5.1...v0.6.0) (2026-02-09)
+
+
+### Features
+
+* Enable package-specific client identification for MCP ([#155](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/155)) ([75cb30e](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/75cb30ecf5e47634aafafed4bab7617b7dc6243c))
+
 ## [0.5.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/v0.4.0...v0.5.1) (2026-01-29)
 
 ### ⚠ BREAKING CHANGES
