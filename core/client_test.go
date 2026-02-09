@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 )
 
@@ -90,7 +92,6 @@ func TestNewToolboxClient(t *testing.T) {
 	})
 
 }
-
 
 func TestNewToolboxClient_ToolboxDeprecationWarning(t *testing.T) {
 	var buf bytes.Buffer
@@ -559,7 +560,6 @@ func TestLoadToolset_HTTPWarning(t *testing.T) {
 		assert.NotContains(t, output, "WARNING: This connection is using HTTP")
 	})
 }
-
 
 func TestDefaultOptionOverwriting(t *testing.T) {
 	// Setup a mock server
