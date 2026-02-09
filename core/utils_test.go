@@ -382,7 +382,7 @@ func captureLogOutput(f func()) string {
 	return buf.String()
 }
 
-func TestcheckSecureHeaders(t *testing.T) {
+func TestCheckSecureHeaders(t *testing.T) {
 	t.Run("Logs warning when HTTP and sensitive data presence", func(t *testing.T) {
 		output := captureLogOutput(func() {
 			checkSecureHeaders("http://example.com", true)
