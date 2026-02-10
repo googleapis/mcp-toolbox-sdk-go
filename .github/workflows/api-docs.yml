@@ -2,7 +2,7 @@ name: "API Reference Deployment"
 
 on:
   push:
-    branches: [ 'task/enable-api-docs' ] 
+    branches: [ 'enable-api-docs' ] 
     tags: [ 'v*' ] 
   workflow_dispatch: 
 
