@@ -18,7 +18,7 @@ sleep 10
 
 wget -nv --recursive --page-requisites --html-extension --convert-links \
      --restrict-file-names=windows --no-parent \
-     -nH --cut-dirs=0 \
+     -nH \
      --reject="*tab=importedby*,*tab=versions*" \
      -P "$OUTPUT_DIR/$VERSION" \
      http://localhost:8080/github.com/googleapis/mcp-toolbox-sdk-go
