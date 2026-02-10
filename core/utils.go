@@ -17,6 +17,8 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"strings"
 
 	"golang.org/x/oauth2"
 )
@@ -202,4 +204,13 @@ func mapToSchema(m map[string]any) (*ParameterSchema, error) {
 	}
 
 	return &tempSchema, nil
+}
+
+// checkSecureHeaders checks if the URL provided is using HTTP and if there are
+// sensitive headers/tokens involved. If both conditions are met, it logs a warning
+// to the standard logger.
+func checkSecureHeaders(url string, hasSensitiveData bool) {
+	if !strings.HasPrefix(url, "https://") && hasSensitiveData {
+		log.Println("WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
+	}
 }
