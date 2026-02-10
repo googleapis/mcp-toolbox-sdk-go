@@ -16,13 +16,13 @@ PKGSITE_PID=$!
 
 sleep 10
 
-mkdir -p "$OUTPUT_DIR/$VERSION"
-wget --recursive --page-requisites --html-extension --convert-links \
+wget -nv --recursive --page-requisites --html-extension --convert-links \
      --restrict-file-names=windows --no-parent \
+     -nH --cut-dirs=0 \
+     --reject="*tab=importedby*,*tab=versions*" \
      -P "$OUTPUT_DIR/$VERSION" \
      http://localhost:8080/github.com/googleapis/mcp-toolbox-sdk-go
 
-# 4. Gracefully shut down the official server
 kill $PKGSITE_PID
 
 echo "Official Go documentation captured in $OUTPUT_DIR/$VERSION"
