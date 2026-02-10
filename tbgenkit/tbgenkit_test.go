@@ -324,7 +324,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 
 		_, err = genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "tool invocation not authorized")
+		assert.Contains(t, err.Error(), "unauthorized Tool call")
 	})
 
 	t.Run("test_run_tool_auth", func(t *testing.T) {
@@ -422,7 +422,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 
 		_, err = genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to get token for service 'my-test-auth'")
+		assert.Contains(t, err.Error(), "failed to resolve auth token my-test-auth")
 		assert.Contains(t, err.Error(), "token source failed as designed")
 	})
 }
@@ -683,8 +683,19 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 		}
 
 		schema := genkitTool.Definition().InputSchema
-
-		assert.Equal(t, schema, expectedSchema)
+		// Extract 'required' fields for separate comparison
+		actualRequired := schema["required"]
+		expectedRequired := expectedSchema["required"]
+		
+		// Remove them from the maps to compare the rest of the structure
+		delete(schema, "required")
+		delete(expectedSchema, "required")
+		
+		// Compare the main structure
+		assert.Equal(t, expectedSchema, schema)
+		
+		// Compare the slices ignoring order
+		assert.ElementsMatch(t, expectedRequired, actualRequired)
 	})
 
 	t.Run("test_run_tool_with_all_map_params", func(t *testing.T) {

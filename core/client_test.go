@@ -24,10 +24,13 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 )
 
@@ -60,6 +63,11 @@ func TestNewToolboxClient(t *testing.T) {
 		if client.httpClient.Timeout != 0 {
 			t.Errorf("expected no timeout, got %v", client.httpClient.Timeout)
 		}
+
+		if client.protocol != MCP {
+			t.Errorf("expected default protocol to be MCP, got %v", client.protocol)
+		}
+
 	})
 
 	t.Run("Returns error when a nil option is provided", func(t *testing.T) {
@@ -83,6 +91,140 @@ func TestNewToolboxClient(t *testing.T) {
 		}
 	})
 
+}
+
+func TestNewToolboxClient_ToolboxDeprecationWarning(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer log.SetOutput(nil)
+	testURL := "https://api.example.com"
+
+	t.Run("Warning is logged when using Toolbox protocol", func(t *testing.T) {
+		buf.Reset()
+
+		_, err := NewToolboxClient(testURL, WithProtocol(Toolbox))
+		if err != nil {
+			t.Fatalf("NewToolboxClient failed: %v", err)
+		}
+
+		logOutput := buf.String()
+		expectedWarning := "The native Toolbox protocol is deprecated"
+
+		if !strings.Contains(logOutput, expectedWarning) {
+			t.Errorf("Expected deprecation warning not found in logs.\nLogged: %s", logOutput)
+		}
+	})
+
+	t.Run("Warning is NOT logged when using MCP protocol", func(t *testing.T) {
+		buf.Reset()
+
+		_, err := NewToolboxClient(testURL)
+		if err != nil {
+			t.Fatalf("NewToolboxClient failed: %v", err)
+		}
+
+		logOutput := buf.String()
+		deprecationWarning := "The native Toolbox protocol is deprecated"
+
+		if strings.Contains(logOutput, deprecationWarning) {
+			t.Error("Did not expect a deprecation warning for MCP protocol, but one was logged.")
+		}
+	})
+}
+
+func TestNewToolboxClient_ProtocolWarnings(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer func() {
+		log.SetOutput(os.Stderr)
+	}()
+
+	withProtocol := func(p Protocol) ClientOption {
+		return func(tc *ToolboxClient) error {
+			tc.protocol = p
+			return nil
+		}
+	}
+
+	t.Run("Logs warning for older MCP versions", func(t *testing.T) {
+		buf.Reset()
+
+		// Initialize with an OLD version (e.g., MCPv20250618)
+		_, err := NewToolboxClient("https://api.example.com", withProtocol(MCPv20250618))
+		if err != nil {
+			t.Fatalf("Unexpected error creating client: %v", err)
+		}
+
+		expectedMsg := "A newer version of MCP: v2025-11-25 is available"
+		if !strings.Contains(buf.String(), expectedMsg) {
+			t.Errorf("Expected log to contain %q, but got: %q", expectedMsg, buf.String())
+		}
+	})
+
+	t.Run("Does not log warning for the latest MCP version", func(t *testing.T) {
+		buf.Reset()
+
+		// Initialize with the LATEST version (MCPv20251125)
+		_, err := NewToolboxClient("https://api.example.com", withProtocol(MCPv20251125))
+		if err != nil {
+			t.Fatalf("Unexpected error creating client: %v", err)
+		}
+
+		forbiddenMsg := "A newer version of MCP"
+		if strings.Contains(buf.String(), forbiddenMsg) {
+			t.Errorf("Did not expect warning for latest version, but log contained: %q", buf.String())
+		}
+	})
+
+	t.Run("Does not log warning for non-MCP protocols (e.g. Toolbox)", func(t *testing.T) {
+		buf.Reset()
+
+		// Initialize with Toolbox protocol
+		_, err := NewToolboxClient("https://api.example.com", withProtocol(Toolbox))
+		if err != nil {
+			t.Fatalf("Unexpected error creating client: %v", err)
+		}
+
+		if strings.Contains(buf.String(), "A newer version of MCP") {
+			t.Errorf("Should not warn about MCP versions when using Toolbox protocol")
+		}
+	})
+}
+
+func TestNewToolboxClient_HTTPWarning(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer func() {
+		log.SetOutput(os.Stderr)
+	}()
+
+	t.Run("Logs warning for insecure HTTP URL", func(t *testing.T) {
+		buf.Reset()
+
+		// Initialize with an insecure HTTP URL
+		_, err := NewToolboxClient("http://insecure-api.example.com", WithClientHeaderString("Authorization", "secure-token"))
+
+		if err != nil {
+			t.Logf("Client creation returned error: %v", err)
+		}
+
+		expectedMsg := "WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS."
+		if !strings.Contains(buf.String(), expectedMsg) {
+			t.Errorf("Expected log to contain HTTP warning %q, but got: %q", expectedMsg, buf.String())
+		}
+	})
+
+	t.Run("Does not log warning for secure HTTPS URL", func(t *testing.T) {
+		buf.Reset()
+
+		// Initialize with a secure HTTPS URL
+		_, _ = NewToolboxClient("https://secure-api.example.com", WithClientHeaderString("Authorization", "secure-token"))
+
+		forbiddenMsg := "WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS."
+		if strings.Contains(buf.String(), forbiddenMsg) {
+			t.Errorf("Did not expect HTTP warning for HTTPS URL, but log contained: %q", buf.String())
+		}
+	})
 }
 
 // TestClientOptions contains unit tests for each ClientOption constructor
@@ -259,7 +401,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	defer server.Close()
 
 	t.Run("LoadTool - Success", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
 		tool, err := client.LoadTool("toolA",
 			context.Background(),
 			WithBindParamString("param1", "value1"),
@@ -274,7 +416,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	})
 
 	t.Run("LoadTool - Negative Test - Unused bound parameter", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
 		_, err := client.LoadTool("toolA",
 			context.Background(),
 			WithBindParamString("param1", "value1"),
@@ -289,7 +431,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	})
 
 	t.Run("LoadToolset - Success with non-strict mode", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
 		tools, err := client.LoadToolset(
 			"",
 			context.Background(),
@@ -306,7 +448,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	})
 
 	t.Run("LoadToolset - Negative Test - Unused parameter in non-strict mode", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
 		_, err := client.LoadToolset(
 			"",
 			context.Background(),
@@ -322,7 +464,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	})
 
 	t.Run("LoadToolset - Negative Test - Unused parameter in strict mode", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
 		_, err := client.LoadToolset(
 			"",
 			context.Background(),
@@ -348,6 +490,74 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 		if !(isToolAError || isToolBError) {
 			t.Errorf("Incorrect error for unused auth token in strict mode. Got: %v", err)
 		}
+	})
+}
+
+func TestLoadTool_HTTPWarning(t *testing.T) {
+	// Setup a mock HTTP server (not HTTPS)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Respond with a valid manifest so LoadTool succeeds
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"tools": {
+				"test-tool": {
+					"description": "A test tool",
+					"parameters": []
+				}
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewToolboxClient(server.URL)
+	require.NoError(t, err)
+
+	t.Run("Warning logged when auth tokens are provided over HTTP", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			_, err := client.LoadTool("test-tool", context.Background(), WithAuthTokenString("service", "token"))
+			// We expect no error, or at least we don't care about the error for the warning test
+			// ignoring error check as we only care about the log
+			_ = err
+		})
+		assert.Contains(t, output, "WARNING: This connection is using HTTP")
+	})
+
+	t.Run("No warning when no auth tokens provided", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			_, _ = client.LoadTool("test-tool", context.Background())
+		})
+		assert.NotContains(t, output, "WARNING: This connection is using HTTP")
+	})
+}
+
+func TestLoadToolset_HTTPWarning(t *testing.T) {
+	// Setup a mock HTTP server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{
+			"tools": {
+				"tool1": { "description": "d1", "parameters": [] },
+				"tool2": { "description": "d2", "parameters": [] }
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	client, err := NewToolboxClient(server.URL)
+	require.NoError(t, err)
+
+	t.Run("Warning logged when auth tokens are provided over HTTP", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			_, _ = client.LoadToolset("test-toolset", context.Background(), WithAuthTokenString("service", "token"))
+		})
+		assert.Contains(t, output, "WARNING: This connection is using HTTP")
+	})
+
+	t.Run("No warning when no auth tokens provided", func(t *testing.T) {
+		output := captureLogOutput(func() {
+			_, _ = client.LoadToolset("test-toolset", context.Background())
+		})
+		assert.NotContains(t, output, "WARNING: This connection is using HTTP")
 	})
 }
 
@@ -434,7 +644,7 @@ func TestNegativeAndEdgeCases(t *testing.T) {
 
 	t.Run("LoadTool fails when a nil ToolOption is provided", func(t *testing.T) {
 
-		client, _ := NewToolboxClient(server.URL)
+		client, _ := NewToolboxClient(server.URL, WithProtocol(Toolbox))
 		_, err := client.LoadTool("any-tool", context.Background(), nil)
 		if err == nil {
 			t.Fatal("Expected an error when a nil option is passed to LoadTool, but got nil")
@@ -474,7 +684,7 @@ func TestNegativeAndEdgeCases(t *testing.T) {
 		}))
 		defer serverWithNoTools.Close()
 
-		client, _ := NewToolboxClient(serverWithNoTools.URL, WithHTTPClient(serverWithNoTools.Client()))
+		client, _ := NewToolboxClient(serverWithNoTools.URL, WithHTTPClient(serverWithNoTools.Client()), WithProtocol(Toolbox))
 
 		// This call would panic if the code doesn't check for a nil map.
 		_, err := client.LoadTool("any-tool", context.Background())
@@ -567,25 +777,11 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	log.SetOutput(&buf)
 	defer log.SetOutput(originalOutput)
 
-	t.Run("logs warning for HTTP with headers", func(t *testing.T) {
-		buf.Reset()
-
-		client, _ := NewToolboxClient(server.URL,
-			WithHTTPClient(server.Client()),
-		)
-
-		_, _ = client.LoadTool("toolA", context.Background())
-
-		expectedLog := "WARNING: Sending ID token over HTTP"
-		if !strings.Contains(buf.String(), expectedLog) {
-			t.Errorf("expected log message '%s' not found in output: '%s'", expectedLog, buf.String())
-		}
-	})
-
 	t.Run("LoadTool fails when a default option is invalid", func(t *testing.T) {
 		// Setup client with duplicate default options
 		client, _ := NewToolboxClient(server.URL,
 			WithHTTPClient(server.Client()),
+			WithProtocol(Toolbox),
 			WithDefaultToolOptions(
 				WithStrict(true),
 				WithStrict(false),
@@ -605,7 +801,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("LoadTool fails when tool is not in the manifest", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
 		_, err := client.LoadTool("tool-that-does-not-exist", context.Background())
 
 		if err == nil {
@@ -621,7 +817,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 		errorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 		errorServer.Close()
 
-		client, _ := NewToolboxClient(errorServer.URL, WithHTTPClient(errorServer.Client()))
+		client, _ := NewToolboxClient(errorServer.URL, WithHTTPClient(errorServer.Client()), WithProtocol(Toolbox))
 		_, err := client.LoadTool("any-tool", context.Background())
 
 		if err == nil {
@@ -633,7 +829,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("LoadTool fails with unused auth tokens", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
 		_, err := client.LoadTool("toolA", context.Background(),
 			WithAuthTokenString("unused-auth", "token"), // This auth is not needed by toolA
 		)
@@ -646,7 +842,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("LoadTool fails with unused bound parameters", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
 		_, err := client.LoadTool("toolA", context.Background(),
 			WithBindParamString("unused-param", "value"), // This param is not defined on toolA
 		)
@@ -661,7 +857,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("LoadToolset fails with unused parameters in strict mode", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
 		_, err := client.LoadToolset(
 			"",
 			context.Background(),
@@ -679,7 +875,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("LoadToolset fails with unused parameters in non-strict mode", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
 		_, err := client.LoadToolset(
 			"",
 			context.Background(),

@@ -17,18 +17,38 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/toolboxtransport"
 	"golang.org/x/oauth2"
 )
+
+// Dummy transport for tests
+type dummyTransport struct {
+	baseURL string
+}
+
+func (d *dummyTransport) BaseURL() string { return d.baseURL }
+func (d *dummyTransport) GetTool(ctx context.Context, name string, h map[string]string) (*transport.ManifestSchema, error) {
+	return nil, nil
+}
+func (d *dummyTransport) ListTools(ctx context.Context, set string, h map[string]string) (*transport.ManifestSchema, error) {
+	return nil, nil
+}
+func (d *dummyTransport) InvokeTool(ctx context.Context, name string, p map[string]any, h map[string]string) (any, error) {
+	return nil, nil
+}
 
 func TestToolboxTool_Getters(t *testing.T) {
 	sampleParams := []ParameterSchema{
@@ -40,6 +60,7 @@ func TestToolboxTool_Getters(t *testing.T) {
 		name:        "my-test-tool",
 		description: "A tool specifically for testing purposes.",
 		parameters:  sampleParams,
+		transport:   &dummyTransport{baseURL: "http://example.com"},
 	}
 
 	t.Run("Name Method Returns Correct Value", func(t *testing.T) {
@@ -78,6 +99,7 @@ func TestToolboxTool_Getters(t *testing.T) {
 		t.Run("Handles Case With No Parameters", func(t *testing.T) {
 			emptyTool := &ToolboxTool{
 				parameters: []ParameterSchema{},
+				transport:  &dummyTransport{baseURL: "http://example.com"},
 			}
 
 			params := emptyTool.Parameters()
@@ -160,6 +182,7 @@ func TestToolFrom(t *testing.T) {
 		authTokenSources: map[string]oauth2.TokenSource{
 			"google": &mockTokenSource{}, // Auth source already set on parent
 		},
+		transport: &dummyTransport{baseURL: "http://example.com"},
 	}
 
 	getTestTool := func() *ToolboxTool {
@@ -241,9 +264,11 @@ func TestToolFrom(t *testing.T) {
 
 func TestCloneToolboxTool(t *testing.T) {
 	// 1. Setup an original tool with populated maps and slices to test deep copying.
+	originalTransport := &dummyTransport{baseURL: "http://example.com"}
 	originalTool := &ToolboxTool{
 		name:        "original_tool",
 		description: "An original tool to be cloned.",
+		transport:   originalTransport,
 		parameters: []ParameterSchema{
 			{Name: "p1", Type: "string"},
 		},
@@ -270,6 +295,10 @@ func TestCloneToolboxTool(t *testing.T) {
 	}
 	if !reflect.DeepEqual(originalTool, clone) {
 		t.Fatal("Initial clone is not deeply equal to the original")
+	}
+
+	if clone.transport != originalTool.transport {
+		t.Error("Clone should share the same transport reference")
 	}
 
 	t.Run("Negative Test - modifying clone's boundParams map", func(t *testing.T) {
@@ -469,12 +498,13 @@ func (ft *failingTransport) RoundTrip(req *http.Request) (*http.Response, error)
 
 func TestToolboxTool_Invoke(t *testing.T) {
 	// A base tool for successful invocations
-	createBaseTool := func(httpClient *http.Client, invocationURL string) *ToolboxTool {
+	createBaseTool := func(httpClient *http.Client, baseURL string) *ToolboxTool {
+		tr := toolboxtransport.New(baseURL, httpClient)
+
 		return &ToolboxTool{
-			name:          "weather",
-			description:   "Get the weather",
-			invocationURL: invocationURL,
-			httpClient:    httpClient,
+			name:        "weather",
+			description: "Get the weather",
+			transport:   tr,
 			parameters: []ParameterSchema{
 				{Name: "city", Type: "string"},
 			},
@@ -717,7 +747,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a failed API call, but got nil")
 		}
-		if !strings.Contains(err.Error(), "API call to tool 'weather' failed") {
+		if !strings.Contains(err.Error(), "HTTP call to tool 'weather' failed") {
 			t.Errorf("Incorrect error message for failed API call. Got: %v", err)
 		}
 	})
@@ -733,7 +763,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a failed API call, but got nil")
 		}
-		if !strings.Contains(err.Error(), "API call to tool 'weather' failed") {
+		if !strings.Contains(err.Error(), "HTTP call to tool 'weather' failed") {
 			t.Errorf("Incorrect error message for failed API call. Got: %v", err)
 		}
 	})
@@ -751,11 +781,64 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a failing response body read, but got nil")
 		}
-		if !strings.Contains(err.Error(), "failed to read API response body") {
+		if !strings.Contains(err.Error(), "failed to read response body") {
 			t.Errorf("Incorrect error message for failed body read. Got: %v", err)
 		}
 	})
 
+}
+func TestToolboxTool_Invoke_HttpsWarning(t *testing.T) {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer log.SetOutput(nil)
+	mockTokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "secret-token"})
+
+	tests := []struct {
+		name          string
+		baseURL       string
+		expectWarning bool
+	}{
+		{
+			name:          "Warning triggered for HTTP",
+			baseURL:       "http://api.example.com",
+			expectWarning: true,
+		},
+		{
+			name:          "No warning for HTTPS",
+			baseURL:       "https://api.example.com",
+			expectWarning: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf.Reset()
+
+			tool := &ToolboxTool{
+				name:      "test-tool",
+				transport: &dummyTransport{baseURL: tt.baseURL},
+				authTokenSources: map[string]oauth2.TokenSource{
+					"service_a": mockTokenSource,
+				},
+				boundParams: make(map[string]any),
+			}
+
+			_, err := tool.Invoke(context.Background(), nil)
+			if err != nil {
+				t.Fatalf("Invoke failed: %v", err)
+			}
+
+			logOutput := buf.String()
+			hasWarning := strings.Contains(logOutput, "WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
+
+			if tt.expectWarning && !hasWarning {
+				t.Errorf("Expected warning for URL %s, but none was logged", tt.baseURL)
+			}
+			if !tt.expectWarning && hasWarning {
+				t.Errorf("Did not expect warning for URL %s, but one was logged: %s", tt.baseURL, logOutput)
+			}
+		})
+	}
 }
 
 // TestInputSchema tests the JSON output of the InputSchema method.

@@ -20,6 +20,9 @@ involving Large Language Models (LLMs).
   - [Installation](#installation)
   - [Quickstart](#quickstart)
   - [Usage](#usage)
+  - [Transport Protocols](#transport-protocols)
+    - [Supported Protocols](#supported-protocols)
+    - [Example](#example)
   - [Loading Tools](#loading-tools)
     - [Load a toolset](#load-a-toolset)
     - [Load a single tool](#load-a-single-tool)
@@ -122,6 +125,52 @@ All interactions for loading and invoking tools happen through this client.
 > during initialization (e.g., `tbadk.NewToolboxClient(URL, core.WithHTTPClient(myClient)`). If you
 > provide your own session, you are responsible for managing its lifecycle;
 > `ToolboxClient` *will not* close it.
+
+## Transport Protocols
+
+The SDK supports multiple transport protocols. By default, the client uses the latest supported version of the **Model Context Protocol (MCP)**.
+
+You can explicitly select a protocol using the `core.WithProtocol` option during client initialization.
+
+> [!NOTE]
+> * **Native Toolbox Transport**: This uses the service's native **REST over HTTP** API.
+> * **MCP Transports**: These options use the **Model Context Protocol over HTTP**.
+
+### Supported Protocols
+
+> [!WARNING]
+> The native Toolbox protocol (`core.Toolbox`) is deprecated and will be removed on March 4, 2026. Please use `core.MCP` or specific MCP versions.
+
+| Constant | Description |
+| :--- | :--- |
+| `core.MCP` | **(Default)** Alias for the latest supported MCP version (currently `v2025-06-18`). |
+| `core.Toolbox` | **Deprecated** The native Toolbox HTTP protocol. |
+| `core.MCPv20251125` | MCP Protocol version 2025-11-25. |
+| `core.MCPv20250618` | MCP Protocol version 2025-06-18. |
+| `core.MCPv20250326` | MCP Protocol version 2025-03-26. |
+| `core.MCPv20241105` | MCP Protocol version 2024-11-05. |
+
+### Example
+
+```go
+import (
+    "github.com/googleapis/mcp-toolbox-sdk-go/core"
+    "github.com/googleapis/mcp-toolbox-sdk-go/tbadk"
+)
+
+// Initialize with the native Toolbox protocol
+client, err := tbadk.NewToolboxClient(
+    "http://localhost:5000",
+    core.WithProtocol(core.Toolbox),
+)
+
+// Initialize with the MCP Protocol 2025-03-26
+client, err := tbadk.NewToolboxClient(
+    "http://localhost:5000",
+    core.WithProtocol(core.MCPv20250326),
+)
+
+```
 
 ## Loading Tools
 

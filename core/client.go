@@ -21,6 +21,14 @@ import (
 	"net/http"
 	"strings"
 
+	"slices"
+
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
+	mcp20241105 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20241105"
+	mcp20250326 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250326"
+	mcp20250618 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250618"
+	mcp20251125 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20251125"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/toolboxtransport"
 	"golang.org/x/oauth2"
 )
 
@@ -28,9 +36,13 @@ import (
 type ToolboxClient struct {
 	baseURL             string
 	httpClient          *http.Client
+	protocol            Protocol
+	protocolSet         bool
+	transport           transport.Transport
 	clientHeaderSources map[string]oauth2.TokenSource
 	defaultToolOptions  []ToolOption
 	defaultOptionsSet   bool
+	clientName          string
 }
 
 // NewToolboxClient creates and configures a new, immutable client for interacting with a
@@ -39,7 +51,7 @@ type ToolboxClient struct {
 // Inputs:
 //   - url: The base URL of the Toolbox server.
 //   - opts: A variadic list of ClientOption functions to configure the client,
-//     such as setting a custom http.Client or default headers.
+//     such as setting a custom http.Client, default headers, or the underlying protocol.
 //
 // Returns:
 //
@@ -47,11 +59,14 @@ type ToolboxClient struct {
 //	and an error if configuration fails.
 func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) {
 	// Initialize the client with default values.
+	// We default to MCP Protocol (the newest version alias) if not overridden.
 	tc := &ToolboxClient{
 		baseURL:             url,
 		httpClient:          &http.Client{},
+		protocol:            MCP, // Default
 		clientHeaderSources: make(map[string]oauth2.TokenSource),
 		defaultToolOptions:  []ToolOption{},
+		clientName:          "toolbox-core-go",
 	}
 
 	// Apply each functional option to customize the client configuration.
@@ -64,7 +79,32 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 		}
 	}
 
-	return tc, nil
+	checkSecureHeaders(tc.baseURL, len(tc.clientHeaderSources) > 0)
+
+	// Initialize the Transport based on the selected Protocol.
+	var transportErr error = nil
+
+	if slices.Contains(GetSupportedMcpVersions(), string(tc.protocol)) && tc.protocol != MCPv20251125 {
+		log.Printf("A newer version of MCP: v2025-11-25 is available. Please use MCPv20251125 to use the latest features.")
+	}
+
+	switch tc.protocol {
+	case MCPv20251125:
+		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName)
+	case MCPv20250618:
+		tc.transport, transportErr = mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName)
+	case MCPv20250326:
+		tc.transport, transportErr = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName)
+	case MCPv20241105:
+		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName)
+	case Toolbox:
+		log.Println("WARNING: The native Toolbox protocol is deprecated and will be removed on March 4, 2026. Please use core.MCP or specific MCP versions.")
+		tc.transport = toolboxtransport.New(tc.baseURL, tc.httpClient)
+	default:
+		return nil, fmt.Errorf("unsupported protocol version: %s", tc.protocol)
+	}
+
+	return tc, transportErr
 }
 
 // newToolboxTool is an internal factory method that constructs a
@@ -87,6 +127,7 @@ func (tc *ToolboxClient) newToolboxTool(
 	schema ToolSchema,
 	finalConfig *ToolConfig,
 	isStrict bool,
+	tr transport.Transport,
 ) (*ToolboxTool, []string, []string, error) {
 
 	// These will be the parameters that the end-user must provide at invocation time.
@@ -151,17 +192,12 @@ func (tc *ToolboxClient) newToolboxTool(
 		finalConfig.AuthTokenSources,
 	)
 
-	if (len(remainingAuthnParams) > 0 || len(remainingAuthzTokens) > 0 || len(tc.clientHeaderSources) > 0) && !strings.HasPrefix(tc.baseURL, "https://") {
-		log.Println("WARNING: Sending ID token over HTTP. User data may be exposed. Use HTTPS for secure communication.")
-	}
-
 	// Construct the final tool object.
 	tt := &ToolboxTool{
 		name:                name,
 		description:         schema.Description,
 		parameters:          finalParameters,
-		invocationURL:       fmt.Sprintf("%s/api/tool/%s%s", tc.baseURL, name, toolInvokeSuffix),
-		httpClient:          tc.httpClient,
+		transport:           tr,
 		authTokenSources:    finalConfig.AuthTokenSources,
 		boundParams:         localBoundParams,
 		requiredAuthnParams: remainingAuthnParams,
@@ -204,9 +240,16 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 		}
 	}
 
+	checkSecureHeaders(tc.baseURL, len(finalConfig.AuthTokenSources) > 0)
+
+	resolvedHeaders, err := resolveClientHeaders(tc.clientHeaderSources)
+	if err != nil {
+		return nil, err
+	}
+
 	// Fetch the manifest for the specified tool.
-	url := fmt.Sprintf("%s/api/tool/%s", tc.baseURL, name)
-	manifest, err := loadManifest(ctx, url, tc.httpClient, tc.clientHeaderSources)
+	manifest, err := tc.transport.GetTool(ctx, name, resolvedHeaders)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tool manifest for '%s': %w", name, err)
 	}
@@ -219,7 +262,7 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 	}
 
 	// Construct the tool from its schema and the final configuration.
-	tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(name, schema, finalConfig, true)
+	tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(name, schema, finalConfig, true, tc.transport)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create toolbox tool from schema for '%s': %w", name, err)
 	}
@@ -291,15 +334,16 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 		}
 	}
 
-	// Determine the manifest URL based on whether a specific toolset name was provided.
-	var url string
-	if name == "" {
-		url = fmt.Sprintf("%s/api/toolset/", tc.baseURL)
-	} else {
-		url = fmt.Sprintf("%s/api/toolset/%s", tc.baseURL, name)
-	}
+	checkSecureHeaders(tc.baseURL, len(finalConfig.AuthTokenSources) > 0)
+
 	// Fetch the manifest for the toolset.
-	manifest, err := loadManifest(ctx, url, tc.httpClient, tc.clientHeaderSources)
+	resolvedHeaders, err := resolveClientHeaders(tc.clientHeaderSources)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch Manifest via Transport
+	manifest, err := tc.transport.ListTools(ctx, name, resolvedHeaders)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load toolset manifest for '%s': %w", name, err)
 	}
@@ -322,7 +366,7 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 
 	for toolName, schema := range manifest.Tools {
 		// Construct each tool from its schema and the shared configuration.
-		tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(toolName, schema, finalConfig, finalConfig.Strict)
+		tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(toolName, schema, finalConfig, finalConfig.Strict, tc.transport)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create tool '%s': %w", toolName, err)
 		}
