@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-# Usage: ./scripts/generate-docs.sh <output_directory> <version_tag>
 OUTPUT_DIR=$1
 VERSION=$2
 
@@ -10,17 +9,20 @@ if [ -z "$OUTPUT_DIR" ] || [ -z "$VERSION" ]; then
   exit 1
 fi
 
-echo "Generating documentation for version $VERSION..."
+go install golang.org/x/pkgsite/cmd/pkgsite@latest
 
-go install github.com/ankit-shukla/doc2go@latest
+pkgsite -http=:8080 &
+PKGSITE_PID=$!
 
-# Generate static HTML for core, tbadk, and tbgenkit
-# -out: destination directory
-# -internal: include internal packages if needed
-# -pkg-main: identifies the root module
-doc2go -out "$OUTPUT_DIR/$VERSION" \
-       -internal \
-       -pkg-main "github.com/googleapis/mcp-toolbox-sdk-go" \
-       ./...
+sleep 10
 
-echo "Documentation generated in $OUTPUT_DIR/$VERSION"
+mkdir -p "$OUTPUT_DIR/$VERSION"
+wget --recursive --page-requisites --html-extension --convert-links \
+     --restrict-file-names=windows --no-parent \
+     -P "$OUTPUT_DIR/$VERSION" \
+     http://localhost:8080/github.com/googleapis/mcp-toolbox-sdk-go
+
+# 4. Gracefully shut down the official server
+kill $PKGSITE_PID
+
+echo "Official Go documentation captured in $OUTPUT_DIR/$VERSION"
