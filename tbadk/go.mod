@@ -1,6 +1,6 @@
 module github.com/googleapis/mcp-toolbox-sdk-go/tbadk
 
-go 1.24.8
+go 1.24.4
 
 replace github.com/googleapis/mcp-toolbox-sdk-go/core => ../core
 
