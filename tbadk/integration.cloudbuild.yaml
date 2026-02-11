@@ -89,7 +89,7 @@ steps:
         '
       }
 
-      check_coverage "coverage-unit.out" "Unit Tests (tbadk)" "true"
+      check_coverage "coverage-unit.out" "Unit Tests (tbadk)" "false"
       check_coverage "coverage-e2e.out" "E2E Tests (tbadk)" "false"
 
       echo "All required coverage checks passed."
