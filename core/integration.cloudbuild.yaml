@@ -13,8 +13,9 @@
 # limitations under the License.
 
 steps:
-  - id: "install-dependencies"
+  - id: "install-dependencies-core"
     name: golang:1.24.4
+    dir: "core"
     waitFor: ["-"]
     env:
       - "GOPATH=/gopath"
@@ -24,34 +25,22 @@ steps:
     script: |
       go mod tidy
 
-  - id: "run-unit-tests"
+  - id: "run-unit-tests-core"
     name: golang:1.24.4
-    waitFor: ["install-dependencies"]
+    dir: "core"
+    waitFor: ["install-dependencies-core"]
     env:
       - "GOPATH=/gopath"
     volumes:
       - name: "go"
         path: "/gopath"
     script: |
-      go test -tags=unit -coverprofile=coverage-unit.out -covermode=atomic ./core/... -v -race
+      go test -tags=unit -coverprofile=coverage-unit.out -covermode=atomic ./... -v -race
 
-  - id: "run-core-e2e-tests"
+  - id: "run-e2e-tests-core"
     name: golang:1.24.4
-    waitFor: ["install-dependencies"]
-    env:
-      - "GOPATH=/gopath"
-      - TOOLBOX_VERSION=$_TOOLBOX_VERSION
-      - GOOGLE_CLOUD_PROJECT=$PROJECT_ID
-      - TOOLBOX_MANIFEST_VERSION=$_TOOLBOX_MANIFEST_VERSION
-    volumes:
-      - name: "go"
-        path: "/gopath"
-    script: |
-      go test -tags=e2e -coverprofile=coverage-e2e.out -covermode=atomic ./core/... -v -race
-
-  - id: "run-tbgenkit-tests"
-    name: golang:1.24.4
-    waitFor: ["install-dependencies"]
+    dir: "core"
+    waitFor: ["install-dependencies-core"]
     env:
       - "GOPATH=/gopath"
       - TOOLBOX_VERSION=$_TOOLBOX_VERSION
@@ -61,11 +50,13 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test -coverprofile=coverage-tbgenkit.out -covermode=atomic ./tbgenkit/... -v -race
+      go test -tags=e2e -coverprofile=coverage-e2e.out -covermode=atomic ./... -v -race
 
-  - id: "run-tbadk-tests"
+  # Verify dependents (TBADK) to ensure Core changes don't break them
+  - id: "run-tests-tbadk-on-core-change"
     name: golang:1.24.4
-    waitFor: ["install-dependencies"]
+    dir: "tbadk"
+    waitFor: ["run-unit-tests-core"]
     env:
       - "GOPATH=/gopath"
       - TOOLBOX_VERSION=$_TOOLBOX_VERSION
@@ -75,11 +66,31 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
-      go test -coverprofile=coverage-tbadk.out -covermode=atomic ./tbadk/... -v -race
+      go mod tidy
+      go test -coverprofile=coverage-tbadk-unit.out -covermode=atomic ./... -v -race
+      go test -tags=e2e -coverprofile=coverage-tbadk-e2e.out -covermode=atomic ./... -v -race
 
-  - id: "check-individual-coverage"
+  # Verify dependents (TBGenKit) to ensure Core changes don't break them
+  - id: "run-tests-tbgenkit-on-core-change"
     name: golang:1.24.4
-    waitFor: ["run-unit-tests", "run-core-e2e-tests", "run-tbgenkit-tests", "run-tbadk-tests"]
+    dir: "tbgenkit"
+    waitFor: ["run-unit-tests-core"]
+    env:
+      - "GOPATH=/gopath"
+      - TOOLBOX_VERSION=$_TOOLBOX_VERSION
+      - GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+      - TOOLBOX_MANIFEST_VERSION=$_TOOLBOX_MANIFEST_VERSION
+    volumes:
+      - name: "go"
+        path: "/gopath"
+    script: |
+      go mod tidy
+
+      go test -tags=e2e -coverprofile=coverage-tbgenkit-e2e.out -covermode=atomic ./... -v -race
+
+  - id: "check-coverage"
+    name: golang:1.24.4
+    waitFor: ["run-unit-tests-core", "run-e2e-tests-core", "run-tests-tbadk-on-core-change", "run-tests-tbgenkit-on-core-change"]
     script: |
       #!/bin/bash
       set -e
@@ -92,6 +103,10 @@ steps:
 
         if [ ! -f "$file" ]; then
           echo "Warning: Coverage file $file not found for $test_name. Skipping."
+          if [ "$enforce_threshold" == "true" ]; then
+             echo "Error: Required coverage file $file is missing."
+             exit 1
+          fi
           return
         fi
 
@@ -109,11 +124,12 @@ steps:
         '
       }
 
-      check_coverage "coverage-unit.out" "Unit Tests (core)" "true"
+      check_coverage "core/coverage-unit.out" "Unit Tests (core)" "true"
+      check_coverage "core/coverage-e2e.out" "E2E Tests (core)" "false"
+      check_coverage "tbadk/coverage-tbadk-unit.out" "Unit Tests (tbadk)" "true"
+      check_coverage "tbadk/coverage-tbadk-e2e.out" "E2E Tests (tbadk)" "false"
 
-      check_coverage "coverage-e2e.out" "E2E Tests (core)" "false"
-      check_coverage "coverage-tbgenkit.out" "TBGenKit Tests" "false"
-      check_coverage "coverage-tbadk.out" "TBADK Tests" "false"
+      check_coverage "tbgenkit/coverage-tbgenkit-e2e.out" "E2E Tests (tbgenkit)" "false"
 
       echo "All required coverage checks passed."
 

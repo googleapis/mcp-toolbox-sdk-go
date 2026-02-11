@@ -13,8 +13,4 @@
 # limitations under the License.
 
 handleGHRelease: true
-packageName: mcp-toolbox-sdk-go
-releaseType: go
-extraFiles: [
-    "core/transport/mcp/version.go",
-]
+manifest: true

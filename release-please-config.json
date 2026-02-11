@@ -1,5 +1,6 @@
 {
   "bump-minor-pre-major": true,
+  "separate-pull-requests": true,
   "bump-patch-for-minor-pre-major": true,
   "include-v-in-tag": true,
   "changelog-sections": [
@@ -9,9 +10,26 @@
     { "type": "docs", "section": "Documentation", "hidden": false }
   ],
   "packages": {
-    ".": {
+    "core": {
       "release-type": "go",
-      "package-name": "mcp-toolbox-sdk-go"
+      "package-name": "github.com/googleapis/mcp-toolbox-sdk-go/core",
+      "extra-files": [
+        "transport/mcp/version.go"
+      ]
+    },
+    "tbadk": {
+      "release-type": "go",
+      "package-name": "github.com/googleapis/mcp-toolbox-sdk-go/tbadk",
+      "extra-files": [
+        "version.go"
+      ]
+    },
+    "tbgenkit": {
+      "release-type": "go",
+      "package-name": "github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit",
+      "extra-files": [
+        "version.go"
+      ]
     }
   }
 }
