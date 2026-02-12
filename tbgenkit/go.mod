@@ -2,13 +2,11 @@ module github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit
 
 go 1.24.4
 
-replace github.com/googleapis/mcp-toolbox-sdk-go/core => ../core
-
 require (
 	cloud.google.com/go/secretmanager v1.16.0
 	cloud.google.com/go/storage v1.59.2
 	github.com/firebase/genkit/go v1.4.0
-	github.com/googleapis/mcp-toolbox-sdk-go/core v0.0.0-00010101000000-000000000000
+	github.com/googleapis/mcp-toolbox-sdk-go/core v0.6.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.34.0
 	google.golang.org/api v0.265.0
