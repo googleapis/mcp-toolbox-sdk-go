@@ -7,7 +7,7 @@ replace github.com/googleapis/mcp-toolbox-sdk-go/core => ../core
 require (
 	cloud.google.com/go/secretmanager v1.16.0
 	cloud.google.com/go/storage v1.59.2
-	github.com/googleapis/mcp-toolbox-sdk-go/core v0.0.0-00010101000000-000000000000
+	github.com/googleapis/mcp-toolbox-sdk-go/core v0.0.0-20260212080314-0059ceb35d50
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.34.0
 	google.golang.org/adk v0.3.0
