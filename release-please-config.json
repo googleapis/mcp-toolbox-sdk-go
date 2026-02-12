@@ -14,7 +14,7 @@
     "core": {
       "release-type": "go",
       "package-name": "github.com/googleapis/mcp-toolbox-sdk-go/core",
-      "label": "core",
+      "component": "core",
       "extra-files": [
         "transport/mcp/version.go"
       ]
@@ -22,7 +22,7 @@
     "tbadk": {
       "release-type": "go",
       "package-name": "github.com/googleapis/mcp-toolbox-sdk-go/tbadk",
-      "label": "tbadk",
+      "component": "tbadk",
       "extra-files": [
         "version.go"
       ]
@@ -30,7 +30,7 @@
     "tbgenkit": {
       "release-type": "go",
       "package-name": "github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit",
-      "label": "tbgenkit",
+      "component": "tbgenkit",
       "extra-files": [
         "version.go"
       ]
