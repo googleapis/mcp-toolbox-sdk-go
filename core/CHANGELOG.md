@@ -1,13 +1,6 @@
 # Changelog
 
-## [0.6.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/github.com/googleapis/mcp-toolbox-sdk-go/core-v0.6.0...github.com/googleapis/mcp-toolbox-sdk-go/core/v0.6.1) (2026-02-12)
-
-
-### Miscellaneous Chores
-
-* **core:** release as 0.6.1 ([#173](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/173)) ([5864acf](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/5864acf915a264d0887860152cc98724218e9a9a))
-
-## [0.6.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/github.com/googleapis/mcp-toolbox-sdk-go/core-v0.5.1...github.com/googleapis/mcp-toolbox-sdk-go/core-v0.6.0) (2026-02-12)
+## [0.6.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/github.com/googleapis/mcp-toolbox-sdk-go/core-v0.5.1...github.com/googleapis/mcp-toolbox-sdk-go/core-v0.6.1) (2026-02-12)
 
 > [!IMPORTANT]
 > **Breaking Change Notice**: As of version `0.6.0`, this repository has transitioned to a multi-module structure.
