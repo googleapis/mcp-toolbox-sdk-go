@@ -5,7 +5,7 @@ go 1.24.4
 require (
 	cloud.google.com/go/secretmanager v1.16.0
 	cloud.google.com/go/storage v1.59.2
-	github.com/googleapis/mcp-toolbox-sdk-go/core v0.6.0
+	github.com/googleapis/mcp-toolbox-sdk-go/core v0.6.2
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.34.0
 	google.golang.org/adk v0.3.0
