@@ -16,4 +16,4 @@ package tbgenkit
 
 // Version is the current version of the library.
 // This is updated automatically by release-please.
-const Version = "0.3.0" // x-release-please-version
+const Version = "0.6.0" // x-release-please-version
