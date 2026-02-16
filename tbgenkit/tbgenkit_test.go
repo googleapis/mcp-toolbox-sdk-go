@@ -627,6 +627,46 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 		assert.Contains(t, err.Error(), "data did not match expected schema")
 	})
 
+	t.Run("test_run_tool_with_default_behavior", func(t *testing.T) {
+		client := newClient(t)
+		tool := searchRowsTool(t, client)
+
+		g := newGenkit()
+
+		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+		if err != nil {
+			t.Fatalf("ToGenkitTool failed: %v", err)
+		}
+
+		// Omit default params, ensure they fallback to defaults
+		response1, err1 := genkitTool.RunRaw(ctx, map[string]any{
+			"email": "twishabansal@google.com",
+		})
+		require.NoError(t, err1)
+		respStr1, ok1 := response1.(string)
+		require.True(t, ok1)
+		assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
+		assert.Contains(t, respStr1, "row2")
+
+		// Override 'data' default
+		response2, err2 := genkitTool.RunRaw(ctx, map[string]any{
+			"email": "twishabansal@google.com",
+			"data":  "row3",
+		})
+		require.NoError(t, err2)
+		respStr2, ok2 := response2.(string)
+		require.True(t, ok2)
+		assert.Contains(t, respStr2, `"email":"twishabansal@google.com"`)
+		assert.Contains(t, respStr2, "row3")
+
+		// Override 'id' default
+		response3, err3 := genkitTool.RunRaw(ctx, map[string]any{
+			"email": "twishabansal@google.com",
+			"id":    4,
+		})
+		require.NoError(t, err3)
+		assert.Equal(t, "null", response3)
+	})
 }
 
 func TestToGenkitTool_MapParams(t *testing.T) {
