@@ -180,6 +180,10 @@ func schemaToMap(p *ParameterSchema) map[string]any {
 		schema["items"] = schemaToMap(p.Items)
 	}
 
+	if p.Default != nil {
+		schema["default"] = p.Default
+	}
+
 	if val, ok := p.AdditionalProperties.(*ParameterSchema); ok && p.Type == "object" {
 		schema["additionalProperties"] = schemaToMap(val)
 	}

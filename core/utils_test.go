@@ -271,6 +271,19 @@ func TestSchemaToMap(t *testing.T) {
 				"type": "boolean",
 			},
 		},
+		{
+			name: "Parameter with Default Value",
+			input: &ParameterSchema{
+				Type:        "string",
+				Description: "Filter with a default",
+				Default:     "active",
+			},
+			expected: map[string]any{
+				"type":        "string",
+				"description": "Filter with a default",
+				"default":     "active",
+			},
+		},
 	}
 
 	// Run test cases

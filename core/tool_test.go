@@ -478,6 +478,89 @@ func TestValidateAndBuildPayload(t *testing.T) {
 			t.Error("User-provided parameter 'city' was not included in final payload")
 		}
 	})
+
+	t.Run("Default parameter is injected when not provided", func(t *testing.T) {
+		toolWithDefault := &ToolboxTool{
+			parameters: []ParameterSchema{
+				{Name: "city", Type: "string"},
+				{Name: "units", Type: "string", Default: "metric"},
+			},
+			boundParams: map[string]any{},
+		}
+
+		input := map[string]any{
+			"city": "London",
+		}
+
+		payload, err := toolWithDefault.validateAndBuildPayload(input)
+		if err != nil {
+			t.Fatalf("validateAndBuildPayload failed unexpectedly: %v", err)
+		}
+
+		expectedPayload := map[string]any{
+			"city":  "London",
+			"units": "metric", // Injected default
+		}
+
+		if !reflect.DeepEqual(payload, expectedPayload) {
+			t.Errorf("Payload mismatch.\nExpected: %v\nGot:      %v", expectedPayload, payload)
+		}
+	})
+
+	t.Run("User input overrides default parameter", func(t *testing.T) {
+		toolWithDefault := &ToolboxTool{
+			parameters: []ParameterSchema{
+				{Name: "city", Type: "string"},
+				{Name: "units", Type: "string", Default: "metric"},
+			},
+			boundParams: map[string]any{},
+		}
+
+		input := map[string]any{
+			"city":  "New York",
+			"units": "imperial", // User overrides default
+		}
+
+		payload, err := toolWithDefault.validateAndBuildPayload(input)
+		if err != nil {
+			t.Fatalf("validateAndBuildPayload failed unexpectedly: %v", err)
+		}
+
+		expectedPayload := map[string]any{
+			"city":  "New York",
+			"units": "imperial", // User input wins
+		}
+
+		if !reflect.DeepEqual(payload, expectedPayload) {
+			t.Errorf("Payload mismatch.\nExpected: %v\nGot:      %v", expectedPayload, payload)
+		}
+	})
+
+	t.Run("Missing required parameter with default is valid", func(t *testing.T) {
+		toolWithRequiredDefault := &ToolboxTool{
+			parameters: []ParameterSchema{
+				// Required is true, but it has a default, so it's okay if missing from input
+				{Name: "format", Type: "string", Required: true, Default: "json"},
+			},
+			boundParams: map[string]any{},
+		}
+
+		// Input is completely empty
+		input := map[string]any{}
+
+		payload, err := toolWithRequiredDefault.validateAndBuildPayload(input)
+		if err != nil {
+			t.Fatalf("validateAndBuildPayload failed unexpectedly: %v", err)
+		}
+
+		expectedPayload := map[string]any{
+			"format": "json", // Injected default
+		}
+
+		if !reflect.DeepEqual(payload, expectedPayload) {
+			t.Errorf("Payload mismatch.\nExpected: %v\nGot:      %v", expectedPayload, payload)
+		}
+	})
 }
 
 type errorReader struct{}

@@ -477,7 +477,7 @@ func TestE2E_OptionalParams(t *testing.T) {
 		assert.NotContains(t, respStr1, "row3")
 
 		// Test case 2: Optional params are explicitly nil
-		// This should produce the same result as omitting them
+		// A nil value is treated as omitting the param, so it should fall back to defaults
 		response2, err2 := tool.Invoke(context.Background(), map[string]any{
 			"email": "twishabansal@google.com",
 			"data":  nil,
@@ -562,6 +562,40 @@ func TestE2E_OptionalParams(t *testing.T) {
 		})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "parameter 'id' expects an integer, but got string")
+	})
+	
+	t.Run("test_run_tool_with_default_behavior", func(t *testing.T) {
+		client := newClient(t)
+		tool := searchRowsTool(t, client)
+
+		// Omit default params, ensure they fallback to defaults
+		response1, err1 := tool.Invoke(context.Background(), map[string]any{
+			"email": "twishabansal@google.com",
+		})
+		require.NoError(t, err1)
+		respStr1, ok1 := response1.(string)
+		require.True(t, ok1)
+		assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
+		assert.Contains(t, respStr1, "row2")
+
+		// Override 'data' default
+		response2, err2 := tool.Invoke(context.Background(), map[string]any{
+			"email": "twishabansal@google.com",
+			"data":  "row3",
+		})
+		require.NoError(t, err2)
+		respStr2, ok2 := response2.(string)
+		require.True(t, ok2)
+		assert.Contains(t, respStr2, `"email":"twishabansal@google.com"`)
+		assert.Contains(t, respStr2, "row3")
+
+		// Override 'id' default
+		response3, err3 := tool.Invoke(context.Background(), map[string]any{
+			"email": "twishabansal@google.com",
+			"id":    4,
+		})
+		require.NoError(t, err3)
+		assert.Equal(t, "null", response3)
 	})
 }
 

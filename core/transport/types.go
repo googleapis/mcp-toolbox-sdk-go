@@ -28,6 +28,7 @@ type ParameterSchema struct {
 	AuthSources          []string         `json:"authSources,omitempty"`
 	Items                *ParameterSchema `json:"items,omitempty"`
 	AdditionalProperties any              `json:"additionalProperties,omitempty"`
+	Default              any              `json:"default,omitempty"`
 }
 
 // ValidateType is a helper for manual type checking.

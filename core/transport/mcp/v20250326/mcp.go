@@ -56,7 +56,7 @@ func New(baseURL string, client *http.Client, clientName string) (*McpTransport,
 		protocolVersion:  ProtocolVersion,
 		clientName:       clientName,
 	}
-	t.BaseMcpTransport.HandshakeHook = t.initializeSession
+	t.HandshakeHook = t.initializeSession
 
 	return t, nil
 }
