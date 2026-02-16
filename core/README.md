@@ -55,6 +55,7 @@ involving Large Language Models (LLMs).
     - [Option B: Binding Parameters to a Loaded Tool](#option-b-binding-parameters-to-a-loaded-tool)
     - [Option C: Binding Parameters While Loading Tools](#option-c-binding-parameters-while-loading-tools)
     - [Binding Dynamic Values](#binding-dynamic-values)
+  - [Default Parameters](#default-parameters)
 - [Using with Orchestration Frameworks](#using-with-orchestration-frameworks)
 - [Contributing](#contributing)
 - [License](#license)
@@ -567,6 +568,20 @@ dynamicBoundTool, err := tool.ToolFrom(core.WithBindParamStringFunc("param", get
 > [!IMPORTANT]
 > You don't need to modify tool configurations to bind parameter values.
 
+## Default Parameters
+
+Tools defined in the Toolbox server can specify default values for their optional parameters. When invoking a tool using the SDK, if an input for a parameter with a default value is not provided, the SDK will automatically populate the request with the default value.
+
+```go
+tool, err = client.LoadTool("my-tool", ctx)
+
+// If 'my-tool' has a parameter 'param2' with a default value of "default-value",
+// we can omit 'param2' from the inputs.
+inputs := map[string]any{"param1": "value"}
+
+// The invocation will automatically use param2="default-value" if not provided
+result, err := tool.Invoke(ctx, inputs)
+```
 
 # Using with Orchestration Frameworks
 
