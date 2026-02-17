@@ -574,7 +574,7 @@ dynamicBoundTool, err := tool.ToolFrom(core.WithBindParamStringFunc("param", get
 
 ## Default Parameters
 
-Tools defined in the Toolbox service can specify default values for their optional parameters. When invoking a tool using the SDK, if an input for a parameter with a default value is not provided, the SDK will automatically populate the request with the default value.
+Tools defined in the MCP Toolbox server can specify default values for their optional parameters. When invoking a tool using the SDK, if an input for a parameter with a default value is not provided, the SDK will automatically populate the request with the default value.
 
 ```go
 tool, err = client.LoadTool("my-tool", ctx)
