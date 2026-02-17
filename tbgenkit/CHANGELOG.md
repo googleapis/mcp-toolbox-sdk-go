@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.6.0...tbgenkit/v0.6.1) (2026-02-17)
+
+
+### Features
+
+* Add support for default parameters ([#185](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/185)) ([6c2bf7a](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/6c2bf7ac95ba4983794d40e70064217bb71fe015))
+
 ## [0.6.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.5.1...tbgenkit/v0.6.0) (2026-02-16)
 
 > [!IMPORTANT]
