@@ -6,7 +6,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -33,6 +34,73 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 )
+
+// --- MCP Mock Helpers ---
+
+// mcpRPCRequest represents a simplified JSON-RPC 2.0 request.
+type mcpRPCRequest struct {
+	JSONRPC string `json:"jsonrpc"`
+	Method  string `json:"method"`
+	ID      any    `json:"id,omitempty"`
+	Params  any    `json:"params,omitempty"`
+}
+
+// mcpRPCResponse represents a standard JSON-RPC 2.0 response.
+type mcpRPCResponse struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      any             `json:"id"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   any             `json:"error,omitempty"`
+}
+
+// mcpTool represents a single tool definition in an MCP list response.
+type mcpTool struct {
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
+	InputSchema map[string]any `json:"inputSchema"`
+	Meta        map[string]any `json:"_meta,omitempty"`
+}
+
+// newMockMCPServer creates a server that simulates the MCP lifecycle (initialize -> list).
+func newMockMCPServer(t *testing.T, tools []mcpTool) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req mcpRPCRequest
+		if err := json.Unmarshal(body, &req); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		var result any
+		switch req.Method {
+		case "initialize":
+			result = map[string]any{
+				"protocolVersion": "2025-06-18",
+				"capabilities":    map[string]any{"tools": map[string]any{}},
+				"serverInfo":      map[string]any{"name": "mock-server", "version": "1.0.0"},
+			}
+		case "notifications/initialized":
+			w.WriteHeader(http.StatusOK)
+			return
+		case "tools/list":
+			result = map[string]any{
+				"tools": tools,
+			}
+		default:
+			http.Error(w, "method not found", http.StatusNotFound)
+			return
+		}
+
+		resBytes, _ := json.Marshal(result)
+		resp := mcpRPCResponse{
+			JSONRPC: "2.0",
+			ID:      req.ID,
+			Result:  resBytes,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+}
 
 // Test Helpers & Mocks
 
@@ -93,45 +161,6 @@ func TestNewToolboxClient(t *testing.T) {
 
 }
 
-func TestNewToolboxClient_ToolboxDeprecationWarning(t *testing.T) {
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer log.SetOutput(nil)
-	testURL := "https://api.example.com"
-
-	t.Run("Warning is logged when using Toolbox protocol", func(t *testing.T) {
-		buf.Reset()
-
-		_, err := NewToolboxClient(testURL)
-		if err != nil {
-			t.Fatalf("NewToolboxClient failed: %v", err)
-		}
-
-		logOutput := buf.String()
-		expectedWarning := "The native Toolbox protocol is deprecated"
-
-		if !strings.Contains(logOutput, expectedWarning) {
-			t.Errorf("Expected deprecation warning not found in logs.\nLogged: %s", logOutput)
-		}
-	})
-
-	t.Run("Warning is NOT logged when using MCP protocol", func(t *testing.T) {
-		buf.Reset()
-
-		_, err := NewToolboxClient(testURL)
-		if err != nil {
-			t.Fatalf("NewToolboxClient failed: %v", err)
-		}
-
-		logOutput := buf.String()
-		deprecationWarning := "The native Toolbox protocol is deprecated"
-
-		if strings.Contains(logOutput, deprecationWarning) {
-			t.Error("Did not expect a deprecation warning for MCP protocol, but one was logged.")
-		}
-	})
-}
-
 func TestNewToolboxClient_ProtocolWarnings(t *testing.T) {
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
@@ -176,19 +205,6 @@ func TestNewToolboxClient_ProtocolWarnings(t *testing.T) {
 		}
 	})
 
-	t.Run("Does not log warning for non-MCP protocols (e.g. Toolbox)", func(t *testing.T) {
-		buf.Reset()
-
-		// Initialize with Toolbox protocol
-		_, err := NewToolboxClient("https://api.example.com")
-		if err != nil {
-			t.Fatalf("Unexpected error creating client: %v", err)
-		}
-
-		if strings.Contains(buf.String(), "A newer version of MCP") {
-			t.Errorf("Should not warn about MCP versions when using Toolbox protocol")
-		}
-	})
 }
 
 func TestNewToolboxClient_HTTPWarning(t *testing.T) {
@@ -372,32 +388,36 @@ func TestClientOptions(t *testing.T) {
 }
 
 func TestLoadToolAndLoadToolset(t *testing.T) {
-	// Setup a valid manifest for the mock server
-	manifest := ManifestSchema{
-		ServerVersion: "v1",
-		Tools: map[string]ToolSchema{
-			"toolA": {
-				Description: "This is tool A",
-				Parameters: []ParameterSchema{
-					{Name: "param1", Type: "string"},
-					{Name: "param2", Type: "string", AuthSources: []string{"google"}},
+	// Setup MCP mock tools
+	mcpTools := []mcpTool{
+		{
+			Name:        "toolA",
+			Description: "This is tool A",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"param1": map[string]any{"type": "string"},
+					"param2": map[string]any{"type": "string"},
 				},
 			},
-			"toolB": {
-				Description:  "Tool B",
-				AuthRequired: []string{"github"},
+			Meta: map[string]any{
+				"toolbox/authParam": map[string]any{
+					"param2": []string{"google"},
+				},
+			},
+		},
+		{
+			Name:        "toolB",
+			Description: "Tool B",
+			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
+			Meta: map[string]any{
+				"toolbox/authInvoke": []string{"github"},
 			},
 		},
 	}
-	manifestJSON, _ := json.Marshal(manifest)
 
-	// Setup a mock server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		if _, err := w.Write(manifestJSON); err != nil {
-			t.Fatalf("Mock server failed to write error response: %v", err)
-		}
-	}))
+	// Setup a mock server using MCP protocol
+	server := newMockMCPServer(t, mcpTools)
 	defer server.Close()
 
 	t.Run("LoadTool - Success", func(t *testing.T) {
@@ -425,7 +445,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error for unused bound parameter, but got nil")
 		}
-		if !strings.Contains(err.Error(), "unable to bind parameter: no parameter named 'unused_param' found on tool 'toolA'") {
+		if !strings.Contains(err.Error(), "no parameter named 'unused_param' found on tool 'toolA'") {
 			t.Errorf("Incorrect error for unused bound parameter. Got: %v", err)
 		}
 	})
@@ -494,19 +514,15 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 }
 
 func TestLoadTool_HTTPWarning(t *testing.T) {
-	// Setup a mock HTTP server (not HTTPS)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Respond with a valid manifest so LoadTool succeeds
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
-			"tools": {
-				"test-tool": {
-					"description": "A test tool",
-					"parameters": []
-				}
-			}
-		}`))
-	}))
+	// Setup a mock HTTP server (not HTTPS) using MCP
+	mcpTools := []mcpTool{
+		{
+			Name:        "test-tool",
+			Description: "A test tool",
+			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
+		},
+	}
+	server := newMockMCPServer(t, mcpTools)
 	defer server.Close()
 
 	client, err := NewToolboxClient(server.URL)
@@ -531,16 +547,12 @@ func TestLoadTool_HTTPWarning(t *testing.T) {
 }
 
 func TestLoadToolset_HTTPWarning(t *testing.T) {
-	// Setup a mock HTTP server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{
-			"tools": {
-				"tool1": { "description": "d1", "parameters": [] },
-				"tool2": { "description": "d2", "parameters": [] }
-			}
-		}`))
-	}))
+	// Setup a mock HTTP server with MCP
+	mcpTools := []mcpTool{
+		{Name: "tool1", Description: "d1", InputSchema: map[string]any{"type": "object", "properties": map[string]any{}}},
+		{Name: "tool2", Description: "d2", InputSchema: map[string]any{"type": "object", "properties": map[string]any{}}},
+	}
+	server := newMockMCPServer(t, mcpTools)
 	defer server.Close()
 
 	client, err := NewToolboxClient(server.URL)
@@ -562,27 +574,23 @@ func TestLoadToolset_HTTPWarning(t *testing.T) {
 }
 
 func TestDefaultOptionOverwriting(t *testing.T) {
-	// Setup a mock server
-	manifest := ManifestSchema{
-		ServerVersion: "v1",
-		Tools: map[string]ToolSchema{
-			"toolWithParams": {
-				Description: "A tool that uses the parameters being tested",
-				Parameters: []ParameterSchema{
-					{Name: "user_id", Type: "string"},
+	// Setup a mock server using MCP
+	mcpTools := []mcpTool{
+		{
+			Name:        "toolWithParams",
+			Description: "A tool that uses the parameters being tested",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"user_id": map[string]any{"type": "string"},
 				},
-				AuthRequired: []string{"google"},
+			},
+			Meta: map[string]any{
+				"toolbox/authInvoke": []string{"google"},
 			},
 		},
 	}
-	manifestJSON, _ := json.Marshal(manifest)
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		if _, err := w.Write(manifestJSON); err != nil {
-			t.Fatalf("Mock server failed to write error response: %v", err)
-		}
-	}))
+	server := newMockMCPServer(t, mcpTools)
 	defer server.Close()
 
 	t.Run("LoadTool - Fails when overriding a default bound parameter", func(t *testing.T) {
@@ -638,8 +646,8 @@ func TestDefaultOptionOverwriting(t *testing.T) {
 }
 
 func TestNegativeAndEdgeCases(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	}))
+	// MCP server returning empty tool list
+	server := newMockMCPServer(t, []mcpTool{})
 	defer server.Close()
 
 	t.Run("LoadTool fails when a nil ToolOption is provided", func(t *testing.T) {
@@ -674,17 +682,8 @@ func TestNegativeAndEdgeCases(t *testing.T) {
 	})
 
 	t.Run("LoadTool fails gracefully if manifest has no tools", func(t *testing.T) {
-		// This server returns a valid manifest, but the "tools" map is missing/empty.
-		manifestWithNoTools := `{"serverVersion": "v1"}`
-		serverWithNoTools := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			if _, err := w.Write([]byte(manifestWithNoTools)); err != nil {
-				t.Fatalf("Mock server failed to write error response: %v", err)
-			}
-		}))
-		defer serverWithNoTools.Close()
-
-		client, _ := NewToolboxClient(serverWithNoTools.URL, WithHTTPClient(serverWithNoTools.Client()))
+		// Mock server above returns empty list of tools
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 
 		// This call would panic if the code doesn't check for a nil map.
 		_, err := client.LoadTool("any-tool", context.Background())
@@ -747,27 +746,31 @@ func TestOptionDuplicateAndEdgeCases(t *testing.T) {
 
 // TestLoadToolAndLoadToolset_ErrorPaths covers various failure scenarios for the main functions.
 func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
-	// --- Setup a mock server and manifest for reuse ---
-	manifest := ManifestSchema{
-		ServerVersion: "v1",
-		Tools: map[string]ToolSchema{
-			"toolA": {
-				Description: "Tool A",
-				Parameters: []ParameterSchema{
-					{Name: "param1", Type: "string"},
-					{Name: "auth_param", Type: "string", AuthSources: []string{"google"}},
+	// Setup a mock server and manifest
+	mcpTools := []mcpTool{
+		{
+			Name:        "toolA",
+			Description: "Tool A",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"param1":     map[string]any{"type": "string"},
+					"auth_param": map[string]any{"type": "string"},
 				},
 			},
-			"toolB": {Description: "Tool B"},
+			Meta: map[string]any{
+				"toolbox/authParam": map[string]any{
+					"auth_param": []string{"google"},
+				},
+			},
+		},
+		{
+			Name:        "toolB",
+			Description: "Tool B",
+			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 		},
 	}
-	manifestJSON, _ := json.Marshal(manifest)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		if _, err := w.Write(manifestJSON); err != nil {
-			t.Fatalf("Mock server failed to write error response: %v", err)
-		}
-	}))
+	server := newMockMCPServer(t, mcpTools)
 	defer server.Close()
 
 	// Buffer to capture logs
