@@ -81,7 +81,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	checkSecureHeaders(tc.baseURL, len(tc.clientHeaderSources) > 0)
 
 	// Initialize the Transport based on the selected Protocol.
-	var transportErr error = nil
+	var transportErr error
 
 	if slices.Contains(GetSupportedMcpVersions(), string(tc.protocol)) && tc.protocol != MCPv20251125 {
 		log.Printf("A newer version of MCP: v2025-11-25 is available. Please use MCPv20251125 to use the latest features.")
