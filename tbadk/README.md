@@ -135,9 +135,9 @@ All interactions for loading and invoking tools happen through this client.
 
 ## Transport Protocols
 
-The SDK supports multiple transport protocols. By default, the client uses the latest supported version of the **Model Context Protocol (MCP)**.
+The SDK supports multiple transport protocolsfor communicating with the Toolbox server. By default, the client uses the latest supported version of the **Model Context Protocol (MCP)**.
 
-You can explicitly select a protocol using the `core.WithProtocol` option during client initialization.
+You can explicitly select a protocol using the `core.WithProtocol` option during client initialization. This is useful if you need to pin the client to a specific legacy version of MCP.
 
 > [!NOTE]
 > * **MCP Transports**: These options use **Model Context Protocol over HTTP**.
