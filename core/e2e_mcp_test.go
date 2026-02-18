@@ -18,7 +18,9 @@ package core_test
 
 import (
 	"context"
+	"log"
 	"net/http"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -28,6 +30,56 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 )
+
+// Global variables to hold session-scoped fixtures
+var (
+	projectID       string = getEnvVar("GOOGLE_CLOUD_PROJECT")
+	toolboxVersion  string = getEnvVar("TOOLBOX_VERSION")
+	authToken1      string
+	authToken2      string
+	manifestVersion string = getEnvVar("TOOLBOX_MANIFEST_VERSION")
+)
+
+func TestMain(m *testing.M) {
+	ctx := context.Background()
+	log.Println("Starting E2E test setup...")
+
+	// Get secrets and auth tokens
+	log.Println("Fetching secrets and auth tokens...")
+	toolsManifestContent := accessSecretVersion(ctx, projectID, "sdk_testing_tools", manifestVersion)
+	clientID1 := accessSecretVersion(ctx, projectID, "sdk_testing_client1", "latest")
+	clientID2 := accessSecretVersion(ctx, projectID, "sdk_testing_client2", "latest")
+	authToken1 = getAuthToken(ctx, clientID1)
+	authToken2 = getAuthToken(ctx, clientID2)
+
+	// Create a temporary file for the tools manifest
+	toolsFile, err := os.CreateTemp("", "tools-*.json")
+	if err != nil {
+		log.Fatalf("Failed to create temp file for tools: %v", err)
+	}
+	if _, err := toolsFile.WriteString(toolsManifestContent); err != nil {
+		log.Fatalf("Failed to write to temp file: %v", err)
+	}
+	toolsFile.Close()
+	toolsFilePath := toolsFile.Name()
+	defer os.Remove(toolsFilePath) // Ensure cleanup
+
+	// Download and start the toolbox server
+	cmd := setupAndStartToolboxServer(ctx, toolboxVersion, toolsFilePath)
+
+	// Run Tests
+	log.Println("Setup complete. Running tests...")
+	exitCode := m.Run()
+
+	// Teardown Phase
+	log.Println("Tearing down toolbox server...")
+	if err := cmd.Process.Kill(); err != nil {
+		log.Printf("Failed to kill toolbox server process: %v", err)
+	}
+	_ = cmd.Wait() // Clean up the process resources
+
+	os.Exit(exitCode)
+}
 
 type protocolTestCase struct {
 	name      string
