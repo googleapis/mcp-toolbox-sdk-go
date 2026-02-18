@@ -30,7 +30,6 @@ import (
 	"testing"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/toolboxtransport"
 	"golang.org/x/oauth2"
 )
 
@@ -582,7 +581,7 @@ func (ft *failingTransport) RoundTrip(req *http.Request) (*http.Response, error)
 func TestToolboxTool_Invoke(t *testing.T) {
 	// A base tool for successful invocations
 	createBaseTool := func(httpClient *http.Client, baseURL string) *ToolboxTool {
-		tr := toolboxtransport.New(baseURL, httpClient)
+		tr := &dummyTransport{baseURL: baseURL}
 
 		return &ToolboxTool{
 			name:        "weather",
