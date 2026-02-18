@@ -102,7 +102,7 @@ func TestNewToolboxClient_ToolboxDeprecationWarning(t *testing.T) {
 	t.Run("Warning is logged when using Toolbox protocol", func(t *testing.T) {
 		buf.Reset()
 
-		_, err := NewToolboxClient(testURL, WithProtocol(Toolbox))
+		_, err := NewToolboxClient(testURL)
 		if err != nil {
 			t.Fatalf("NewToolboxClient failed: %v", err)
 		}
@@ -180,7 +180,7 @@ func TestNewToolboxClient_ProtocolWarnings(t *testing.T) {
 		buf.Reset()
 
 		// Initialize with Toolbox protocol
-		_, err := NewToolboxClient("https://api.example.com", withProtocol(Toolbox))
+		_, err := NewToolboxClient("https://api.example.com")
 		if err != nil {
 			t.Fatalf("Unexpected error creating client: %v", err)
 		}
@@ -401,7 +401,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	defer server.Close()
 
 	t.Run("LoadTool - Success", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		tool, err := client.LoadTool("toolA",
 			context.Background(),
 			WithBindParamString("param1", "value1"),
@@ -416,7 +416,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	})
 
 	t.Run("LoadTool - Negative Test - Unused bound parameter", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadTool("toolA",
 			context.Background(),
 			WithBindParamString("param1", "value1"),
@@ -431,7 +431,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	})
 
 	t.Run("LoadToolset - Success with non-strict mode", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		tools, err := client.LoadToolset(
 			"",
 			context.Background(),
@@ -448,7 +448,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	})
 
 	t.Run("LoadToolset - Negative Test - Unused parameter in non-strict mode", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
 			"",
 			context.Background(),
@@ -464,7 +464,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 	})
 
 	t.Run("LoadToolset - Negative Test - Unused parameter in strict mode", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
 			"",
 			context.Background(),
@@ -644,7 +644,7 @@ func TestNegativeAndEdgeCases(t *testing.T) {
 
 	t.Run("LoadTool fails when a nil ToolOption is provided", func(t *testing.T) {
 
-		client, _ := NewToolboxClient(server.URL, WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL)
 		_, err := client.LoadTool("any-tool", context.Background(), nil)
 		if err == nil {
 			t.Fatal("Expected an error when a nil option is passed to LoadTool, but got nil")
@@ -684,7 +684,7 @@ func TestNegativeAndEdgeCases(t *testing.T) {
 		}))
 		defer serverWithNoTools.Close()
 
-		client, _ := NewToolboxClient(serverWithNoTools.URL, WithHTTPClient(serverWithNoTools.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(serverWithNoTools.URL, WithHTTPClient(serverWithNoTools.Client()))
 
 		// This call would panic if the code doesn't check for a nil map.
 		_, err := client.LoadTool("any-tool", context.Background())
@@ -781,7 +781,6 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 		// Setup client with duplicate default options
 		client, _ := NewToolboxClient(server.URL,
 			WithHTTPClient(server.Client()),
-			WithProtocol(Toolbox),
 			WithDefaultToolOptions(
 				WithStrict(true),
 				WithStrict(false),
@@ -801,7 +800,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("LoadTool fails when tool is not in the manifest", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadTool("tool-that-does-not-exist", context.Background())
 
 		if err == nil {
@@ -817,7 +816,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 		errorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 		errorServer.Close()
 
-		client, _ := NewToolboxClient(errorServer.URL, WithHTTPClient(errorServer.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(errorServer.URL, WithHTTPClient(errorServer.Client()))
 		_, err := client.LoadTool("any-tool", context.Background())
 
 		if err == nil {
@@ -829,7 +828,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("LoadTool fails with unused auth tokens", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadTool("toolA", context.Background(),
 			WithAuthTokenString("unused-auth", "token"), // This auth is not needed by toolA
 		)
@@ -842,7 +841,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("LoadTool fails with unused bound parameters", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadTool("toolA", context.Background(),
 			WithBindParamString("unused-param", "value"), // This param is not defined on toolA
 		)
@@ -857,7 +856,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("LoadToolset fails with unused parameters in strict mode", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
 			"",
 			context.Background(),
@@ -875,7 +874,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("LoadToolset fails with unused parameters in non-strict mode", func(t *testing.T) {
-		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()), WithProtocol(Toolbox))
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadToolset(
 			"",
 			context.Background(),
