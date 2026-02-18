@@ -28,7 +28,6 @@ import (
 	mcp20250326 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250326"
 	mcp20250618 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250618"
 	mcp20251125 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20251125"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/toolboxtransport"
 	"golang.org/x/oauth2"
 )
 
@@ -82,7 +81,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	checkSecureHeaders(tc.baseURL, len(tc.clientHeaderSources) > 0)
 
 	// Initialize the Transport based on the selected Protocol.
-	var transportErr error = nil
+	var transportErr error
 
 	if slices.Contains(GetSupportedMcpVersions(), string(tc.protocol)) && tc.protocol != MCPv20251125 {
 		log.Printf("A newer version of MCP: v2025-11-25 is available. Please use MCPv20251125 to use the latest features.")
@@ -97,9 +96,6 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 		tc.transport, transportErr = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName)
 	case MCPv20241105:
 		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName)
-	case Toolbox:
-		log.Println("WARNING: The native Toolbox protocol is deprecated and will be removed on March 4, 2026. Please use core.MCP or specific MCP versions.")
-		tc.transport = toolboxtransport.New(tc.baseURL, tc.httpClient)
 	default:
 		return nil, fmt.Errorf("unsupported protocol version: %s", tc.protocol)
 	}

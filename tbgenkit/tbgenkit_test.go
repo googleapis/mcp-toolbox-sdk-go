@@ -1,4 +1,5 @@
 //go:build e2e
+
 // Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -46,6 +47,21 @@ func (f *failingTokenSource) Token() (*oauth2.Token, error) {
 	return nil, errors.New("token source failed as designed")
 }
 
+type protocolTestCase struct {
+	name      string
+	protocol  core.Protocol
+	isDefault bool
+}
+
+var protocolsToTest = []protocolTestCase{
+	{name: "Default (Latest)", isDefault: true},
+	{name: "v20241105", protocol: core.MCPv20241105},
+	{name: "v20250326", protocol: core.MCPv20250326},
+	{name: "v20250618", protocol: core.MCPv20250618},
+	{name: "v20251125", protocol: core.MCPv20251125},
+	{name: "MCP Alias (Latest)", protocol: core.MCP},
+}
+
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	log.Println("Starting E2E test setup...")
@@ -88,739 +104,779 @@ func TestMain(m *testing.M) {
 }
 
 func TestToGenkitTool(t *testing.T) {
-	// Helper to create a new client for each sub-test, like a function-scoped fixture
-	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err, "Failed to create ToolboxClient")
-		return client
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			// Helper to create a new client for each sub-test, like a function-scoped fixture
+			newClient := func(t *testing.T) *core.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err, "Failed to create ToolboxClient")
+				return client
+			}
+
+			ctx := context.Background()
+
+			newGenkit := func() *genkit.Genkit {
+				g := genkit.Init(ctx)
+				return g
+			}
+
+			// Helper to load the get-n-rows tool
+			getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
+				tool, err := client.LoadTool("get-n-rows", ctx)
+				require.NoError(t, err, "Failed to load tool 'get-n-rows'")
+				require.Equal(t, "get-n-rows", tool.Name())
+				return tool
+			}
+
+			t.Run("SuccessfulConversionAndExecution", func(t *testing.T) {
+				client := newClient(t)
+				tool := getNRowsTool(t, client)
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool returned unexpected error: %v", err)
+				}
+				if genkitTool == nil {
+					t.Fatal("ToGenkitTool returned nil tool, expected as valid tool")
+				}
+
+				// Verify the properties of the returned genkitTool
+				if genkitTool.Name() != tool.Name() {
+					t.Errorf("Returned genkit tool name mismatch: got %q, want %q", genkitTool.Name(), tool.Name())
+				}
+
+				// Execute the wrapped function and verify its output
+				inputForExecute := map[string]any{"num_rows": "2"}
+				actualResult, execErr := genkitTool.RunRaw(ctx, inputForExecute)
+				if execErr != nil {
+					t.Errorf("ExecuteFn returned unexpected error: %v", execErr)
+				}
+				respStr, ok := actualResult.(string)
+				require.True(t, ok, "Response should be a string")
+				assert.Contains(t, respStr, "row1")
+				assert.Contains(t, respStr, "row2")
+				assert.NotContains(t, respStr, "row3")
+			})
+
+			// --- Test Case 2: tool is nil ---
+			t.Run("NilTool", func(t *testing.T) {
+				g := newGenkit()
+				genkitTool, err := tbgenkit.ToGenkitTool(nil, g)
+				if err == nil {
+					t.Fatal("Expected error when tool is nil, got nil")
+				}
+				if genkitTool != nil {
+					t.Error("Expected nil tool when tool is nil, got non-nil")
+				}
+				expectedErrStr := "error: ToGenkitTool received a nil core.ToolboxTool pointer"
+				if err.Error() != expectedErrStr {
+					t.Errorf("Unexpected error message for nil tool: got %q, want %q", err.Error(), expectedErrStr)
+				}
+			})
+
+			// --- Test Case 3: g is nil ---
+			t.Run("NilGenkit", func(t *testing.T) {
+				client := newClient(t)
+				tool := getNRowsTool(t, client)
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, nil)
+				if err == nil {
+					t.Fatal("Expected error when Genkit instance is nil, got nil")
+				}
+				if genkitTool != nil {
+					t.Error("Expected nil tool when Genkit instance is nil, got non-nil")
+				}
+				expectedErrStr := "error: ToGenkitTool received a nil genkit.Genkit pointer"
+				if err.Error() != expectedErrStr {
+					t.Errorf("Unexpected error message for nil Genkit: got %q, want %q", err.Error(), expectedErrStr)
+				}
+			})
+
+		})
 	}
-
-	ctx := context.Background()
-
-	newGenkit := func() *genkit.Genkit {
-		g := genkit.Init(ctx)
-		return g
-	}
-
-	// Helper to load the get-n-rows tool
-	getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
-		tool, err := client.LoadTool("get-n-rows", ctx)
-		require.NoError(t, err, "Failed to load tool 'get-n-rows'")
-		require.Equal(t, "get-n-rows", tool.Name())
-		return tool
-	}
-
-	t.Run("SuccessfulConversionAndExecution", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool returned unexpected error: %v", err)
-		}
-		if genkitTool == nil {
-			t.Fatal("ToGenkitTool returned nil tool, expected as valid tool")
-		}
-
-		// Verify the properties of the returned genkitTool
-		if genkitTool.Name() != tool.Name() {
-			t.Errorf("Returned genkit tool name mismatch: got %q, want %q", genkitTool.Name(), tool.Name())
-		}
-
-		// Execute the wrapped function and verify its output
-		inputForExecute := map[string]any{"num_rows": "2"}
-		actualResult, execErr := genkitTool.RunRaw(ctx, inputForExecute)
-		if execErr != nil {
-			t.Errorf("ExecuteFn returned unexpected error: %v", execErr)
-		}
-		respStr, ok := actualResult.(string)
-		require.True(t, ok, "Response should be a string")
-		assert.Contains(t, respStr, "row1")
-		assert.Contains(t, respStr, "row2")
-		assert.NotContains(t, respStr, "row3")
-	})
-
-	// --- Test Case 2: tool is nil ---
-	t.Run("NilTool", func(t *testing.T) {
-		g := newGenkit()
-		genkitTool, err := tbgenkit.ToGenkitTool(nil, g)
-		if err == nil {
-			t.Fatal("Expected error when tool is nil, got nil")
-		}
-		if genkitTool != nil {
-			t.Error("Expected nil tool when tool is nil, got non-nil")
-		}
-		expectedErrStr := "error: ToGenkitTool received a nil core.ToolboxTool pointer"
-		if err.Error() != expectedErrStr {
-			t.Errorf("Unexpected error message for nil tool: got %q, want %q", err.Error(), expectedErrStr)
-		}
-	})
-
-	// --- Test Case 3: g is nil ---
-	t.Run("NilGenkit", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, nil)
-		if err == nil {
-			t.Fatal("Expected error when Genkit instance is nil, got nil")
-		}
-		if genkitTool != nil {
-			t.Error("Expected nil tool when Genkit instance is nil, got non-nil")
-		}
-		expectedErrStr := "error: ToGenkitTool received a nil genkit.Genkit pointer"
-		if err.Error() != expectedErrStr {
-			t.Errorf("Unexpected error message for nil Genkit: got %q, want %q", err.Error(), expectedErrStr)
-		}
-	})
-
 }
 
 func TestToGenkitTool_BoundParams(t *testing.T) {
-	// Helper to create a new client for each sub-test, like a function-scoped fixture
-	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err, "Failed to create ToolboxClient")
-		return client
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			// Helper to create a new client for each sub-test, like a function-scoped fixture
+			newClient := func(t *testing.T) *core.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err, "Failed to create ToolboxClient")
+				return client
+			}
+			ctx := context.Background()
+			newGenkit := func() *genkit.Genkit {
+				g := genkit.Init(ctx)
+				return g
+			}
+
+			// Helper to load the get-n-rows tool
+			getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
+				tool, err := client.LoadTool("get-n-rows", ctx)
+				require.NoError(t, err, "Failed to load tool 'get-n-rows'")
+				require.Equal(t, "get-n-rows", tool.Name())
+				return tool
+			}
+
+			t.Run("WithBoundParams", func(t *testing.T) {
+				client := newClient(t)
+				tool := getNRowsTool(t, client)
+				g := newGenkit()
+
+				boundTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "3"))
+				require.NoError(t, err)
+
+				genkitTool, err := tbgenkit.ToGenkitTool(boundTool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				schema := genkitTool.Definition().InputSchema
+
+				expectedSchema := map[string]any{
+					"type":       "object",
+					"properties": struct{}{},
+				}
+
+				if reflect.DeepEqual(schema, expectedSchema) {
+					t.Fatal("Input schema does not match")
+				}
+
+				result, err := genkitTool.RunRaw(ctx, map[string]any{})
+
+				require.NoError(t, err)
+
+				respStr, ok := result.(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, "row1")
+				assert.Contains(t, respStr, "row2")
+				assert.Contains(t, respStr, "row3")
+				assert.NotContains(t, respStr, "row4")
+			})
+
+			t.Run("WithBoundParams Callable", func(t *testing.T) {
+				client := newClient(t)
+				tool := getNRowsTool(t, client)
+				callable := func() (string, error) {
+					return "3", nil
+				}
+				g := newGenkit()
+
+				boundTool, err := tool.ToolFrom(core.WithBindParamStringFunc("num_rows", callable))
+				require.NoError(t, err)
+
+				genkitTool, err := tbgenkit.ToGenkitTool(boundTool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				schema := genkitTool.Definition().InputSchema
+
+				expectedSchema := map[string]any{
+					"type":       "object",
+					"properties": struct{}{},
+				}
+
+				if reflect.DeepEqual(schema, expectedSchema) {
+					t.Fatal("Input schema does not match")
+				}
+
+				result, err := genkitTool.RunRaw(ctx, map[string]any{})
+
+				require.NoError(t, err)
+
+				respStr, ok := result.(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, "row1")
+				assert.Contains(t, respStr, "row2")
+				assert.Contains(t, respStr, "row3")
+				assert.NotContains(t, respStr, "row4")
+			})
+		})
 	}
-	ctx := context.Background()
-	newGenkit := func() *genkit.Genkit {
-		g := genkit.Init(ctx)
-		return g
-	}
-
-	// Helper to load the get-n-rows tool
-	getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
-		tool, err := client.LoadTool("get-n-rows", ctx)
-		require.NoError(t, err, "Failed to load tool 'get-n-rows'")
-		require.Equal(t, "get-n-rows", tool.Name())
-		return tool
-	}
-
-	t.Run("WithBoundParams", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-		g := newGenkit()
-
-		boundTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "3"))
-		require.NoError(t, err)
-
-		genkitTool, err := tbgenkit.ToGenkitTool(boundTool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		schema := genkitTool.Definition().InputSchema
-
-		expectedSchema := map[string]any{
-			"type":       "object",
-			"properties": struct{}{},
-		}
-
-		if reflect.DeepEqual(schema, expectedSchema) {
-			t.Fatal("Input schema does not match")
-		}
-
-		result, err := genkitTool.RunRaw(ctx, map[string]any{})
-
-		require.NoError(t, err)
-
-		respStr, ok := result.(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, "row1")
-		assert.Contains(t, respStr, "row2")
-		assert.Contains(t, respStr, "row3")
-		assert.NotContains(t, respStr, "row4")
-	})
-
-	t.Run("WithBoundParams Callable", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-		callable := func() (string, error) {
-			return "3", nil
-		}
-		g := newGenkit()
-
-		boundTool, err := tool.ToolFrom(core.WithBindParamStringFunc("num_rows", callable))
-		require.NoError(t, err)
-
-		genkitTool, err := tbgenkit.ToGenkitTool(boundTool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		schema := genkitTool.Definition().InputSchema
-
-		expectedSchema := map[string]any{
-			"type":       "object",
-			"properties": struct{}{},
-		}
-
-		if reflect.DeepEqual(schema, expectedSchema) {
-			t.Fatal("Input schema does not match")
-		}
-
-		result, err := genkitTool.RunRaw(ctx, map[string]any{})
-
-		require.NoError(t, err)
-
-		respStr, ok := result.(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, "row1")
-		assert.Contains(t, respStr, "row2")
-		assert.Contains(t, respStr, "row3")
-		assert.NotContains(t, respStr, "row4")
-	})
 }
 
 func TestToGenkitTool_Auth(t *testing.T) {
-	// Helper to create a new client for each sub-test, like a function-scoped fixture
-	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err, "Failed to create ToolboxClient")
-		return client
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			// Helper to create a new client for each sub-test, like a function-scoped fixture
+			newClient := func(t *testing.T) *core.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err, "Failed to create ToolboxClient")
+				return client
+			}
+
+			// Helper to create a static token source from a string token
+			staticTokenSource := func(token string) oauth2.TokenSource {
+				return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+			}
+			ctx := context.Background()
+			newGenkit := func() *genkit.Genkit {
+				g := genkit.Init(ctx)
+				return g
+			}
+
+			t.Run("test_run_tool_no_auth", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-id-auth", ctx)
+				require.NoError(t, err)
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				_, err = genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "permission error: auth service 'my-test-auth' is required")
+			})
+
+			t.Run("test_run_tool_wrong_auth", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-id-auth", ctx)
+				require.NoError(t, err)
+				g := newGenkit()
+
+				authedTool, err := tool.ToolFrom(
+					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken2)),
+				)
+				require.NoError(t, err)
+
+				genkitTool, err := tbgenkit.ToGenkitTool(authedTool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				_, err = genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unauthorized Tool call")
+			})
+
+			t.Run("test_run_tool_auth", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-id-auth", ctx,
+					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
+				)
+				require.NoError(t, err)
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				response, err := genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
+				require.NoError(t, err)
+
+				respStr, ok := response.(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, "row2")
+			})
+
+			t.Run("test_run_tool_param_auth_no_auth", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-email-auth", ctx)
+				require.NoError(t, err)
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				_, err = genkitTool.RunRaw(ctx, map[string]any{})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "permission error: auth service 'my-test-auth' is required")
+			})
+
+			t.Run("test_run_tool_param_auth", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-email-auth", ctx,
+					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
+				)
+				require.NoError(t, err)
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				response, err := genkitTool.RunRaw(ctx, map[string]any{})
+				require.NoError(t, err)
+
+				respStr, ok := response.(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, "row4")
+				assert.Contains(t, respStr, "row5")
+				assert.Contains(t, respStr, "row6")
+			})
+
+			t.Run("test_run_tool_param_auth_no_field", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-content-auth", ctx,
+					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
+				)
+				require.NoError(t, err)
+
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				_, err = genkitTool.RunRaw(ctx, map[string]any{})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "no field named row_data in claims")
+			})
+
+			t.Run("test_run_tool_with_failing_token_source", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-id-auth", ctx,
+					core.WithAuthTokenSource("my-test-auth", &failingTokenSource{}),
+				)
+				require.NoError(t, err)
+
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				_, err = genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "failed to resolve auth token my-test-auth")
+				assert.Contains(t, err.Error(), "token source failed as designed")
+			})
+		})
 	}
-
-	// Helper to create a static token source from a string token
-	staticTokenSource := func(token string) oauth2.TokenSource {
-		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-	}
-	ctx := context.Background()
-	newGenkit := func() *genkit.Genkit {
-		g := genkit.Init(ctx)
-		return g
-	}
-
-	t.Run("test_run_tool_no_auth", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-id-auth", ctx)
-		require.NoError(t, err)
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		_, err = genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "permission error: auth service 'my-test-auth' is required")
-	})
-
-	t.Run("test_run_tool_wrong_auth", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-id-auth", ctx)
-		require.NoError(t, err)
-		g := newGenkit()
-
-		authedTool, err := tool.ToolFrom(
-			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken2)),
-		)
-		require.NoError(t, err)
-
-		genkitTool, err := tbgenkit.ToGenkitTool(authedTool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		_, err = genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unauthorized Tool call")
-	})
-
-	t.Run("test_run_tool_auth", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-id-auth", ctx,
-			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
-		)
-		require.NoError(t, err)
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		response, err := genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
-		require.NoError(t, err)
-
-		respStr, ok := response.(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, "row2")
-	})
-
-	t.Run("test_run_tool_param_auth_no_auth", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-email-auth", ctx)
-		require.NoError(t, err)
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		_, err = genkitTool.RunRaw(ctx, map[string]any{})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "permission error: auth service 'my-test-auth' is required")
-	})
-
-	t.Run("test_run_tool_param_auth", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-email-auth", ctx,
-			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
-		)
-		require.NoError(t, err)
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		response, err := genkitTool.RunRaw(ctx, map[string]any{})
-		require.NoError(t, err)
-
-		respStr, ok := response.(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, "row4")
-		assert.Contains(t, respStr, "row5")
-		assert.Contains(t, respStr, "row6")
-	})
-
-	t.Run("test_run_tool_param_auth_no_field", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-content-auth", ctx,
-			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
-		)
-		require.NoError(t, err)
-
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		_, err = genkitTool.RunRaw(ctx, map[string]any{})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "no field named row_data in claims")
-	})
-
-	t.Run("test_run_tool_with_failing_token_source", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-id-auth", ctx,
-			core.WithAuthTokenSource("my-test-auth", &failingTokenSource{}),
-		)
-		require.NoError(t, err)
-
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		_, err = genkitTool.RunRaw(ctx, map[string]any{"id": "2"})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to resolve auth token my-test-auth")
-		assert.Contains(t, err.Error(), "token source failed as designed")
-	})
 }
 
 func TestToGenkitTool_OptionalParams(t *testing.T) {
-	// Helper to create a new client for each sub-test, like a function-scoped fixture
-	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err, "Failed to create ToolboxClient")
-		return client
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			// Helper to create a new client for each sub-test, like a function-scoped fixture
+			newClient := func(t *testing.T) *core.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err, "Failed to create ToolboxClient")
+				return client
+			}
+			ctx := context.Background()
+			newGenkit := func() *genkit.Genkit {
+				g := genkit.Init(ctx)
+				return g
+			}
+
+			// Helper to load the search-rows tool
+			searchRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
+				tool, err := client.LoadTool("search-rows", ctx)
+				require.NoError(t, err, "Failed to load tool 'search-rows'")
+				return tool
+			}
+
+			t.Run("test_tool_schema_is_correct", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				expectedSchema := map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"data": map[string]any{
+							"description": "The row to narrow down the search.",
+							"type":        "string",
+						},
+						"email": map[string]any{
+							"description": "The email to search for.",
+							"type":        "string",
+						},
+						"id": map[string]any{
+							"description": "The id to narrow down the search.",
+							"type":        "integer",
+						}},
+					"required": []any{"email"},
+				}
+
+				schema := genkitTool.Definition().InputSchema
+
+				assert.Equal(t, schema, expectedSchema)
+			})
+
+			t.Run("test_run_tool_omitting_optionals", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				// Test case 1: Optional params are completely omitted
+				response1, err1 := genkitTool.RunRaw(ctx, map[string]any{
+					"email": "twishabansal@google.com",
+				})
+				require.NoError(t, err1)
+				respStr1, ok1 := response1.(string)
+				require.True(t, ok1)
+				assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
+				assert.Contains(t, respStr1, "row2")
+				assert.NotContains(t, respStr1, "row3")
+
+				// Test case 2: Optional params are explicitly nil
+				// This should produce the same result as omitting them
+				response2, err2 := genkitTool.RunRaw(ctx, map[string]any{
+					"email": "twishabansal@google.com",
+					"data":  nil,
+					"id":    nil,
+				})
+				require.NoError(t, err2)
+				respStr2, ok2 := response2.(string)
+				require.True(t, ok2)
+				assert.Equal(t, respStr1, respStr2)
+			})
+
+			t.Run("test_run_tool_with_all_params_provided", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				response, err := genkitTool.RunRaw(ctx, map[string]any{
+					"email": "twishabansal@google.com",
+					"data":  "row3",
+					"id":    3,
+				})
+				require.NoError(t, err)
+				respStr, ok := response.(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, `"email":"twishabansal@google.com"`)
+				assert.Contains(t, respStr, `"id":3`)
+				assert.Contains(t, respStr, "row3")
+				assert.NotContains(t, respStr, "row2")
+			})
+
+			t.Run("test_run_tool_missing_required_param", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+				_, err = genkitTool.RunRaw(ctx, map[string]any{
+					"data": "row5",
+					"id":   5,
+				})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "email is required")
+			})
+
+			t.Run("test_run_tool_required_param_is_nil", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				_, err = genkitTool.RunRaw(ctx, map[string]any{
+					"email": nil,
+					"id":    5,
+				})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "email is required")
+			})
+
+			// Corresponds to tests that check server-side logic by providing data that doesn't match
+			t.Run("test_run_tool_with_non_matching_data", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				// Test with a different email
+				response, err := genkitTool.RunRaw(ctx, map[string]any{
+					"email": "anubhavdhawan@google.com",
+					"id":    3,
+					"data":  "row3",
+				})
+				require.NoError(t, err)
+				assert.Equal(t, "null", response, "Response should be null for non-matching email")
+
+				// Test with different data
+				response, err = genkitTool.RunRaw(ctx, map[string]any{
+					"email": "twishabansal@google.com",
+					"id":    3,
+					"data":  "row4", // This data doesn't match the id
+				})
+				require.NoError(t, err)
+				assert.Equal(t, "null", response, "Response should be null for non-matching data")
+			})
+
+			t.Run("test_run_tool_wrong_type_for_integer", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				_, err = genkitTool.RunRaw(ctx, map[string]any{
+					"email": "twishabansal@google.com",
+					"id":    "not-an-integer",
+				})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "data did not match expected schema")
+			})
+
+			t.Run("test_run_tool_with_default_behavior", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				// Omit default params, ensure they fallback to defaults
+				response1, err1 := genkitTool.RunRaw(ctx, map[string]any{
+					"email": "twishabansal@google.com",
+				})
+				require.NoError(t, err1)
+				respStr1, ok1 := response1.(string)
+				require.True(t, ok1)
+				assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
+				assert.Contains(t, respStr1, "row2")
+
+				// Override 'data' default
+				response2, err2 := genkitTool.RunRaw(ctx, map[string]any{
+					"email": "twishabansal@google.com",
+					"data":  "row3",
+				})
+				require.NoError(t, err2)
+				respStr2, ok2 := response2.(string)
+				require.True(t, ok2)
+				assert.Contains(t, respStr2, `"email":"twishabansal@google.com"`)
+				assert.Contains(t, respStr2, "row3")
+
+				// Override 'id' default
+				response3, err3 := genkitTool.RunRaw(ctx, map[string]any{
+					"email": "twishabansal@google.com",
+					"id":    4,
+				})
+				require.NoError(t, err3)
+				assert.Equal(t, "null", response3)
+			})
+		})
 	}
-	ctx := context.Background()
-	newGenkit := func() *genkit.Genkit {
-		g := genkit.Init(ctx)
-		return g
-	}
-
-	// Helper to load the search-rows tool
-	searchRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
-		tool, err := client.LoadTool("search-rows", ctx)
-		require.NoError(t, err, "Failed to load tool 'search-rows'")
-		return tool
-	}
-
-	t.Run("test_tool_schema_is_correct", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		expectedSchema := map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"data": map[string]any{
-					"description": "The row to narrow down the search.",
-					"type":        "string",
-				},
-				"email": map[string]any{
-					"description": "The email to search for.",
-					"type":        "string",
-				},
-				"id": map[string]any{
-					"description": "The id to narrow down the search.",
-					"type":        "integer",
-				}},
-			"required": []any{"email"},
-		}
-
-		schema := genkitTool.Definition().InputSchema
-
-		assert.Equal(t, schema, expectedSchema)
-	})
-
-	t.Run("test_run_tool_omitting_optionals", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		// Test case 1: Optional params are completely omitted
-		response1, err1 := genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-		})
-		require.NoError(t, err1)
-		respStr1, ok1 := response1.(string)
-		require.True(t, ok1)
-		assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
-		assert.Contains(t, respStr1, "row2")
-		assert.NotContains(t, respStr1, "row3")
-
-		// Test case 2: Optional params are explicitly nil
-		// This should produce the same result as omitting them
-		response2, err2 := genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-			"data":  nil,
-			"id":    nil,
-		})
-		require.NoError(t, err2)
-		respStr2, ok2 := response2.(string)
-		require.True(t, ok2)
-		assert.Equal(t, respStr1, respStr2)
-	})
-
-	t.Run("test_run_tool_with_all_params_provided", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		response, err := genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-			"data":  "row3",
-			"id":    3,
-		})
-		require.NoError(t, err)
-		respStr, ok := response.(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, `"email":"twishabansal@google.com"`)
-		assert.Contains(t, respStr, `"id":3`)
-		assert.Contains(t, respStr, "row3")
-		assert.NotContains(t, respStr, "row2")
-	})
-
-	t.Run("test_run_tool_missing_required_param", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-		_, err = genkitTool.RunRaw(ctx, map[string]any{
-			"data": "row5",
-			"id":   5,
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "email is required")
-	})
-
-	t.Run("test_run_tool_required_param_is_nil", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		_, err = genkitTool.RunRaw(ctx, map[string]any{
-			"email": nil,
-			"id":    5,
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "email is required")
-	})
-
-	// Corresponds to tests that check server-side logic by providing data that doesn't match
-	t.Run("test_run_tool_with_non_matching_data", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		// Test with a different email
-		response, err := genkitTool.RunRaw(ctx, map[string]any{
-			"email": "anubhavdhawan@google.com",
-			"id":    3,
-			"data":  "row3",
-		})
-		require.NoError(t, err)
-		assert.Equal(t, "null", response, "Response should be null for non-matching email")
-
-		// Test with different data
-		response, err = genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-			"id":    3,
-			"data":  "row4", // This data doesn't match the id
-		})
-		require.NoError(t, err)
-		assert.Equal(t, "null", response, "Response should be null for non-matching data")
-	})
-
-	t.Run("test_run_tool_wrong_type_for_integer", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		_, err = genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-			"id":    "not-an-integer",
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "data did not match expected schema")
-	})
-
-	t.Run("test_run_tool_with_default_behavior", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		// Omit default params, ensure they fallback to defaults
-		response1, err1 := genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-		})
-		require.NoError(t, err1)
-		respStr1, ok1 := response1.(string)
-		require.True(t, ok1)
-		assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
-		assert.Contains(t, respStr1, "row2")
-
-		// Override 'data' default
-		response2, err2 := genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-			"data":  "row3",
-		})
-		require.NoError(t, err2)
-		respStr2, ok2 := response2.(string)
-		require.True(t, ok2)
-		assert.Contains(t, respStr2, `"email":"twishabansal@google.com"`)
-		assert.Contains(t, respStr2, "row3")
-
-		// Override 'id' default
-		response3, err3 := genkitTool.RunRaw(ctx, map[string]any{
-			"email": "twishabansal@google.com",
-			"id":    4,
-		})
-		require.NoError(t, err3)
-		assert.Equal(t, "null", response3)
-	})
 }
 
 func TestToGenkitTool_MapParams(t *testing.T) {
-	// Helper to create a new client for each sub-test, like a function-scoped fixture
-	newClient := func(t *testing.T) *core.ToolboxClient {
-		client, err := core.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err, "Failed to create ToolboxClient")
-		return client
-	}
-	ctx := context.Background()
-	newGenkit := func() *genkit.Genkit {
-		g := genkit.Init(ctx)
-		return g
-	}
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			// Helper to create a new client for each sub-test, like a function-scoped fixture
+			newClient := func(t *testing.T) *core.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err, "Failed to create ToolboxClient")
+				return client
+			}
+			ctx := context.Background()
+			newGenkit := func() *genkit.Genkit {
+				g := genkit.Init(ctx)
+				return g
+			}
 
-	// Helper to load the process-data tool
-	processDataTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
-		tool, err := client.LoadTool("process-data", ctx)
-		require.NoError(t, err, "Failed to load tool 'process-data'")
-		return tool
-	}
+			// Helper to load the process-data tool
+			processDataTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
+				tool, err := client.LoadTool("process-data", ctx)
+				require.NoError(t, err, "Failed to load tool 'process-data'")
+				return tool
+			}
 
-	t.Run("test_tool_schema_is_correct", func(t *testing.T) {
-		client := newClient(t)
-		tool := processDataTool(t, client)
-		g := newGenkit()
+			t.Run("test_tool_schema_is_correct", func(t *testing.T) {
+				client := newClient(t)
+				tool := processDataTool(t, client)
+				g := newGenkit()
 
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
 
-		expectedSchema := map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"execution_context": map[string]any{
-					"description": "A flexible set of key-value pairs for the execution environment.",
-					"type":        "object",
-				},
-				"user_scores": map[string]any{
-					"description": "A map of user IDs to their scores.",
-					"type":        "object",
-					"additionalProperties": map[string]any{
-						"type": "integer",
+				expectedSchema := map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"execution_context": map[string]any{
+							"description": "A flexible set of key-value pairs for the execution environment.",
+							"type":        "object",
+						},
+						"user_scores": map[string]any{
+							"description": "A map of user IDs to their scores.",
+							"type":        "object",
+							"additionalProperties": map[string]any{
+								"type": "integer",
+							},
+						},
+						"feature_flags": map[string]any{
+							"description": "Optional feature flags.",
+							"type":        "object",
+							"additionalProperties": map[string]any{
+								"type": "boolean",
+							},
+						}},
+					"required": []any{"execution_context", "user_scores"},
+				}
+
+				schema := genkitTool.Definition().InputSchema
+				// Extract 'required' fields for separate comparison
+				actualRequired := schema["required"]
+				expectedRequired := expectedSchema["required"]
+
+				// Remove them from the maps to compare the rest of the structure
+				delete(schema, "required")
+				delete(expectedSchema, "required")
+
+				// Compare the main structure
+				assert.Equal(t, expectedSchema, schema)
+
+				// Compare the slices ignoring order
+				assert.ElementsMatch(t, expectedRequired, actualRequired)
+			})
+
+			t.Run("test_run_tool_with_all_map_params", func(t *testing.T) {
+				// Skipping this test until integer typed maps are parsed correctly within genkit
+				t.Skip()
+				client := newClient(t)
+				tool := processDataTool(t, client)
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				// Invoke the tool with valid map parameters.
+				response, err := genkitTool.RunRaw(context.Background(), map[string]any{
+					"execution_context": map[string]any{
+						"env":  "prod",
+						"id":   1234,
+						"user": 1234.5,
 					},
-				},
-				"feature_flags": map[string]any{
-					"description": "Optional feature flags.",
-					"type":        "object",
-					"additionalProperties": map[string]any{
-						"type": "boolean",
+					"user_scores": map[string]any{
+						"user1": int(100),
+						"user2": int(200),
 					},
-				}},
-			"required": []any{"execution_context", "user_scores"},
-		}
+					"feature_flags": map[string]any{
+						"new_feature": true,
+					},
+				})
+				require.NoError(t, err)
+				respStr, ok := response.(string)
+				require.True(t, ok, "Response should be a string")
 
-		schema := genkitTool.Definition().InputSchema
-		// Extract 'required' fields for separate comparison
-		actualRequired := schema["required"]
-		expectedRequired := expectedSchema["required"]
-		
-		// Remove them from the maps to compare the rest of the structure
-		delete(schema, "required")
-		delete(expectedSchema, "required")
-		
-		// Compare the main structure
-		assert.Equal(t, expectedSchema, schema)
-		
-		// Compare the slices ignoring order
-		assert.ElementsMatch(t, expectedRequired, actualRequired)
-	})
+				assert.Contains(t, respStr, `"execution_context":{"env":"prod","id":1234,"user":1234.5}`)
+				assert.Contains(t, respStr, `"user_scores":{"user1":100,"user2":200}`)
+				assert.Contains(t, respStr, `"feature_flags":{"new_feature":true}`)
+			})
 
-	t.Run("test_run_tool_with_all_map_params", func(t *testing.T) {
-		// Skipping this test until integer typed maps are parsed correctly within genkit
-		t.Skip()
-		client := newClient(t)
-		tool := processDataTool(t, client)
-		g := newGenkit()
+			t.Run("test_run_tool_omitting_optional_map", func(t *testing.T) {
+				// Skipping this test until integer typed maps are parsed correctly within genkit
+				t.Skip()
+				client := newClient(t)
+				tool := processDataTool(t, client)
+				g := newGenkit()
 
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
 
-		// Invoke the tool with valid map parameters.
-		response, err := genkitTool.RunRaw(context.Background(), map[string]any{
-			"execution_context": map[string]any{
-				"env":  "prod",
-				"id":   1234,
-				"user": 1234.5,
-			},
-			"user_scores": map[string]any{
-				"user1": int(100),
-				"user2": int(200),
-			},
-			"feature_flags": map[string]any{
-				"new_feature": true,
-			},
+				// Invoke the tool without the optional 'feature_flags' parameter.
+				response, err := genkitTool.RunRaw(ctx, map[string]any{
+					"execution_context": map[string]any{"env": "dev"},
+					"user_scores":       map[string]any{"user3": 300},
+				})
+				require.NoError(t, err)
+				respStr, ok := response.(string)
+				require.True(t, ok, "Response should be a string")
+
+				assert.Contains(t, respStr, `"execution_context":{"env":"dev"}`)
+				assert.Contains(t, respStr, `"user_scores":{"user3":300}`)
+				assert.Contains(t, respStr, `"feature_flags":null`)
+			})
+
+			t.Run("test_run_tool_with_wrong_map_value_type", func(t *testing.T) {
+				client := newClient(t)
+				tool := processDataTool(t, client)
+				g := newGenkit()
+
+				genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+				if err != nil {
+					t.Fatalf("ToGenkitTool failed: %v", err)
+				}
+
+				// Attempt to invoke the tool with an incorrect type in a map value.
+				_, err = genkitTool.RunRaw(ctx, map[string]any{
+					"execution_context": map[string]any{"env": "staging"},
+					"user_scores": map[string]any{
+						"user4": "not-an-integer",
+					},
+				})
+
+				// Assert that an error was returned.
+				require.Error(t, err, "Expected an error for wrong map value type")
+				assert.Contains(t, err.Error(), "Expected: integer, given: string", "Error message should indicate a validation failure")
+			})
 		})
-		require.NoError(t, err)
-		respStr, ok := response.(string)
-		require.True(t, ok, "Response should be a string")
-
-		assert.Contains(t, respStr, `"execution_context":{"env":"prod","id":1234,"user":1234.5}`)
-		assert.Contains(t, respStr, `"user_scores":{"user1":100,"user2":200}`)
-		assert.Contains(t, respStr, `"feature_flags":{"new_feature":true}`)
-	})
-
-	t.Run("test_run_tool_omitting_optional_map", func(t *testing.T) {
-		// Skipping this test until integer typed maps are parsed correctly within genkit
-		t.Skip()
-		client := newClient(t)
-		tool := processDataTool(t, client)
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		// Invoke the tool without the optional 'feature_flags' parameter.
-		response, err := genkitTool.RunRaw(ctx, map[string]any{
-			"execution_context": map[string]any{"env": "dev"},
-			"user_scores":       map[string]any{"user3": 300},
-		})
-		require.NoError(t, err)
-		respStr, ok := response.(string)
-		require.True(t, ok, "Response should be a string")
-
-		assert.Contains(t, respStr, `"execution_context":{"env":"dev"}`)
-		assert.Contains(t, respStr, `"user_scores":{"user3":300}`)
-		assert.Contains(t, respStr, `"feature_flags":null`)
-	})
-
-	t.Run("test_run_tool_with_wrong_map_value_type", func(t *testing.T) {
-		client := newClient(t)
-		tool := processDataTool(t, client)
-		g := newGenkit()
-
-		genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
-		if err != nil {
-			t.Fatalf("ToGenkitTool failed: %v", err)
-		}
-
-		// Attempt to invoke the tool with an incorrect type in a map value.
-		_, err = genkitTool.RunRaw(ctx, map[string]any{
-			"execution_context": map[string]any{"env": "staging"},
-			"user_scores": map[string]any{
-				"user4": "not-an-integer",
-			},
-		})
-
-		// Assert that an error was returned.
-		require.Error(t, err, "Expected an error for wrong map value type")
-		assert.Contains(t, err.Error(), "Expected: integer, given: string", "Error message should indicate a validation failure")
-	})
+	}
 }
