@@ -18,6 +18,7 @@ package core_test
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -79,6 +80,13 @@ func TestMain(m *testing.M) {
 	_ = cmd.Wait() // Clean up the process resources
 
 	os.Exit(exitCode)
+}
+
+// failingTokenSource is a token source that always returns an error, for testing failure paths.
+type failingTokenSource struct{}
+
+func (f *failingTokenSource) Token() (*oauth2.Token, error) {
+	return nil, errors.New("token source failed as designed")
 }
 
 type protocolTestCase struct {
