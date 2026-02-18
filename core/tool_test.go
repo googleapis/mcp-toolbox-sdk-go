@@ -954,38 +954,6 @@ func TestToolboxTool_Invoke_HttpsWarning(t *testing.T) {
 	defer log.SetOutput(nil)
 	mockTokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "secret-token"})
 
-	// Helper factory that auto-mocks the MCP handshake for the warning test
-	setupTool := func(url string) *ToolboxTool {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Mock successful handshake
-			body, _ := io.ReadAll(r.Body)
-			var req jsonRPCRequest
-			json.Unmarshal(body, &req)
-			if req.Method == "initialize" {
-				res, _ := json.Marshal(map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "mock", "version": "1"}})
-				json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
-				return
-			}
-			if req.Method == "notifications/initialized" {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
-			// call response
-			res, _ := json.Marshal(map[string]any{"content": []map[string]string{{"type": "text", "text": "ok"}}})
-			json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
-		}))
-		// We use the mock server's client but inject the test URL into the transport
-		tr, _ := mcp.New(url, server.Client(), "test-client")
-		return &ToolboxTool{
-			name:      "test-tool",
-			transport: tr,
-			authTokenSources: map[string]oauth2.TokenSource{
-				"service_a": mockTokenSource,
-			},
-			boundParams: make(map[string]any),
-		}
-	}
-
 	tests := []struct {
 		name          string
 		baseURL       string
@@ -1017,7 +985,7 @@ func TestToolboxTool_Invoke_HttpsWarning(t *testing.T) {
 				boundParams: make(map[string]any),
 			}
 
-			_ = tool.Invoke(context.Background(), nil)
+			_, _ = tool.Invoke(context.Background(), nil)
 
 			logOutput := buf.String()
 			hasWarning := strings.Contains(logOutput, "WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
