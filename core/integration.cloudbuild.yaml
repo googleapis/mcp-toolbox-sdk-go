@@ -136,5 +136,5 @@ steps:
 options:
   logging: CLOUD_LOGGING_ONLY
 substitutions:
-  _TOOLBOX_VERSION: '0.26.0'
+  _TOOLBOX_VERSION: '0.27.0'
   _TOOLBOX_MANIFEST_VERSION: '34'
