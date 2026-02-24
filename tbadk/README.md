@@ -140,7 +140,7 @@ The SDK supports multiple transport protocols for communicating with the Toolbox
 You can explicitly select a protocol using the `core.WithProtocol` option during client initialization. This is useful if you need to pin the client to a specific legacy version of MCP.
 
 > [!NOTE]
-> * **MCP Transports**: These options use **Model Context Protocol over HTTP**.
+> MCP Transport options use **Model Context Protocol over HTTP**.
 
 ### Supported Protocols
 
