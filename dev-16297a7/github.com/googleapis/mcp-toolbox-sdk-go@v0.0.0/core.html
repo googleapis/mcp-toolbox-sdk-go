@@ -1,0 +1,3614 @@
+
+
+<!DOCTYPE html>
+<html lang="en" data-layout="responsive" data-local="true">
+  <head>
+    
+    <script>
+      window.addEventListener('error', window.__err=function f(e){f.p=f.p||[];f.p.push(e)});
+    </script>
+    <script>
+      (function() {
+        const theme = document.cookie.match(/prefers-color-scheme=(light|dark|auto)/)?.[1]
+        if (theme) {
+          document.querySelector('html').setAttribute('data-theme', theme);
+        }
+      }())
+    </script>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    
+    <meta class="js-gtmID" data-gtmid="">
+    <link rel="shortcut icon" href="../../../static/shared/icon/favicon.ico">
+    
+  
+    <meta name="robots" content="noindex">
+  
+
+    <link href="../../../static/frontend/frontend.min.css@version=.css" rel="stylesheet">
+    
+    
+  <title>core package - github.com/googleapis/mcp-toolbox-sdk-go/core - Go Packages</title>
+
+    
+  <link href="../../../static/frontend/unit/unit.min.css@version=.css" rel="stylesheet">
+  
+  <link href="../../../static/frontend/unit/main/main.min.css@version=.css" rel="stylesheet">
+
+
+  </head>
+  <body>
+    
+    <script>
+      function loadScript(src, mod = true) {
+        let s = document.createElement('script');
+        s.src = src;
+        if (mod) {
+          s.type = 'module';
+          s.async = true;
+          s.defer = true
+        }
+        document.head.appendChild(s);
+      }
+      loadScript("/third_party/dialog-polyfill/dialog-polyfill.js", false)
+      loadScript("/static/frontend/frontend.js");
+    </script>
+    
+  <header class="go-Header go-Header--full js-siteHeader">
+    <div class="go-Header-inner go-Header-inner--dark">
+      <nav class="go-Header-nav">
+        <a href="http://localhost:8080/" class="js-headerLogo" data-gtmc="nav link"
+            data-test-id="go-header-logo-link" role="heading" aria-level="1">
+          <img class="go-Header-logo" src="../../../static/shared/logo/go-white.svg" alt="Go">
+        </a>
+         <div class="skip-navigation-wrapper">
+            <a class="skip-to-content-link" aria-label="Skip to main content" href="core.html#main-content"> Skip to Main Content </a>
+          </div>
+        <div class="go-Header-rightContent">
+          
+<div class="go-SearchForm js-searchForm">
+  <form
+    class="go-InputGroup go-ShortcutKey go-SearchForm-form"
+    action="http://localhost:8080/search"
+    data-shortcut="/"
+    data-shortcut-alt="search"
+    data-gtmc="search form"
+    aria-label="Search for a package"
+    role="search"
+  >
+    <input name="q" class="go-Input js-searchFocus" aria-label="Search for a package" type="search"
+        autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"
+        placeholder="Search packages"
+        value="" />
+    <input name="m" value="" hidden>
+    <button class="go-Button go-Button--inverted" aria-label="Submit search">
+      <img
+        class="go-Icon"
+        height="24"
+        width="24"
+        src="../../../static/shared/icon/search_gm_grey_24dp.svg"
+        alt=""
+      />
+    </button>
+  </form>
+  <button class="go-SearchForm-expandSearch js-expandSearch" data-gtmc="nav button"
+      aria-label="Open search" data-test-id="expand-search">
+    <img class="go-Icon go-Icon--inverted" height="24" width="24"
+        src="../../../static/shared/icon/search_gm_grey_24dp.svg" alt="">
+
+  </button>
+</div>
+
+          <ul class="go-Header-menu">
+            <li class="go-Header-menuItem">
+              <a class="js-desktop-menu-hover" href="core.html#" data-gtmc="nav link">
+                Why Go
+                <img class="go-Icon" height="24" width="24" src="../../../static/shared/icon/arrow_drop_down_gm_grey_24dp.svg" alt="submenu dropdown icon">
+              </a>
+              <ul class="go-Header-submenu go-Header-submenu--why js-desktop-submenu-hover" aria-label="submenu">
+                  <li class="go-Header-submenuItem">
+                    <div>
+                      <a href="https://go.dev/solutions#case-studies">
+                        <span>Case Studies</span>
+                      </a>
+                    </div>
+                    <p>Common problems companies solve with Go</p>
+                  </li>
+                  <li class="go-Header-submenuItem">
+                    <div>
+                      <a href="https://go.dev/solutions#use-cases">
+                        <span>Use Cases</span>
+                      </a>
+                    </div>
+                    <p>Stories about how and why companies use Go</p>
+                  </li>
+                  <li class="go-Header-submenuItem">
+                    <div>
+                      <a href="https://go.dev/security/">
+                        <span>Security</span>
+                      </a>
+                    </div>
+                    <p>How Go can help keep you secure by default</p>
+                  </li>
+              </ul>
+            </li>
+            <li class="go-Header-menuItem">
+              <a href="https://go.dev/learn/" data-gtmc="nav link">Learn</a>
+            </li>
+            <li class="go-Header-menuItem">
+              <a class="js-desktop-menu-hover" href="core.html#" data-gtmc="nav link">
+                Docs
+                <img class="go-Icon" height="24" width="24" src="../../../static/shared/icon/arrow_drop_down_gm_grey_24dp.svg" alt="submenu dropdown icon">
+              </a>
+              <ul class="go-Header-submenu go-Header-submenu--docs js-desktop-submenu-hover" aria-label="submenu">
+                <li class="go-Header-submenuItem">
+                  <div>
+                    <a href="https://go.dev/doc/effective_go">
+                      <span>Effective Go</span>
+                    </a>
+                  </div>
+                  <p>Tips for writing clear, performant, and idiomatic Go code</p>
+                </li>
+                <li class="go-Header-submenuItem">
+                  <div>
+                    <a href="https://go.dev/doc/">
+                      <span>Go User Manual</span>
+                    </a>
+                  </div>
+                  <p>A complete introduction to building software with Go</p>
+                </li>
+                <li class="go-Header-submenuItem">
+                  <div>
+                    <a href="https://pkg.go.dev/std">
+                      <span>Standard library</span>
+                    </a>
+                  </div>
+                  <p>Reference documentation for Go's standard library</p>
+                </li>
+                <li class="go-Header-submenuItem">
+                  <div>
+                    <a href="https://go.dev/doc/devel/release">
+                      <span>Release Notes</span>
+                    </a>
+                  </div>
+                  <p>Learn what's new in each Go release</p>
+                </li>
+              </ul>
+            </li>
+            <li class="go-Header-menuItem go-Header-menuItem--active">
+              <a href="http://localhost:8080/" data-gtmc="nav link">Packages</a>
+            </li>
+            <li class="go-Header-menuItem">
+              <a class="js-desktop-menu-hover" href="core.html#" data-gtmc="nav link">
+                Community
+                <img class="go-Icon" height="24" width="24" src="../../../static/shared/icon/arrow_drop_down_gm_grey_24dp.svg" alt="submenu dropdown icon">
+              </a>
+              <ul class="go-Header-submenu go-Header-submenu--community js-desktop-submenu-hover" aria-label="submenu">
+                <li class="go-Header-submenuItem">
+                  <div>
+                    <a href="https://go.dev/talks/">
+                      <span>Recorded Talks</span>
+                    </a>
+                  </div>
+                  <p>Videos from prior events</p>
+                </li>
+                <li class="go-Header-submenuItem">
+                  <div>
+                    <a href="https://www.meetup.com/pro/go">
+                      <span>Meetups</span>
+                      <i class="material-icons">
+                        <img class="go-Icon" height="24" width="24"
+                            src="../../../static/shared/icon/launch_gm_grey_24dp.svg" alt="">
+                      </i>
+                    </a>
+                  </div>
+                  <p>Meet other local Go developers</p>
+                </li>
+                <li class="go-Header-submenuItem">
+                  <div>
+                    <a href="https://github.com/golang/go/wiki/Conferences">
+                      <span>Conferences</span>
+                      <i class="material-icons">
+                        <img class="go-Icon" height="24" width="24"
+                            src="../../../static/shared/icon/launch_gm_grey_24dp.svg" alt="">
+                      </i>
+                    </a>
+                  </div>
+                  <p>Learn and network with Go developers from around the world</p>
+                </li>
+                <li class="go-Header-submenuItem">
+                  <div>
+                    <a href="https://go.dev/blog">
+                      <span>Go blog</span>
+                    </a>
+                  </div>
+                  <p>The Go project's official blog.</p>
+                </li>
+                <li class="go-Header-submenuItem">
+                  <div>
+                    <a href="https://go.dev/help">
+                      <span>Go project</span>
+                    </a>
+                  </div>
+                  <p>Get help and stay informed from Go</p>
+                </li>
+                <li class="go-Header-submenuItem">
+                  <div>
+                    Get connected
+                  </div>
+                  <p></p>
+                  <div class="go-Header-socialIcons">
+                      <a
+                        class="go-Header-socialIcon"
+                        aria-label="Get connected with google-groups (Opens in new window)"
+                        title="Get connected with google-groups (Opens in new window)"
+                        href="https://groups.google.com/g/golang-nuts">
+                        <img src="../../../static/shared/logo/social/google-groups.svg" />
+                      </a>
+                      <a
+                        class="go-Header-socialIcon"
+                        aria-label="Get connected with github (Opens in new window)"
+                        title="Get connected with github (Opens in new window)"
+                        href="https://github.com/golang">
+                        <img src="../../../static/shared/logo/social/github.svg" />
+                      </a>
+                      <a
+                        class="go-Header-socialIcon"
+                        aria-label="Get connected with twitter (Opens in new window)"
+                        title="Get connected with twitter (Opens in new window)"
+                        href="https://twitter.com/golang">
+                        <img src="../../../static/shared/logo/social/twitter.svg" />
+                      </a>
+                      <a
+                        class="go-Header-socialIcon"
+                        aria-label="Get connected with reddit (Opens in new window)"
+                        title="Get connected with reddit (Opens in new window)"
+                        href="https://www.reddit.com/r/golang/">
+                        <img src="../../../static/shared/logo/social/reddit.svg" />
+                      </a>
+                      <a
+                        class="go-Header-socialIcon"
+                        aria-label="Get connected with slack (Opens in new window)"
+                        title="Get connected with slack (Opens in new window)"
+                        href="https://invite.slack.golangbridge.org/">
+                        <img src="../../../static/shared/logo/social/slack.svg" />
+                      </a>
+                      <a
+                        class="go-Header-socialIcon"
+                        aria-label="Get connected with stack-overflow (Opens in new window)"
+                        title=""
+                        href="https://stackoverflow.com/collectives/go">
+                        <img src="../../../static/shared/logo/social/stack-overflow.svg" />
+                      </a>
+                  </div>
+                </li>
+              </ul>
+            </li>
+          </ul>
+          <button class="go-Header-navOpen js-headerMenuButton go-Header-navOpen--white" data-gtmc="nav button" aria-label="Open navigation">
+          </button>
+        </div>
+      </nav>
+    </div>
+  </header>
+  <aside class="go-NavigationDrawer js-header">
+    <nav class="go-NavigationDrawer-nav">
+      <div class="go-NavigationDrawer-header">
+        <a href="https://go.dev/">
+          <img class="go-NavigationDrawer-logo" src="../../../static/shared/logo/go-blue.svg" alt="Go.">
+        </a>
+      </div>
+      <ul class="go-NavigationDrawer-list">
+          <li class="go-NavigationDrawer-listItem js-mobile-subnav-trigger go-NavigationDrawer-hasSubnav">
+            <a href="core.html#">
+              <span>Why Go</span>
+              <i class="material-icons">
+                <img class="go-Icon" height="24" width="24"
+                  src="../../../static/shared/icon/navigate_next_gm_grey_24dp.svg" alt="">
+              </i>
+            </a>
+
+            <div class="go-NavigationDrawer go-NavigationDrawer-submenuItem">
+              <div class="go-NavigationDrawer-nav">
+                <div class="go-NavigationDrawer-header">
+                  <a href="core.html#">
+                    <i class="material-icons">
+                      <img class="go-Icon" height="24" width="24"
+                        src="../../../static/shared/icon/navigate_before_gm_grey_24dp.svg" alt="">
+                      </i>
+                      Why Go
+                  </a>
+                </div>
+                <ul class="go-NavigationDrawer-list">
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://go.dev/solutions#case-studies">
+                      Case Studies
+                    </a>
+                  </li>
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://go.dev/solutions#use-cases">
+                      Use Cases
+                    </a>
+                  </li>
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://go.dev/security/">
+                      Security
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          <li class="go-NavigationDrawer-listItem">
+            <a href="https://go.dev/learn/">Learn</a>
+          </li>
+          <li class="go-NavigationDrawer-listItem js-mobile-subnav-trigger go-NavigationDrawer-hasSubnav">
+            <a href="core.html#">
+              <span>Docs</span>
+              <i class="material-icons">
+                <img class="go-Icon" height="24" width="24"
+                  src="../../../static/shared/icon/navigate_next_gm_grey_24dp.svg" alt="">
+              </i>
+            </a>
+
+            <div class="go-NavigationDrawer go-NavigationDrawer-submenuItem">
+              <div class="go-NavigationDrawer-nav">
+                <div class="go-NavigationDrawer-header">
+                  <a href="core.html#"><i class="material-icons">
+                    <img class="go-Icon" height="24" width="24"
+                      src="../../../static/shared/icon/navigate_before_gm_grey_24dp.svg" alt="">
+                    </i>
+                    Docs
+                  </a>
+                </div>
+                <ul class="go-NavigationDrawer-list">
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://go.dev/doc/effective_go">
+                      Effective Go
+                    </a>
+                  </li>
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://go.dev/doc/">
+                      Go User Manual
+                    </a>
+                  </li>
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://pkg.go.dev/std">
+                      Standard library
+                    </a>
+                  </li>
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://go.dev/doc/devel/release">
+                      Release Notes
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          <li class="go-NavigationDrawer-listItem go-NavigationDrawer-listItem--active">
+            <a href="http://localhost:8080/">Packages</a>
+          </li>
+          <li class="go-NavigationDrawer-listItem js-mobile-subnav-trigger go-NavigationDrawer-hasSubnav">
+            <a href="core.html#">
+              <span>Community</span>
+              <i class="material-icons">
+                <img class="go-Icon" height="24" width="24"
+                  src="../../../static/shared/icon/navigate_next_gm_grey_24dp.svg" alt="">
+              </i>
+            </a>
+            <div class="go-NavigationDrawer go-NavigationDrawer-submenuItem">
+              <div class="go-NavigationDrawer-nav">
+                <div class="go-NavigationDrawer-header">
+                  <a href="core.html#">
+                    <i class="material-icons">
+                      <img class="go-Icon" height="24" width="24"
+                        src="../../../static/shared/icon/navigate_before_gm_grey_24dp.svg" alt="">
+                    </i>
+                    Community
+                  </a>
+                </div>
+                <ul class="go-NavigationDrawer-list">
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://go.dev/talks/">
+                      Recorded Talks
+                    </a>
+                  </li>
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://www.meetup.com/pro/go">
+                      Meetups
+                      <i class="material-icons">
+                      <img class="go-Icon" height="24" width="24"
+                          src="../../../static/shared/icon/launch_gm_grey_24dp.svg" alt="">
+                      </i>
+                    </a>
+                  </li>
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://github.com/golang/go/wiki/Conferences">
+                      Conferences
+                      <i class="material-icons">
+                        <img class="go-Icon" height="24" width="24" src="../../../static/shared/icon/launch_gm_grey_24dp.svg" alt="">
+                      </i>
+                    </a>
+                  </li>
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://go.dev/blog">
+                      Go blog
+                    </a>
+                  </li>
+                  <li class="go-NavigationDrawer-listItem">
+                    <a href="https://go.dev/help">
+                      Go project
+                    </a>
+                  </li>
+                  <li class="go-NavigationDrawer-listItem">
+                    <div>Get connected</div>
+                    <div class="go-Header-socialIcons">
+                        <a class="go-Header-socialIcon" href="https://groups.google.com/g/golang-nuts"><img src="../../../static/shared/logo/social/google-groups.svg" /></a>
+                        <a class="go-Header-socialIcon" href="https://github.com/golang"><img src="../../../static/shared/logo/social/github.svg" /></a>
+                        <a class="go-Header-socialIcon" href="https://twitter.com/golang"><img src="../../../static/shared/logo/social/twitter.svg" /></a>
+                        <a class="go-Header-socialIcon" href="https://www.reddit.com/r/golang/"><img src="../../../static/shared/logo/social/reddit.svg" /></a>
+                        <a class="go-Header-socialIcon" href="https://invite.slack.golangbridge.org/"><img src="../../../static/shared/logo/social/slack.svg" /></a>
+                        <a class="go-Header-socialIcon" href="https://stackoverflow.com/collectives/go"><img src="../../../static/shared/logo/social/stack-overflow.svg" /></a>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+      </ul>
+    </nav>
+  </aside>
+  <div class="go-NavigationDrawer-scrim js-scrim" role="presentation"></div>
+
+    
+  <main class="go-Main" id="main-content">
+    <div class="go-Main-banner" role="alert"></div>
+    <header class="go-Main-header js-mainHeader">
+  
+  
+  <nav class="go-Main-headerBreadcrumb go-Breadcrumb" aria-label="Breadcrumb" data-test-id="UnitHeader-breadcrumb">
+    <ol>
+      
+        
+          <li data-test-id="UnitHeader-breadcrumbItem">
+            <a href="http://localhost:8080/" data-gtmc="breadcrumb link">Discover Packages</a>
+          </li>
+        
+          <li data-test-id="UnitHeader-breadcrumbItem">
+            <a href="../mcp-toolbox-sdk-go@v0.0.0.html" data-gtmc="breadcrumb link">github.com/googleapis/mcp-toolbox-sdk-go</a>
+          </li>
+        
+        <li>
+          <a href="core.html" data-gtmc="breadcrumb link" aria-current="location"
+              data-test-id="UnitHeader-breadcrumbCurrent">
+            core
+          </a>
+          
+            <button
+              class="go-Button go-Button--inline go-Clipboard js-clipboard"
+              title="Copy path to clipboard.&#10;&#10;github.com/googleapis/mcp-toolbox-sdk-go/core"
+              aria-label="Copy Path to Clipboard"
+              data-to-copy="github.com/googleapis/mcp-toolbox-sdk-go/core"
+              data-gtmc="breadcrumbs button"
+            >
+              <img
+                class="go-Icon go-Icon--accented"
+                height="24"
+                width="24"
+                src="../../../static/shared/icon/content_copy_gm_grey_24dp.svg"
+                alt=""
+              >
+            </button>
+          
+        
+      </li>
+    </ol>
+  </nav>
+
+  <div class="go-Main-headerContent">
+    
+  <div class="go-Main-headerTitle js-stickyHeader">
+    <a class="go-Main-headerLogo" href="http://localhost:8080/" aria-hidden="true" tabindex="-1" data-gtmc="header link" aria-label="Link to Go Homepage">
+      <img height="78" width="207" src="../../../static/shared/logo/go-blue.svg" alt="Go">
+    </a>
+    <h1 class="UnitHeader-titleHeading" data-test-id="UnitHeader-title">core</h1>
+    
+      <span class="go-Chip go-Chip--inverted">package</span>
+    
+    
+      
+        <button
+          class="go-Button go-Button--inline go-Clipboard js-clipboard"
+          title="Copy path to clipboard.&#10;&#10;github.com/googleapis/mcp-toolbox-sdk-go/core"
+          aria-label="Copy Path to Clipboard"
+          data-to-copy="github.com/googleapis/mcp-toolbox-sdk-go/core"
+          data-gtmc="title button"
+          tabindex="-1"
+        >
+          <img
+            class="go-Icon go-Icon--accented"
+            height="24"
+            width="24"
+            src="../../../static/shared/icon/content_copy_gm_grey_24dp.svg"
+            alt=""
+          />
+        </button>
+      
+    
+  </div>
+
+    
+      
+  <div class="go-Main-headerDetails">
+    
+      
+  <span class="go-Main-headerDetailItem" data-test-id="UnitHeader-version">
+    <a href="http://localhost:8080/github.com/googleapis/mcp-toolbox-sdk-go@v0.0.0/core?tab=versions" aria-label="Version: v0.0.0" 
+    data-gtmc="header link" aria-describedby="version-description">
+      <span class="go-textSubtle" aria-hidden="true">Version: </span>
+        v0.0.0
+    </a>
+    <div class="screen-reader-only" id="version-description" hidden>
+      Opens a new window with list of versions in this module.
+    </div>
+    
+    <span class="DetailsHeader-badge--unknown" data-test-id="UnitHeader-minorVersionBanner">
+      <span class="go-Chip DetailsHeader-span--latest">Latest</span>
+      <span class="go-Chip DetailsHeader-span--notAtLatest">
+        Latest
+        
+  <details class="go-Tooltip js-tooltip" data-gtmc="tooltip">
+    <summary>
+      <img class="go-Icon go-Icon--inverted" height="24" width="24" src="../../../static/shared/icon/alert_gm_grey_24dp.svg" alt="Warning">
+    </summary>
+    <p>This package is not in the latest version of its module.</p>
+  </details>
+
+      </span>
+      <a href="../mcp-toolbox-sdk-go/core.html" aria-label="Go to Latest Version" data-gtmc="header link">
+        <span class="go-Chip go-Chip--alert DetailsHeader-span--goToLatest">Go to latest</span>
+      </a>
+    </span>
+  </span>
+
+      
+  <span class="go-Main-headerDetailItem" data-test-id="UnitHeader-commitTime">
+    Published: Feb 24, 2026
+  </span>
+
+      
+  <span class="go-Main-headerDetailItem" data-test-id="UnitHeader-licenses">
+    License: <a href="core@tab=licenses.html" data-test-id="UnitHeader-license" 
+        data-gtmc="header link" aria-describedby="license-description">Apache-2.0</a>
+      
+    
+  </span>
+  <div class="screen-reader-only" id="license-description" hidden>
+    Opens a new window with license information.
+  </div>
+
+      
+        
+  <span class="go-Main-headerDetailItem" data-test-id="UnitHeader-imports">
+    <a href="core@tab=imports.html" aria-label="Imports: 0"
+        data-gtmc="header link" aria-describedby="imports-description">
+      <span class="go-textSubtle">Imports: </span>0
+    </a>
+  </span>
+  <div class="screen-reader-only" id="imports-description" hidden>
+    Opens a new window with list of imports.
+  </div>
+
+        
+  <span class="go-Main-headerDetailItem" data-test-id="UnitHeader-importedby">
+    <a href="http://localhost:8080/github.com/googleapis/mcp-toolbox-sdk-go@v0.0.0/core?tab=importedby" aria-label="Imported By: 0"
+        data-gtmc="header link" aria-describedby="importedby-description">
+       <span class="go-textSubtle">Imported by: </span>0
+    </a>
+  </span>
+  <div class="screen-reader-only" id="importedby-description" hidden>
+    Opens a new window with list of known importers.
+  </div>
+
+      
+    
+  </div>
+  
+  <div class="UnitHeader-overflowContainer">
+    <svg class="UnitHeader-overflowImage" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24">
+      <path d="M0 0h24v24H0z" fill="none"/>
+      <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+    </svg>
+    <select class="UnitHeader-overflowSelect js-selectNav" tabindex="-1">
+      <option value="/">Main</option>
+      <option value="/github.com/googleapis/mcp-toolbox-sdk-go@v0.0.0/core?tab=versions">
+        Versions
+      </option>
+      <option value="/github.com/googleapis/mcp-toolbox-sdk-go@v0.0.0/core?tab=licenses">
+        Licenses
+      </option>
+      
+        <option value="/github.com/googleapis/mcp-toolbox-sdk-go@v0.0.0/core?tab=imports">
+          Imports
+        </option>
+        <option value="/github.com/googleapis/mcp-toolbox-sdk-go@v0.0.0/core?tab=importedby">
+          Imported By
+        </option>
+      
+    </select>
+  </div>
+
+
+    
+  </div>
+
+</header>
+    
+      <aside class="go-Main-aside  js-mainAside">
+  
+  <div class="UnitMeta">
+    <h2 class="go-textLabel">Details</h2>
+    
+  <ul class="UnitMeta-details">
+    <li>
+      <details class="go-Tooltip js-tooltip" data-gtmc="tooltip">
+        <summary class="go-textSubtle">
+          
+  <img class="go-Icon go-Icon--accented"
+    tabindex="0"
+    role="button"src="../../../static/shared/icon/check_circle_gm_grey_24dp.svg" alt="checked" aria-label="Valid file, toggle tooltip"height="24" width="24">
+
+          Valid <a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go//go.mod" target="_blank" rel="noopener">go.mod</a> file
+          <img class="go-Icon" role="button" tabindex="0" src="../../../static/shared/icon/help_gm_grey_24dp.svg" alt="" aria-label="Toggle go.mod validity tooltip" height="24" width="24">
+        </summary>
+        <p aria-live="polite" role="tooltip">
+          The Go module system was introduced in Go 1.11 and is the official dependency management
+          solution for Go.
+        </p>
+      </details>
+    </li>
+    <li>
+      <details class="go-Tooltip js-tooltip" data-gtmc="tooltip">
+        <summary class="go-textSubtle">
+          
+  <img class="go-Icon go-Icon--accented"
+    tabindex="0"
+    role="button"src="../../../static/shared/icon/check_circle_gm_grey_24dp.svg" alt="checked" aria-label="Valid file, toggle tooltip"height="24" width="24">
+
+          Redistributable license
+          <img class="go-Icon" role="button" tabindex="0" src="../../../static/shared/icon/help_gm_grey_24dp.svg" alt="" aria-label="Toggle redistributable help tooltip" height="24" width="24">
+        </summary>
+        <p aria-live="polite" role="tooltip">
+          Redistributable licenses place minimal restrictions on how software can be used,
+          modified, and redistributed.
+        </p>
+      </details>
+    </li>
+    <li>
+      <details class="go-Tooltip js-tooltip" data-gtmc="tooltip">
+        <summary class="go-textSubtle">
+          
+  <img class="go-Icon go-Icon--accented"
+    tabindex="0"
+    role="button"src="../../../static/shared/icon/check_circle_gm_grey_24dp.svg" alt="checked" aria-label="Valid file, toggle tooltip"height="24" width="24">
+
+          Tagged version
+          <img class="go-Icon" role="button" tabindex="0" src="../../../static/shared/icon/help_gm_grey_24dp.svg" alt="" aria-label="Toggle tagged version tooltip" height="24" width="24">
+        </summary>
+        <p aria-live="polite" role="tooltip">Modules with tagged versions give importers more predictable builds.</p>
+      </details>
+    </li>
+    <li>
+      <details class="go-Tooltip js-tooltip" data-gtmc="tooltip">
+        <summary class="go-textSubtle">
+          
+  <img class="go-Icon"
+    tabindex="0"
+    role="button"src="../../../static/shared/icon/cancel_gm_grey_24dp.svg" alt="unchecked" aria-label="Missing or invalid file, toggle tooltip"height="24" width="24">
+
+          Stable version
+          <img class="go-Icon" role="button" tabindex="0" aria-label="Toggle stable version tooltip" src="../../../static/shared/icon/help_gm_grey_24dp.svg" alt="" height="24" width="24">
+        </summary>
+        <p aria-live="polite" role="tooltip">When a project reaches major version v1 it is considered stable.</p>
+      </details>
+    </li>
+    <li class="UnitMeta-detailsLearn">
+      <a href="http://localhost:8080/about#best-practices" data-gtmc="meta link">Learn more about best practices</a>
+    </li>
+  </ul>
+
+    <h2 class="go-textLabel">Repository</h2>
+    <div class="UnitMeta-repo">
+      
+        <a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/" title="/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/" target="_blank" rel="noopener">
+          /files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/
+        </a>
+      
+    </div>
+    
+  </div>
+
+</aside>
+    
+    <nav class="go-Main-nav go-Main-nav--sticky js-mainNav" aria-label="Outline">
+  <div class="go-Main-navDesktop">
+    
+  <div class="UnitOutline-jumpTo">
+    <button class="UnitOutline-jumpToInput go-ShortcutKey js-jumpToInput"
+        aria-controls="jump-to-modal"
+        aria-label="Open Jump to Identifier"
+        data-shortcut="f"
+        data-shortcut-alt="find"
+        data-test-id="jump-to-button" data-gtmc="outline button">
+      Jump to ...
+    </button>
+  </div>
+  <ul class="go-Tree js-tree" role="tree" aria-label="Outline">
+    
+      <li class="js-readmeOutline">
+        <a href="core.html#section-readme" data-gtmc="outline link">
+          README
+        </a>
+        
+  <ul id="readme-outline">
+    
+      <li>
+        <a href="core.html#readme-mcp-toolbox-core-sdk" data-gtmc="readme outline link">
+          MCP Toolbox Core SDK
+        </a>
+        
+          <ul>
+            
+              <li>
+                <a href="core.html#readme-installation" data-gtmc="readme outline link">
+                  Installation
+                </a>
+                 
+              </li>
+            
+              <li>
+                <a href="core.html#readme-quickstart" data-gtmc="readme outline link">
+                  Quickstart
+                </a>
+                 
+              </li>
+            
+              <li>
+                <a href="core.html#readme-usage" data-gtmc="readme outline link">
+                  Usage
+                </a>
+                 
+              </li>
+            
+              <li>
+                <a href="core.html#readme-transport-protocols" data-gtmc="readme outline link">
+                  Transport Protocols
+                </a>
+                
+                  <ul>
+                    
+                      <li>
+                        <a href="core.html#readme-supported-protocols" data-gtmc="readme outline link">
+                          Supported Protocols
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-example" data-gtmc="readme outline link">
+                          Example
+                        </a>
+                      </li>
+                     
+                  </ul>
+                 
+              </li>
+            
+              <li>
+                <a href="core.html#readme-loading-tools" data-gtmc="readme outline link">
+                  Loading Tools
+                </a>
+                
+                  <ul>
+                    
+                      <li>
+                        <a href="core.html#readme-load-a-toolset" data-gtmc="readme outline link">
+                          Load a toolset
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-load-a-single-tool" data-gtmc="readme outline link">
+                          Load a single tool
+                        </a>
+                      </li>
+                     
+                  </ul>
+                 
+              </li>
+            
+              <li>
+                <a href="core.html#readme-invoking-tools" data-gtmc="readme outline link">
+                  Invoking Tools
+                </a>
+                 
+              </li>
+            
+              <li>
+                <a href="core.html#readme-client-to-server-authentication" data-gtmc="readme outline link">
+                  Client to Server Authentication
+                </a>
+                
+                  <ul>
+                    
+                      <li>
+                        <a href="core.html#readme-when-is-client-to-server-authentication-needed" data-gtmc="readme outline link">
+                          When is Client-to-Server Authentication Needed?
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-how-it-works" data-gtmc="readme outline link">
+                          How it works
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-configuration" data-gtmc="readme outline link">
+                          Configuration
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-authenticating-with-google-cloud-servers" data-gtmc="readme outline link">
+                          Authenticating with Google Cloud Servers
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-step-by-step-guide-for-cloud-run" data-gtmc="readme outline link">
+                          Step by Step Guide for Cloud Run
+                        </a>
+                      </li>
+                     
+                  </ul>
+                 
+              </li>
+            
+              <li>
+                <a href="core.html#readme-authenticating-tools" data-gtmc="readme outline link">
+                  Authenticating Tools
+                </a>
+                
+                  <ul>
+                    
+                      <li>
+                        <a href="core.html#readme-when-is-authentication-needed" data-gtmc="readme outline link">
+                          When is Authentication Needed?
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-supported-authentication-mechanisms" data-gtmc="readme outline link">
+                          Supported Authentication Mechanisms
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-step-1-configure-tools-in-toolbox-service" data-gtmc="readme outline link">
+                          Step 1: Configure Tools in Toolbox Service
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-step-2-configure-sdk-client" data-gtmc="readme outline link">
+                          Step 2: Configure SDK Client
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-complete-authentication-example" data-gtmc="readme outline link">
+                          Complete Authentication Example
+                        </a>
+                      </li>
+                     
+                  </ul>
+                 
+              </li>
+            
+              <li>
+                <a href="core.html#readme-binding-parameter-values" data-gtmc="readme outline link">
+                  Binding Parameter Values
+                </a>
+                
+                  <ul>
+                    
+                      <li>
+                        <a href="core.html#readme-why-bind-parameters" data-gtmc="readme outline link">
+                          Why Bind Parameters?
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-option-b-binding-parameters-to-a-loaded-tool" data-gtmc="readme outline link">
+                          Option B: Binding Parameters to a Loaded Tool
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-option-c-binding-parameters-while-loading-tools" data-gtmc="readme outline link">
+                          Option C: Binding Parameters While Loading Tools
+                        </a>
+                      </li>
+                    
+                      <li>
+                        <a href="core.html#readme-binding-dynamic-values" data-gtmc="readme outline link">
+                          Binding Dynamic Values
+                        </a>
+                      </li>
+                     
+                  </ul>
+                 
+              </li>
+             
+          </ul>
+         
+      </li>
+    
+      <li>
+        <a href="core.html#readme-using-with-orchestration-frameworks" data-gtmc="readme outline link">
+          Using with Orchestration Frameworks
+        </a>
+         
+      </li>
+    
+      <li>
+        <a href="core.html#readme-contributing" data-gtmc="readme outline link">
+          Contributing
+        </a>
+         
+      </li>
+    
+      <li>
+        <a href="core.html#readme-license" data-gtmc="readme outline link">
+          License
+        </a>
+         
+      </li>
+    
+      <li>
+        <a href="core.html#readme-support" data-gtmc="readme outline link">
+          Support
+        </a>
+         
+      </li>
+     
+  </ul>
+
+      </li>
+    
+    
+      <li>
+        <a href="core.html#section-documentation" data-gtmc="outline link">
+          Documentation
+        </a>
+        
+<ul>
+  <li class="DocNav-overview">
+      <a href="core.html#pkg-index" data-gtmc="doc outline link">
+        Index
+      </a>
+    </li>
+    <li class="DocNav-constants">
+      <a href="core.html#pkg-constants" data-gtmc="doc outline link">
+        Constants
+      </a>
+    </li>
+    <li class="DocNav-variables">
+      <a href="core.html#pkg-variables" data-gtmc="doc outline link">
+        Variables
+      </a>
+    </li>
+    <li class="DocNav-functions">
+      <a href="core.html#pkg-functions" data-gtmc="doc outline link">
+        Functions
+      </a>
+      
+        <ul>
+          
+            <li>
+              <a href="core.html#GetGoogleIDToken" title="GetGoogleIDToken(ctx, audience)" data-gtmc="doc outline link">
+                GetGoogleIDToken(ctx, audience)
+              </a>
+            </li>
+          
+            <li>
+              <a href="core.html#GetSupportedMcpVersions" title="GetSupportedMcpVersions()" data-gtmc="doc outline link">
+                GetSupportedMcpVersions()
+              </a>
+            </li>
+          
+            <li>
+              <a href="core.html#NewCustomTokenSource" title="NewCustomTokenSource(provider)" data-gtmc="doc outline link">
+                NewCustomTokenSource(provider)
+              </a>
+            </li>
+          
+        </ul>
+      
+    </li>
+    <li class="DocNav-types">
+      <a href="core.html#pkg-types" data-gtmc="doc outline link">
+        Types
+      </a>
+      <ul>
+        
+          
+          <li>
+            <a href="core.html#ClientOption" title="type ClientOption" data-gtmc="doc outline link">
+              type ClientOption
+            </a>
+            
+              <ul>
+                
+                  <li>
+                    <a href="core.html#WithClientHeaderString" title="WithClientHeaderString(headerName, value)"
+                        data-gtmc="doc outline link">
+                      WithClientHeaderString(headerName, value)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithClientHeaderTokenSource" title="WithClientHeaderTokenSource(headerName, value)"
+                        data-gtmc="doc outline link">
+                      WithClientHeaderTokenSource(headerName, value)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithClientName" title="WithClientName(name)"
+                        data-gtmc="doc outline link">
+                      WithClientName(name)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithDefaultToolOptions" title="WithDefaultToolOptions(opts)"
+                        data-gtmc="doc outline link">
+                      WithDefaultToolOptions(opts)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithHTTPClient" title="WithHTTPClient(client)"
+                        data-gtmc="doc outline link">
+                      WithHTTPClient(client)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithProtocol" title="WithProtocol(p)"
+                        data-gtmc="doc outline link">
+                      WithProtocol(p)
+                    </a>
+                  </li>
+                
+                
+              </ul>
+             
+          </li>
+        
+          
+          <li>
+            <a href="core.html#Float" title="type Float" data-gtmc="doc outline link">
+              type Float
+            </a>
+             
+          </li>
+        
+          
+          <li>
+            <a href="core.html#Integer" title="type Integer" data-gtmc="doc outline link">
+              type Integer
+            </a>
+             
+          </li>
+        
+          
+          <li>
+            <a href="core.html#ManifestSchema" title="type ManifestSchema" data-gtmc="doc outline link">
+              type ManifestSchema
+            </a>
+             
+          </li>
+        
+          
+          <li>
+            <a href="core.html#ParameterSchema" title="type ParameterSchema" data-gtmc="doc outline link">
+              type ParameterSchema
+            </a>
+             
+          </li>
+        
+          
+          <li>
+            <a href="core.html#Protocol" title="type Protocol" data-gtmc="doc outline link">
+              type Protocol
+            </a>
+             
+          </li>
+        
+          
+          <li>
+            <a href="core.html#ToolConfig" title="type ToolConfig" data-gtmc="doc outline link">
+              type ToolConfig
+            </a>
+             
+          </li>
+        
+          
+          <li>
+            <a href="core.html#ToolOption" title="type ToolOption" data-gtmc="doc outline link">
+              type ToolOption
+            </a>
+            
+              <ul>
+                
+                  <li>
+                    <a href="core.html#WithAuthTokenSource" title="WithAuthTokenSource(authSourceName, idToken)"
+                        data-gtmc="doc outline link">
+                      WithAuthTokenSource(authSourceName, idToken)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithAuthTokenString" title="WithAuthTokenString(authSourceName, idToken)"
+                        data-gtmc="doc outline link">
+                      WithAuthTokenString(authSourceName, idToken)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamBool" title="WithBindParamBool(name, value)"
+                        data-gtmc="doc outline link">
+                      WithBindParamBool(name, value)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamBoolArray" title="WithBindParamBoolArray(name, value)"
+                        data-gtmc="doc outline link">
+                      WithBindParamBoolArray(name, value)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamBoolArrayFunc" title="WithBindParamBoolArrayFunc(name, fn)"
+                        data-gtmc="doc outline link">
+                      WithBindParamBoolArrayFunc(name, fn)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamBoolFunc" title="WithBindParamBoolFunc(name, fn)"
+                        data-gtmc="doc outline link">
+                      WithBindParamBoolFunc(name, fn)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamFloat" title="WithBindParamFloat(name, value)"
+                        data-gtmc="doc outline link">
+                      WithBindParamFloat(name, value)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamFloatArray" title="WithBindParamFloatArray(name, value)"
+                        data-gtmc="doc outline link">
+                      WithBindParamFloatArray(name, value)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamFloatArrayFunc" title="WithBindParamFloatArrayFunc(name, fn)"
+                        data-gtmc="doc outline link">
+                      WithBindParamFloatArrayFunc(name, fn)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamFloatFunc" title="WithBindParamFloatFunc(name, fn)"
+                        data-gtmc="doc outline link">
+                      WithBindParamFloatFunc(name, fn)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamInt" title="WithBindParamInt(name, value)"
+                        data-gtmc="doc outline link">
+                      WithBindParamInt(name, value)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamIntArray" title="WithBindParamIntArray(name, value)"
+                        data-gtmc="doc outline link">
+                      WithBindParamIntArray(name, value)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamIntArrayFunc" title="WithBindParamIntArrayFunc(name, fn)"
+                        data-gtmc="doc outline link">
+                      WithBindParamIntArrayFunc(name, fn)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamIntFunc" title="WithBindParamIntFunc(name, fn)"
+                        data-gtmc="doc outline link">
+                      WithBindParamIntFunc(name, fn)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamString" title="WithBindParamString(name, value)"
+                        data-gtmc="doc outline link">
+                      WithBindParamString(name, value)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamStringArray" title="WithBindParamStringArray(name, value)"
+                        data-gtmc="doc outline link">
+                      WithBindParamStringArray(name, value)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamStringArrayFunc" title="WithBindParamStringArrayFunc(name, fn)"
+                        data-gtmc="doc outline link">
+                      WithBindParamStringArrayFunc(name, fn)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithBindParamStringFunc" title="WithBindParamStringFunc(name, fn)"
+                        data-gtmc="doc outline link">
+                      WithBindParamStringFunc(name, fn)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#WithStrict" title="WithStrict(strict)"
+                        data-gtmc="doc outline link">
+                      WithStrict(strict)
+                    </a>
+                  </li>
+                
+                
+              </ul>
+             
+          </li>
+        
+          
+          <li>
+            <a href="core.html#ToolSchema" title="type ToolSchema" data-gtmc="doc outline link">
+              type ToolSchema
+            </a>
+             
+          </li>
+        
+          
+          <li>
+            <a href="core.html#ToolboxClient" title="type ToolboxClient" data-gtmc="doc outline link">
+              type ToolboxClient
+            </a>
+            
+              <ul>
+                
+                  <li>
+                    <a href="core.html#NewToolboxClient" title="NewToolboxClient(url, opts)"
+                        data-gtmc="doc outline link">
+                      NewToolboxClient(url, opts)
+                    </a>
+                  </li>
+                
+                
+                  <li>
+                    <a href="core.html#ToolboxClient.LoadTool" title="(tc) LoadTool(name, ctx, opts)"
+                        data-gtmc="doc outline link">
+                      (tc) LoadTool(name, ctx, opts)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#ToolboxClient.LoadToolset" title="(tc) LoadToolset(name, ctx, opts)"
+                        data-gtmc="doc outline link">
+                      (tc) LoadToolset(name, ctx, opts)
+                    </a>
+                  </li>
+                
+              </ul>
+             
+          </li>
+        
+          
+          <li>
+            <a href="core.html#ToolboxTool" title="type ToolboxTool" data-gtmc="doc outline link">
+              type ToolboxTool
+            </a>
+            
+              <ul>
+                
+                
+                  <li>
+                    <a href="core.html#ToolboxTool.DescribeParameters" title="(tt) DescribeParameters()"
+                        data-gtmc="doc outline link">
+                      (tt) DescribeParameters()
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#ToolboxTool.Description" title="(tt) Description()"
+                        data-gtmc="doc outline link">
+                      (tt) Description()
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#ToolboxTool.InputSchema" title="(tt) InputSchema()"
+                        data-gtmc="doc outline link">
+                      (tt) InputSchema()
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#ToolboxTool.Invoke" title="(tt) Invoke(ctx, input)"
+                        data-gtmc="doc outline link">
+                      (tt) Invoke(ctx, input)
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#ToolboxTool.Name" title="(tt) Name()"
+                        data-gtmc="doc outline link">
+                      (tt) Name()
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#ToolboxTool.Parameters" title="(tt) Parameters()"
+                        data-gtmc="doc outline link">
+                      (tt) Parameters()
+                    </a>
+                  </li>
+                
+                  <li>
+                    <a href="core.html#ToolboxTool.ToolFrom" title="(tt) ToolFrom(opts)"
+                        data-gtmc="doc outline link">
+                      (tt) ToolFrom(opts)
+                    </a>
+                  </li>
+                
+              </ul>
+             
+          </li>
+         
+      </ul>
+    </li>
+  
+  
+</ul>
+
+      </li>
+    
+    
+      <li>
+        <a href="core.html#section-sourcefiles" data-gtmc="outline link">
+          Source Files
+        </a>
+      </li>
+    
+    
+      <li>
+        <a href="core.html#section-directories" data-gtmc="outline link">
+          Directories
+        </a>
+      </li>
+    
+  </ul>
+
+  </div>
+  <div class="go-Main-navMobile js-mainNavMobile">
+    <label class="go-Label">
+      <select class="go-Select">
+        
+          <option selected disabled>README</option>
+        
+      </select>
+    </label>
+  </div>
+</nav>
+    <article class="go-Main-article js-mainContent">
+  <div class="UnitDetails" data-test-id="UnitDetails" style="display: block;">
+    <div class="UnitDetails-content js-unitDetailsContent" data-test-id="UnitDetails-content">
+      
+        
+  <div class="UnitReadme UnitReadme--expanded js-readme">
+    <h2 class="UnitReadme-title" id="section-readme">
+      <img class="go-Icon" height="24" width="24" src="../../../static/shared/icon/chrome_reader_mode_gm_grey_24dp.svg" alt="">
+      README
+      <a class="UnitReadme-idLink" href="core.html#section-readme" title="Go to Readme" aria-label="Go to Readme">¶</a>
+    </h2>
+    
+      <div class="UnitReadme-content" data-test-id="Unit-readmeContent">
+        <div class="Overview-readmeContent js-readmeContent"><p><img src="https://raw.githubusercontent.com/googleapis/genai-toolbox/main/logo.png" alt="MCP Toolbox Logo"/></p>
+<h3 class="h1" id="readme-mcp-toolbox-core-sdk">MCP Toolbox Core SDK</h3>
+<p><a href="https://opensource.org/licenses/Apache-2.0" rel="nofollow"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"/></a></p>
+<p>This SDK allows you to seamlessly integrate the functionalities of
+<a href="https://github.com/googleapis/genai-toolbox" rel="nofollow">Toolbox</a> allowing you to load and
+use tools defined in the service as standard Go structs within your GenAI
+applications.</p>
+<p>This simplifies integrating external functionalities (like APIs, databases, or
+custom logic) managed by the Toolbox into your workflows, especially those
+involving Large Language Models (LLMs).</p>
+
+
+<ul>
+<li><a href="core.html#readme-mcp-toolbox-core-sdk" rel="nofollow">MCP Toolbox Core SDK</a>
+<ul>
+<li><a href="core.html#readme-installation" rel="nofollow">Installation</a></li>
+<li><a href="core.html#readme-quickstart" rel="nofollow">Quickstart</a></li>
+<li><a href="core.html#readme-usage" rel="nofollow">Usage</a></li>
+<li><a href="core.html#readme-transport-protocols" rel="nofollow">Transport Protocols</a>
+<ul>
+<li><a href="core.html#readme-supported-protocols" rel="nofollow">Supported Protocols</a></li>
+<li><a href="core.html#readme-example" rel="nofollow">Example</a></li>
+</ul>
+</li>
+<li><a href="core.html#readme-loading-tools" rel="nofollow">Loading Tools</a>
+<ul>
+<li><a href="core.html#readme-load-a-toolset" rel="nofollow">Load a toolset</a></li>
+<li><a href="core.html#readme-load-a-single-tool" rel="nofollow">Load a single tool</a></li>
+</ul>
+</li>
+<li><a href="core.html#readme-invoking-tools" rel="nofollow">Invoking Tools</a></li>
+<li><a href="core.html#readme-client-to-server-authentication" rel="nofollow">Client to Server Authentication</a>
+<ul>
+<li><a href="core.html#readme-when-is-client-to-server-authentication-needed" rel="nofollow">When is Client-to-Server Authentication Needed?</a></li>
+<li><a href="core.html#readme-how-it-works" rel="nofollow">How it works</a></li>
+<li><a href="core.html#readme-configuration" rel="nofollow">Configuration</a></li>
+<li><a href="core.html#readme-authenticating-with-google-cloud-servers" rel="nofollow">Authenticating with Google Cloud Servers</a></li>
+<li><a href="core.html#readme-step-by-step-guide-for-cloud-run" rel="nofollow">Step by Step Guide for Cloud Run</a></li>
+</ul>
+</li>
+<li><a href="core.html#readme-authenticating-tools" rel="nofollow">Authenticating Tools</a>
+<ul>
+<li><a href="core.html#readme-when-is-authentication-needed" rel="nofollow">When is Authentication Needed?</a></li>
+<li><a href="core.html#readme-supported-authentication-mechanisms" rel="nofollow">Supported Authentication Mechanisms</a></li>
+<li><a href="core.html#readme-step-1-configure-tools-in-toolbox-service" rel="nofollow">Step 1: Configure Tools in Toolbox Service</a></li>
+<li><a href="core.html#readme-step-2-configure-sdk-client" rel="nofollow">Step 2: Configure SDK Client</a>
+<ul>
+<li><a href="core.html#readme-provide-an-id-token-retriever-function" rel="nofollow">Provide an ID Token Retriever Function</a></li>
+<li><a href="core.html#readme-option-a-add-default-authentication-to-a-client" rel="nofollow">Option A: Add Default Authentication to a Client</a></li>
+<li><a href="core.html#readme-option-b-add-authentication-to-a-loaded-tool" rel="nofollow">Option B: Add Authentication to a Loaded Tool</a></li>
+<li><a href="core.html#readme-option-c-add-authentication-while-loading-tools" rel="nofollow">Option C: Add Authentication While Loading Tools</a></li>
+</ul>
+</li>
+<li><a href="core.html#readme-complete-authentication-example" rel="nofollow">Complete Authentication Example</a></li>
+</ul>
+</li>
+<li><a href="core.html#readme-binding-parameter-values" rel="nofollow">Binding Parameter Values</a>
+<ul>
+<li><a href="core.html#readme-why-bind-parameters" rel="nofollow">Why Bind Parameters?</a>
+<ul>
+<li><a href="core.html#readme-option-a-add-default-bound-parameters-to-a-client" rel="nofollow">Option A: Add Default Bound Parameters to a Client</a></li>
+</ul>
+</li>
+<li><a href="core.html#readme-option-b-binding-parameters-to-a-loaded-tool" rel="nofollow">Option B: Binding Parameters to a Loaded Tool</a></li>
+<li><a href="core.html#readme-option-c-binding-parameters-while-loading-tools" rel="nofollow">Option C: Binding Parameters While Loading Tools</a></li>
+<li><a href="core.html#readme-binding-dynamic-values" rel="nofollow">Binding Dynamic Values</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="core.html#readme-using-with-orchestration-frameworks" rel="nofollow">Using with Orchestration Frameworks</a></li>
+<li><a href="core.html#readme-contributing" rel="nofollow">Contributing</a></li>
+<li><a href="core.html#readme-license" rel="nofollow">License</a></li>
+<li><a href="core.html#readme-support" rel="nofollow">Support</a></li>
+</ul>
+
+<h4 class="h2" id="readme-installation">Installation</h4>
+<pre><code>go get github.com/googleapis/mcp-toolbox-sdk-go
+</code></pre>
+<p>This SDK is supported on Go version 1.24.4 and higher.</p>
+<blockquote>
+<p>[!NOTE]</p>
+<ul>
+<li>While the SDK itself is synchronous, you can execute its functions within goroutines to achieve asynchronous behavior.</li>
+</ul>
+</blockquote>
+<h4 class="h2" id="readme-quickstart">Quickstart</h4>
+<p>Here&#39;s a minimal example to get you started. Ensure your Toolbox service is
+running and accessible.</p>
+<pre><code>package main
+
+import (
+	&#34;context&#34;
+	&#34;fmt&#34;
+	&#34;github.com/googleapis/mcp-toolbox-sdk-go/core&#34;
+)
+
+func quickstart() string {
+	ctx := context.Background()
+	inputs := map[string]any{&#34;location&#34;: &#34;London&#34;}
+	client, err := core.NewToolboxClient(&#34;http://localhost:5000&#34;)
+	if err != nil {
+		return fmt.Sprintln(&#34;Could not start Toolbox Client&#34;, err)
+	}
+	tool, err := client.LoadTool(&#34;get_weather&#34;, ctx)
+	if err != nil {
+		return fmt.Sprintln(&#34;Could not load Toolbox Tool&#34;, err)
+	}
+	result, err := tool.Invoke(ctx, inputs)
+	if err != nil {
+		return fmt.Sprintln(&#34;Could not invoke tool&#34;, err)
+	}
+	return fmt.Sprintln(result)
+}
+
+func main() {
+	fmt.Println(quickstart())
+}
+</code></pre>
+<h4 class="h2" id="readme-usage">Usage</h4>
+<p>Import and initialize a Toolbox client, pointing it to the URL of your running
+Toolbox service.</p>
+<pre><code>import &#34;github.com/googleapis/mcp-toolbox-sdk-go/core&#34;
+
+client, err := core.NewToolboxClient(&#34;http://localhost:5000&#34;)
+</code></pre>
+<p>All interactions for loading and invoking tools happen through this client.</p>
+<blockquote>
+<p>[!NOTE]
+For advanced use cases, you can provide an external custom <code>http.Client</code>
+during initialization (e.g., <code>core.NewToolboxClient(URL, core.WithHTTPClient(myClient)</code>). If you
+provide your own session, you are responsible for managing its lifecycle;
+<code>ToolboxClient</code> <em>will not</em> close it.</p>
+</blockquote>
+<blockquote>
+<p>[!IMPORTANT]
+Closing the <code>ToolboxClient</code> also closes the underlying network session shared by
+all tools loaded from that client. As a result, any tool instances you have
+loaded will cease to function and will raise an error if you attempt to invoke
+them after the client is closed.</p>
+</blockquote>
+<h4 class="h2" id="readme-transport-protocols">Transport Protocols</h4>
+<p>The SDK supports multiple transport protocols for communicating with the Toolbox server. By default, the client uses the latest supported version of the <strong>Model Context Protocol (MCP)</strong>.</p>
+<p>You can explicitly select a protocol using the <code>core.WithProtocol</code> option during client initialization. This is useful if you need to use the native Toolbox HTTP protocol or pin the client to a specific legacy version of MCP.</p>
+<blockquote>
+<p>[!NOTE]</p>
+<ul>
+<li><strong>Native Toolbox Transport</strong>: This uses the service&#39;s native <strong>REST over HTTP</strong> API.</li>
+<li><strong>MCP Transports</strong>: These options use the <strong>Model Context Protocol over HTTP</strong>.</li>
+</ul>
+</blockquote>
+<h5 class="h3" id="readme-supported-protocols">Supported Protocols</h5>
+<blockquote>
+<p>[!WARNING]
+The native Toolbox protocol (<code>core.Toolbox</code>) is deprecated and will be removed on March 4, 2026. Please use <code>core.MCP</code> or specific MCP versions.</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th align="left">Constant</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left"><code>core.MCP</code></td>
+<td align="left"><strong>(Default)</strong> Alias for the latest supported MCP version (currently <code>v2025-06-18</code>).</td>
+</tr>
+<tr>
+<td align="left"><code>core.Toolbox</code></td>
+<td align="left"><strong>Deprecated</strong> The native Toolbox HTTP protocol.</td>
+</tr>
+<tr>
+<td align="left"><code>core.MCPv20251125</code></td>
+<td align="left">MCP Protocol version 2025-11-25.</td>
+</tr>
+<tr>
+<td align="left"><code>core.MCPv20250618</code></td>
+<td align="left">MCP Protocol version 2025-06-18.</td>
+</tr>
+<tr>
+<td align="left"><code>core.MCPv20250326</code></td>
+<td align="left">MCP Protocol version 2025-03-26.</td>
+</tr>
+<tr>
+<td align="left"><code>core.MCPv20241105</code></td>
+<td align="left">MCP Protocol version 2024-11-05.</td>
+</tr>
+</tbody>
+</table>
+<h5 class="h3" id="readme-example">Example</h5>
+<p>If you wish to use the native Toolbox protocol:</p>
+<pre><code>import &#34;github.com/googleapis/mcp-toolbox-sdk-go/core&#34;
+
+client, err := core.NewToolboxClient(
+    &#34;http://localhost:5000&#34;,
+    core.WithProtocol(core.Toolbox),
+)
+</code></pre>
+<p>If you want to pin the MCP Version 2025-03-26:</p>
+<pre><code>import &#34;github.com/googleapis/mcp-toolbox-sdk-go/core&#34;
+
+client, err := core.NewToolboxClient(
+    &#34;http://localhost:5000&#34;,
+    core.WithProtocol(core.MCPv20250326),
+)
+</code></pre>
+<h4 class="h2" id="readme-loading-tools">Loading Tools</h4>
+<p>You can load tools individually or in groups (toolsets) as defined in your
+Toolbox service configuration. Loading a toolset is convenient when working with
+multiple related functions, while loading a single tool offers more granular
+control.</p>
+<h5 class="h3" id="readme-load-a-toolset">Load a toolset</h5>
+<p>A toolset is a collection of related tools. You can load all tools in a toolset
+or a specific one:</p>
+<pre><code>// Load default toolset by providing an empty string as the name
+tools, err := client.LoadToolset(&#34;&#34;, ctx)
+
+// Load a specific toolset
+tools, err := client.LoadToolset(&#34;my-toolset&#34;, ctx)
+</code></pre>
+<h5 class="h3" id="readme-load-a-single-tool">Load a single tool</h5>
+<p>Loads a specific tool by its unique name. This provides fine-grained control.</p>
+<pre><code>tool, err = client.LoadTool(&#34;my-tool&#34;, ctx)
+</code></pre>
+<h4 class="h2" id="readme-invoking-tools">Invoking Tools</h4>
+<p>Once loaded, tools behave like Go structs. You invoke them using <code>Invoke</code> method
+by passing arguments corresponding to the parameters defined in the tool&#39;s
+configuration within the Toolbox service.</p>
+<pre><code>tool, err = client.LoadTool(&#34;my-tool&#34;, ctx)
+inputs := map[string]any{&#34;location&#34;: &#34;London&#34;}
+result, err := tool.Invoke(ctx, inputs)
+</code></pre>
+<blockquote>
+<p>[!TIP]
+For a more comprehensive guide on setting up the Toolbox service itself, which
+you&#39;ll need running to use this SDK, please refer to the <a href="https://googleapis.github.io/genai-toolbox/getting-started/local_quickstart" rel="nofollow">Toolbox Quickstart
+Guide</a>.</p>
+</blockquote>
+<h4 class="h2" id="readme-client-to-server-authentication">Client to Server Authentication</h4>
+<p>This section describes how to authenticate the ToolboxClient itself when
+connecting to a Toolbox server instance that requires authentication. This is
+crucial for securing your Toolbox server endpoint, especially when deployed on
+platforms like Cloud Run, GKE,  or any environment where unauthenticated access is restricted.</p>
+<p>This client-to-server authentication ensures that the Toolbox server can verify
+the identity of the client making the request before any tool is loaded or
+called. It is different from <a href="core.html#readme-authenticating-tools" rel="nofollow">Authenticating Tools</a>,
+which deals with providing credentials for specific tools within an already
+connected Toolbox session.</p>
+<h5 class="h3" id="readme-when-is-client-to-server-authentication-needed">When is Client-to-Server Authentication Needed?</h5>
+<p>You&#39;ll need this type of authentication if your Toolbox server is configured to
+deny unauthenticated requests. For example:</p>
+<ul>
+<li>Your Toolbox server is deployed on Cloud Run and configured to &#34;Require authentication.&#34;</li>
+<li>Your server is behind an Identity-Aware Proxy (IAP) or a similar
+authentication layer.</li>
+<li>You have custom authentication middleware on your self-hosted Toolbox server.</li>
+</ul>
+<p>Without proper client authentication in these scenarios, attempts to connect or
+make calls (like <code>LoadTool</code>) will likely fail with <code>Unauthorized</code> errors.</p>
+<h5 class="h3" id="readme-how-it-works">How it works</h5>
+<p>The <code>ToolboxClient</code> allows you to specify TokenSources that dynamically generate HTTP headers for
+every request sent to the Toolbox server. The most common use case is to add an
+Authorization header with a bearer token (e.g., a Google ID token).</p>
+<p>These header-generating functions are called just before each request, ensuring
+that fresh credentials or header values can be used.</p>
+<h5 class="h3" id="readme-configuration">Configuration</h5>
+<p>You can configure these dynamic headers as seen below:</p>
+<pre><code>import &#34;github.com/googleapis/mcp-toolbox-sdk-go/core&#34;
+
+tokenProvider := func() string {
+	return &#34;header3_value&#34;
+}
+
+staticTokenSource := oauth2.StaticTokenSource(&amp;oauth2.Token{AccessToken: &#34;header2_value&#34;})
+dynamicTokenSource := core.NewCustomTokenSource(tokenProvider)
+
+client, err := core.NewToolboxClient(
+  &#34;toolbox-url&#34;,
+  core.WithClientHeaderString(&#34;header1&#34;, &#34;header1_value&#34;),
+  core.WithClientHeaderTokenSource(&#34;header2&#34;, staticTokenSource),
+  core.WithClientHeaderTokenSource(&#34;header3&#34;, dynamicTokenSource),
+)
+</code></pre>
+<h5 class="h3" id="readme-authenticating-with-google-cloud-servers">Authenticating with Google Cloud Servers</h5>
+<p>For Toolbox servers hosted on Google Cloud (e.g., Cloud Run) and requiring
+<code>Google ID token</code> authentication, the helper module
+<a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/core/auth.go" rel="nofollow">auth_methods</a> provides utility functions.</p>
+<h5 class="h3" id="readme-step-by-step-guide-for-cloud-run">Step by Step Guide for Cloud Run</h5>
+<ol>
+<li><strong>Configure Permissions</strong>: <a href="https://cloud.google.com/run/docs/securing/managing-access#service-add-principals" rel="nofollow">Grant</a> the <code>roles/run.invoker</code> IAM role on the Cloud
+Run service to the principal. This could be your <code>user account email</code> or a
+<code>service account</code>.</li>
+<li><strong>Configure Credentials</strong>
+<ul>
+<li>Local Development: Set up
+<a href="https://cloud.google.com/docs/authentication/set-up-adc-local-dev-environment" rel="nofollow">ADC</a>.</li>
+<li>Google Cloud Environments: When running within Google Cloud (e.g., Compute
+Engine, GKE, another Cloud Run service, Cloud Functions), ADC is typically
+configured automatically, using the environment&#39;s default service account.</li>
+</ul>
+</li>
+<li><strong>Connect to the Toolbox Server</strong>
+<pre><code>import &#34;github.com/googleapis/mcp-toolbox-sdk-go/core&#34;
+import &#34;context&#34;
+
+ctx := context.Background()
+
+token, err := core.GetGoogleIDToken(ctx, URL)
+
+client, err := core.NewToolboxClient(
+  URL,
+  core.WithClientHeaderString(&#34;Authorization&#34;, token),
+)
+
+// Now, you can use the client as usual.
+</code></pre>
+</li>
+</ol>
+<h4 class="h2" id="readme-authenticating-tools">Authenticating Tools</h4>
+<blockquote>
+<p>[!WARNING]
+<strong>Always use HTTPS</strong> to connect your application with the Toolbox service,
+especially in <strong>production environments</strong> or whenever the communication
+involves <strong>sensitive data</strong> (including scenarios where tools require
+authentication tokens). Using plain HTTP lacks encryption and exposes your
+application and data to significant security risks, such as eavesdropping and
+tampering.</p>
+</blockquote>
+<p>Tools can be configured within the Toolbox service to require authentication,
+ensuring only authorized users or applications can invoke them, especially when
+accessing sensitive data.</p>
+<h5 class="h3" id="readme-when-is-authentication-needed">When is Authentication Needed?</h5>
+<p>Authentication is configured per-tool within the Toolbox service itself. If a
+tool you intend to use is marked as requiring authentication in the service, you
+must configure the SDK client to provide the necessary credentials (currently
+Oauth2 tokens) when invoking that specific tool.</p>
+<h5 class="h3" id="readme-supported-authentication-mechanisms">Supported Authentication Mechanisms</h5>
+<p>The Toolbox service enables secure tool usage through <strong>Authenticated Parameters</strong>.
+For detailed information on how these mechanisms work within the Toolbox service and how to configure them, please refer to <a href="https://googleapis.github.io/genai-toolbox/resources/tools/#authenticated-parameters" rel="nofollow">Toolbox Service Documentation - Authenticated Parameters</a>.</p>
+<h5 class="h3" id="readme-step-1-configure-tools-in-toolbox-service">Step 1: Configure Tools in Toolbox Service</h5>
+<p>First, ensure the target tool(s) are configured correctly in the Toolbox service
+to require authentication. Refer to the <a href="https://googleapis.github.io/genai-toolbox/resources/tools/#authenticated-parameters" rel="nofollow">Toolbox Service Documentation -
+Authenticated
+Parameters</a>
+for instructions.</p>
+<h5 class="h3" id="readme-step-2-configure-sdk-client">Step 2: Configure SDK Client</h5>
+<p>Your application needs a way to obtain the required Oauth2 token for the
+authenticated user. The SDK requires you to provide a function capable of
+retrieving this token <em>when the tool is invoked</em>.</p>
+<h6 class="h4" id="readme-provide-an-id-token-retriever-function">Provide an ID Token Retriever Function</h6>
+<p>You must provide the SDK with a function that returns the
+necessary token when called. The implementation depends on your application&#39;s
+authentication flow (e.g., retrieving a stored token, initiating an OAuth flow).</p>
+<blockquote>
+<p>[!IMPORTANT]
+The name used when registering the getter function with the SDK (e.g.,
+<code>&#34;my_api_token&#34;</code>) must exactly match the <code>name</code> of the corresponding
+<code>authServices</code> defined in the tool&#39;s configuration within the Toolbox service.</p>
+</blockquote>
+<pre><code>func getAuthToken() string {
+  // ... Logic to retrieve ID token (e.g., from local storage, OAuth flow)
+  // This example just returns a placeholder. Replace with your actual token retrieval.
+	return &#34;YOUR_ID_TOKEN&#34; // Placeholder
+}
+</code></pre>
+<blockquote>
+<p>[!TIP]
+Your token retriever function is invoked every time an authenticated parameter
+requires a token for a tool call. Consider implementing caching logic within
+this function to avoid redundant token fetching or generation, especially for
+tokens with longer validity periods or if the retrieval process is
+resource-intensive.</p>
+</blockquote>
+<h6 class="h4" id="readme-option-a-add-default-authentication-to-a-client">Option A: Add Default Authentication to a Client</h6>
+<p>You can add default tool level authentication to a client.
+Every tool / toolset loaded by the client will contain the auth token.</p>
+<pre><code>
+ctx := context.Background()
+
+client, err := core.NewToolboxClient(&#34;http://127.0.0.1:5000&#34;,
+	core.WithDefaultToolOptions(
+		core.WithAuthTokenString(&#34;my-auth-1&#34;, &#34;auth-value&#34;),
+	),
+)
+
+AuthTool, err := client.LoadTool(&#34;my-tool&#34;, ctx)
+</code></pre>
+<h6 class="h4" id="readme-option-b-add-authentication-to-a-loaded-tool">Option B: Add Authentication to a Loaded Tool</h6>
+<p>You can add the token retriever function to a tool object <em>after</em> it has been
+loaded. This modifies the specific tool instance.</p>
+<pre><code>
+ctx := context.Background()
+
+client, err := core.NewToolboxClient(&#34;http://127.0.0.1:5000&#34;)
+
+tool, err := client.LoadTool(&#34;my-tool&#34;, ctx)
+
+AuthTool, err := tool.ToolFrom(
+  core.WithAuthTokenSource(&#34;my-auth&#34;, headerTokenSource),
+  core.WithAuthTokenString(&#34;my-auth-1&#34;, &#34;value&#34;),
+  )
+</code></pre>
+<h6 class="h4" id="readme-option-c-add-authentication-while-loading-tools">Option C: Add Authentication While Loading Tools</h6>
+<p>You can provide the token retriever(s) directly during the <code>LoadTool</code> or
+<code>LoadToolset</code> calls. This applies the authentication configuration only to the
+tools loaded in that specific call, without modifying the original tool objects
+if they were loaded previously.</p>
+<pre><code>AuthTool, err := client.LoadTool(&#34;my-tool&#34;, ctx, core.WithAuthTokenString(&#34;my-auth-1&#34;, &#34;value&#34;))
+
+// or
+
+AuthTools, err := client.LoadToolset(
+  &#34;my-toolset&#34;,
+  ctx,
+  core.WithAuthTokenString(&#34;my-auth-1&#34;, &#34;value&#34;),
+)
+</code></pre>
+<blockquote>
+<p>[!NOTE]
+Adding auth tokens during loading only affect the tools loaded within that
+call.</p>
+</blockquote>
+<h5 class="h3" id="readme-complete-authentication-example">Complete Authentication Example</h5>
+<pre><code>import &#34;github.com/googleapis/mcp-toolbox-sdk-go/core&#34;
+import &#34;fmt&#34;
+
+func getAuthToken() string {
+  // ... Logic to retrieve ID token (e.g., from local storage, OAuth flow)
+  // This example just returns a placeholder. Replace with your actual token retrieval.
+	return &#34;YOUR_ID_TOKEN&#34; // Placeholder
+}
+
+func main() {
+  ctx := context.Background()
+  inputs := map[string]any{&#34;input&#34;: &#34;some input&#34;}
+
+  dynamicTokenSource := core.NewCustomTokenSource(getAuthToken)
+
+  client, err := core.NewToolboxClient(&#34;http://127.0.0.1:5000&#34;)
+  tool, err := client.LoadTool(&#34;my-tool&#34;, ctx)
+  AuthTool, err := tool.ToolFrom(core.WithAuthTokenSource(&#34;my_auth&#34;, dynamicTokenSource))
+
+  result, err := AuthTool.Invoke(ctx, inputs)
+
+  fmt.Println(result)
+}
+</code></pre>
+<blockquote>
+<p>[!NOTE]
+An auth token getter for a specific name (e.g., &#34;GOOGLE_ID&#34;) will replace any
+client header with the same name followed by &#34;_token&#34; (e.g.,
+&#34;GOOGLE_ID_token&#34;).</p>
+</blockquote>
+<h4 class="h2" id="readme-binding-parameter-values">Binding Parameter Values</h4>
+<p>The SDK allows you to pre-set, or &#34;bind&#34;, values for specific tool parameters
+before the tool is invoked or even passed to an LLM. These bound values are
+fixed and will not be requested or modified by the LLM during tool use.</p>
+<h5 class="h3" id="readme-why-bind-parameters">Why Bind Parameters?</h5>
+<ul>
+<li><strong>Protecting sensitive information:</strong>  API keys, secrets, etc.</li>
+<li><strong>Enforcing consistency:</strong> Ensuring specific values for certain parameters.</li>
+<li><strong>Pre-filling known data:</strong>  Providing defaults or context.</li>
+</ul>
+<blockquote>
+<p>[!IMPORTANT]
+The parameter names used for binding (e.g., <code>&#34;api_key&#34;</code>) must exactly match the
+parameter names defined in the tool&#39;s configuration within the Toolbox
+service.</p>
+</blockquote>
+<blockquote>
+<p>[!NOTE]
+You do not need to modify the tool&#39;s configuration in the Toolbox service to
+bind parameter values using the SDK.</p>
+</blockquote>
+<h6 class="h4" id="readme-option-a-add-default-bound-parameters-to-a-client">Option A: Add Default Bound Parameters to a Client</h6>
+<p>You can add default tool level bound parameters to a client. Every tool / toolset<br/>
+loaded by the client will have the bound parameter.</p>
+<pre><code>
+ctx := context.Background()
+
+client, err := core.NewToolboxClient(&#34;http://127.0.0.1:5000&#34;,
+	core.WithDefaultToolOptions(
+		core.WithBindParamString(&#34;param1&#34;, &#34;value&#34;),
+	),
+)
+
+boundTool, err := client.LoadTool(&#34;my-tool&#34;, ctx)
+</code></pre>
+<h5 class="h3" id="readme-option-b-binding-parameters-to-a-loaded-tool">Option B: Binding Parameters to a Loaded Tool</h5>
+<p>Bind values to a tool object <em>after</em> it has been loaded. This modifies the
+specific tool instance.</p>
+<pre><code>client, err := core.NewToolboxClient(&#34;http://127.0.0.1:5000&#34;)
+
+tool, err := client.LoadTool(&#34;my-tool&#34;, ctx)
+
+boundTool, err := tool.ToolFrom(
+  core.WithBindParamString(&#34;param1&#34;, &#34;value&#34;),
+  core.WithBindParamString(&#34;param2&#34;, &#34;value&#34;)
+  )
+</code></pre>
+<h5 class="h3" id="readme-option-c-binding-parameters-while-loading-tools">Option C: Binding Parameters While Loading Tools</h5>
+<p>Specify bound parameters directly when loading tools. This applies the binding
+only to the tools loaded in that specific call.</p>
+<pre><code>boundTool, err := client.LoadTool(&#34;my-tool&#34;, ctx, core.WithBindParamString(&#34;param&#34;, &#34;value&#34;))
+
+// OR
+
+boundTool, err := client.LoadToolset(&#34;&#34;, ctx, core.WithBindParamString(&#34;param&#34;, &#34;value&#34;))
+</code></pre>
+<blockquote>
+<p>[!NOTE]
+Bound values during loading only affect the tools loaded in that call.</p>
+</blockquote>
+<h5 class="h3" id="readme-binding-dynamic-values">Binding Dynamic Values</h5>
+<p>Instead of a static value, you can bind a parameter to a synchronous or
+asynchronous function. This function will be called <em>each time</em> the tool is
+invoked to dynamically determine the parameter&#39;s value at runtime.
+Functions with the return type (data_type, error) can be provided.</p>
+<pre><code>getDynamicValue := func() (string, error) { return &#34;req-123&#34;, nil }
+
+dynamicBoundTool, err := tool.ToolFrom(core.WithBindParamStringFunc(&#34;param&#34;, getDynamicValue))
+</code></pre>
+<blockquote>
+<p>[!IMPORTANT]
+You don&#39;t need to modify tool configurations to bind parameter values.</p>
+</blockquote>
+<h3 class="h1" id="readme-using-with-orchestration-frameworks">Using with Orchestration Frameworks</h3>
+<p>To see how the MCP Toolbox Go SDK works with orchestration frameworks, check out the end-to-end examples in the <a href="https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/core/samples" rel="nofollow">/samples/</a> folder.</p>
+<p>Use the <a href="https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/tbgenkit" rel="nofollow">tbgenkit package</a> to convert Toolbox Tools into Genkit compatible tools.</p>
+<h3 class="h1" id="readme-contributing">Contributing</h3>
+<p>Contributions are welcome! Please refer to the <a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/DEVELOPER.md" rel="nofollow">DEVELOPER.md</a>
+file for guidelines on how to set up a development environment and run tests.</p>
+<h3 class="h1" id="readme-license">License</h3>
+<p>This project is licensed under the Apache License 2.0. See the
+<a href="https://github.com/googleapis/mcp-toolbox-sdk-go/raw/main/LICENSE" rel="nofollow">LICENSE</a> file for details.</p>
+<h3 class="h1" id="readme-support">Support</h3>
+<p>If you encounter issues or have questions, check the existing <a href="https://github.com/googleapis/genai-toolbox/issues" rel="nofollow">GitHub Issues</a> for the main Toolbox project.</p>
+</div>
+      </div>
+      <button class="UnitReadme-expandLink js-readmeExpand"
+          data-test-id="readme-expand" data-gtmc="readme button"
+          aria-label="Expand Readme">Expand ▾</button>
+      <button class="UnitReadme-collapseLink js-readmeCollapse"
+          data-test-id="readme-collapse" data-gtmc="readme button"
+          aria-label="Expand Readme">Collapse ▴</button>
+    
+  </div>
+
+      
+      
+        
+          
+  <div class="UnitDoc">
+    <h2 class="UnitDoc-title" id="section-documentation">
+      <img class="go-Icon" height="24" width="24" src="../../../static/shared/icon/code_gm_grey_24dp.svg" alt="">
+      Documentation
+      <a class="UnitDoc-idLink" href="core.html#section-documentation" title="Go to Documentation" aria-label="Go to Documentation">¶</a>
+    </h2>
+    
+  
+    
+  
+
+    <div class="Documentation js-documentation">
+      
+        
+
+<div class="Documentation-content js-docContent"> <section class="Documentation-index">
+    <h3 id="pkg-index" class="Documentation-indexHeader">Index <a href="core.html#pkg-index" title="Go to Index" aria-label="Go to Index">¶</a></h3>
+
+<ul class="Documentation-indexList">
+<li class="Documentation-indexFunction">
+        <a href="core.html#GetGoogleIDToken">func GetGoogleIDToken(ctx context.Context, audience string) (string, error)</a></li>
+<li class="Documentation-indexFunction">
+        <a href="core.html#GetSupportedMcpVersions">func GetSupportedMcpVersions() []string</a></li>
+<li class="Documentation-indexFunction">
+        <a href="core.html#NewCustomTokenSource">func NewCustomTokenSource(provider func() string) oauth2.TokenSource</a></li>
+<li class="Documentation-indexType">
+          <a href="core.html#ClientOption">type ClientOption</a></li>
+<li><ul class="Documentation-indexTypeFunctions">
+<li>
+            <a href="core.html#WithClientHeaderString">func WithClientHeaderString(headerName string, value string) ClientOption</a></li>
+<li>
+            <a href="core.html#WithClientHeaderTokenSource">func WithClientHeaderTokenSource(headerName string, value oauth2.TokenSource) ClientOption</a></li>
+<li>
+            <a href="core.html#WithClientName">func WithClientName(name string) ClientOption</a></li>
+<li>
+            <a href="core.html#WithDefaultToolOptions">func WithDefaultToolOptions(opts ...ToolOption) ClientOption</a></li>
+<li>
+            <a href="core.html#WithHTTPClient">func WithHTTPClient(client *http.Client) ClientOption</a></li>
+<li>
+            <a href="core.html#WithProtocol">func WithProtocol(p Protocol) ClientOption</a></li>
+</ul></li>
+<li class="Documentation-indexType">
+          <a href="core.html#Float">type Float</a></li>
+<li class="Documentation-indexType">
+          <a href="core.html#Integer">type Integer</a></li>
+<li class="Documentation-indexType">
+          <a href="core.html#ManifestSchema">type ManifestSchema</a></li>
+<li class="Documentation-indexType">
+          <a href="core.html#ParameterSchema">type ParameterSchema</a></li>
+<li class="Documentation-indexType">
+          <a href="core.html#Protocol">type Protocol</a></li>
+<li class="Documentation-indexType">
+          <a href="core.html#ToolConfig">type ToolConfig</a></li>
+<li class="Documentation-indexType">
+          <a href="core.html#ToolOption">type ToolOption</a></li>
+<li><ul class="Documentation-indexTypeFunctions">
+<li>
+            <a href="core.html#WithAuthTokenSource">func WithAuthTokenSource(authSourceName string, idToken oauth2.TokenSource) ToolOption</a></li>
+<li>
+            <a href="core.html#WithAuthTokenString">func WithAuthTokenString(authSourceName string, idToken string) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamBool">func WithBindParamBool(name string, value bool) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamBoolArray">func WithBindParamBoolArray(name string, value []bool) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamBoolArrayFunc">func WithBindParamBoolArrayFunc(name string, fn func() ([]bool, error)) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamBoolFunc">func WithBindParamBoolFunc(name string, fn func() (bool, error)) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamFloat">func WithBindParamFloat[T Float](name string, value T) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamFloatArray">func WithBindParamFloatArray[T Float](name string, value []T) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamFloatArrayFunc">func WithBindParamFloatArrayFunc[T Float](name string, fn func() ([]T, error)) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamFloatFunc">func WithBindParamFloatFunc[T Float](name string, fn func() (T, error)) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamInt">func WithBindParamInt[T Integer](name string, value T) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamIntArray">func WithBindParamIntArray[T Integer](name string, value []T) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamIntArrayFunc">func WithBindParamIntArrayFunc[T Integer](name string, fn func() ([]T, error)) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamIntFunc">func WithBindParamIntFunc[T Integer](name string, fn func() (T, error)) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamString">func WithBindParamString(name string, value string) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamStringArray">func WithBindParamStringArray(name string, value []string) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamStringArrayFunc">func WithBindParamStringArrayFunc(name string, fn func() ([]string, error)) ToolOption</a></li>
+<li>
+            <a href="core.html#WithBindParamStringFunc">func WithBindParamStringFunc(name string, fn func() (string, error)) ToolOption</a></li>
+<li>
+            <a href="core.html#WithStrict">func WithStrict(strict bool) ToolOption</a></li>
+</ul></li>
+<li class="Documentation-indexType">
+          <a href="core.html#ToolSchema">type ToolSchema</a></li>
+<li class="Documentation-indexType">
+          <a href="core.html#ToolboxClient">type ToolboxClient</a></li>
+<li><ul class="Documentation-indexTypeFunctions">
+<li>
+            <a href="core.html#NewToolboxClient">func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error)</a></li>
+</ul></li>
+<li><ul class="Documentation-indexTypeMethods">
+<li>
+            <a href="core.html#ToolboxClient.LoadTool">func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...ToolOption) (*ToolboxTool, error)</a></li>
+<li>
+            <a href="core.html#ToolboxClient.LoadToolset">func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...ToolOption) ([]*ToolboxTool, error)</a></li>
+</ul></li>
+<li class="Documentation-indexType">
+          <a href="core.html#ToolboxTool">type ToolboxTool</a></li>
+<li><ul class="Documentation-indexTypeMethods">
+<li>
+            <a href="core.html#ToolboxTool.DescribeParameters">func (tt *ToolboxTool) DescribeParameters() string</a></li>
+<li>
+            <a href="core.html#ToolboxTool.Description">func (tt *ToolboxTool) Description() string</a></li>
+<li>
+            <a href="core.html#ToolboxTool.InputSchema">func (tt *ToolboxTool) InputSchema() ([]byte, error)</a></li>
+<li>
+            <a href="core.html#ToolboxTool.Invoke">func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, error)</a></li>
+<li>
+            <a href="core.html#ToolboxTool.Name">func (tt *ToolboxTool) Name() string</a></li>
+<li>
+            <a href="core.html#ToolboxTool.Parameters">func (tt *ToolboxTool) Parameters() []ParameterSchema</a></li>
+<li>
+            <a href="core.html#ToolboxTool.ToolFrom">func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error)</a></li>
+</ul></li>
+</ul>
+</section><h3 tabindex="-1" id="pkg-constants" class="Documentation-constantsHeader">Constants <a href="core.html#pkg-constants" title="Go to Constants" aria-label="Go to Constants">¶</a></h3>
+
+  <section class="Documentation-constants"><p class="Documentation-empty">This section is empty.</p></section>
+
+  <h3 tabindex="-1" id="pkg-variables" class="Documentation-variablesHeader">Variables <a href="core.html#pkg-variables" title="Go to Variables" aria-label="Go to Variables">¶</a></h3>
+
+  <section class="Documentation-variables"><p class="Documentation-empty">This section is empty.</p></section>
+
+  <h3 tabindex="-1" id="pkg-functions" class="Documentation-functionsHeader">Functions <a href="core.html#pkg-functions" title="Go to Functions" aria-label="Go to Functions">¶</a></h3>
+
+  <section class="Documentation-functions"><div class="Documentation-function">
+	  
+  
+  
+    <h4 tabindex="-1" id="GetGoogleIDToken" data-kind="function" class="Documentation-functionHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/auth.go#L46">GetGoogleIDToken</a> <a class="Documentation-idLink" href="core.html#GetGoogleIDToken" title="Go to GetGoogleIDToken" aria-label="Go to GetGoogleIDToken">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func GetGoogleIDToken(ctx <a href="http://localhost:8080/context">context</a>.<a href="http://localhost:8080/context#Context">Context</a>, audience <a href="http://localhost:8080/builtin#string">string</a>) (<a href="http://localhost:8080/builtin#string">string</a>, <a href="http://localhost:8080/builtin#error">error</a>)</pre>
+    </div>
+  <p>GetGoogleIDToken fetches a Google ID token for a specific audience.
+</p><p>Inputs:
+</p><ul class="Documentation-bulletList">
+  <li>ctx: The context for the request, which can be used for cancellation or deadlines.</li>
+  <li>audience: The recipient of the token, typically the URL of the secured service</li>
+</ul><p>Returns:
+</p><pre>A string in the format &#34;Bearer &lt;token&gt;&#34; on success, or an error if
+the token could not be fetched.
+</pre>
+
+  
+
+        </div><div class="Documentation-function">
+	  
+  
+  
+    <h4 tabindex="-1" id="GetSupportedMcpVersions" data-kind="function" class="Documentation-functionHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/protocol.go#L39">GetSupportedMcpVersions</a> <a class="Documentation-idLink" href="core.html#GetSupportedMcpVersions" title="Go to GetSupportedMcpVersions" aria-label="Go to GetSupportedMcpVersions">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func GetSupportedMcpVersions() []<a href="http://localhost:8080/builtin#string">string</a></pre>
+    </div>
+  <p>GetSupportedMcpVersions returns a list of supported MCP protocol versions.
+</p>
+
+  
+
+        </div><div class="Documentation-function">
+	  
+  
+  
+    <h4 tabindex="-1" id="NewCustomTokenSource" data-kind="function" class="Documentation-functionHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/utils.go#L136">NewCustomTokenSource</a> <a class="Documentation-idLink" href="core.html#NewCustomTokenSource" title="Go to NewCustomTokenSource" aria-label="Go to NewCustomTokenSource">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func NewCustomTokenSource(provider func() <a href="http://localhost:8080/builtin#string">string</a>) <a href="http://localhost:8080/golang.org/x/oauth2">oauth2</a>.<a href="http://localhost:8080/golang.org/x/oauth2#TokenSource">TokenSource</a></pre>
+    </div>
+  <p>This function converts a custom function that returns a string into an oauth2.TokenSource type.
+</p><p>Inputs:
+</p><ul class="Documentation-bulletList">
+  <li>provider: A custom function that returns a token as a string.</li>
+</ul><p>Returns:
+</p><ul class="Documentation-bulletList">
+  <li>An oauth2.TokenSource that wraps the custom function.</li>
+</ul>
+
+  
+
+        </div></section>
+
+  <h3 tabindex="-1" id="pkg-types" class="Documentation-typesHeader">Types <a href="core.html#pkg-types" title="Go to Types" aria-label="Go to Types">¶</a></h3>
+
+  <section class="Documentation-types"><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="ClientOption" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L27">ClientOption</a> <a class="Documentation-idLink" href="core.html#ClientOption" title="Go to ClientOption" aria-label="Go to ClientOption">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type ClientOption func(*<a href="core.html#ToolboxClient">ToolboxClient</a>) <a href="http://localhost:8080/builtin#error">error</a></pre>
+    </div>
+  <p>ClientOption configures a ToolboxClient at creation time.
+</p>
+<div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithClientHeaderString" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L70">WithClientHeaderString</a> <a class="Documentation-idLink" href="core.html#WithClientHeaderString" title="Go to WithClientHeaderString" aria-label="Go to WithClientHeaderString">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithClientHeaderString(headerName <a href="http://localhost:8080/builtin#string">string</a>, value <a href="http://localhost:8080/builtin#string">string</a>) <a href="core.html#ClientOption">ClientOption</a></pre>
+    </div>
+  <p>WithClientHeaderString adds a static string value as a client-wide HTTP header.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithClientHeaderTokenSource" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L82">WithClientHeaderTokenSource</a> <a class="Documentation-idLink" href="core.html#WithClientHeaderTokenSource" title="Go to WithClientHeaderTokenSource" aria-label="Go to WithClientHeaderTokenSource">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithClientHeaderTokenSource(headerName <a href="http://localhost:8080/builtin#string">string</a>, value <a href="http://localhost:8080/golang.org/x/oauth2">oauth2</a>.<a href="http://localhost:8080/golang.org/x/oauth2#TokenSource">TokenSource</a>) <a href="core.html#ClientOption">ClientOption</a></pre>
+    </div>
+  <p>WithClientHeaderTokenSource adds a dynamic client-wide HTTP header from a TokenSource.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithClientName" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L39">WithClientName</a> <a class="Documentation-idLink" href="core.html#WithClientName" title="Go to WithClientName" aria-label="Go to WithClientName">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithClientName(name <a href="http://localhost:8080/builtin#string">string</a>) <a href="core.html#ClientOption">ClientOption</a></pre>
+    </div>
+  <p>WithClientName sets the client name used in the MCP protocol handshake.
+Defaults to &#34;toolbox-core-go&#34; if not set.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithDefaultToolOptions" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L97">WithDefaultToolOptions</a> <a class="Documentation-idLink" href="core.html#WithDefaultToolOptions" title="Go to WithDefaultToolOptions" aria-label="Go to WithDefaultToolOptions">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithDefaultToolOptions(opts ...<a href="core.html#ToolOption">ToolOption</a>) <a href="core.html#ClientOption">ClientOption</a></pre>
+    </div>
+  <p>WithDefaultToolOptions provides default Options that will be applied to every tool
+loaded by this client.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithHTTPClient" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L59">WithHTTPClient</a> <a class="Documentation-idLink" href="core.html#WithHTTPClient" title="Go to WithHTTPClient" aria-label="Go to WithHTTPClient">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithHTTPClient(client *<a href="http://localhost:8080/net/http">http</a>.<a href="http://localhost:8080/net/http#Client">Client</a>) <a href="core.html#ClientOption">ClientOption</a></pre>
+    </div>
+  <p>WithHTTPClient provides a custom http.Client to the ToolboxClient.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithProtocol" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L47">WithProtocol</a> <a class="Documentation-idLink" href="core.html#WithProtocol" title="Go to WithProtocol" aria-label="Go to WithProtocol">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithProtocol(p <a href="core.html#Protocol">Protocol</a>) <a href="core.html#ClientOption">ClientOption</a></pre>
+    </div>
+  <p>WithProtocol provides a the underlying transport protocol to the ToolboxClient..
+</p>
+
+  
+
+  </div>
+  
+
+    </div><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="Float" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L126">Float</a> <a class="Documentation-idLink" href="core.html#Float" title="Go to Float" aria-label="Go to Float">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type Float interface {
+	~<a href="http://localhost:8080/builtin#float32">float32</a> | ~<a href="http://localhost:8080/builtin#float64">float64</a>
+}</pre>
+    </div>
+  
+
+  
+
+    </div><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="Integer" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L121">Integer</a> <a class="Documentation-idLink" href="core.html#Integer" title="Go to Integer" aria-label="Go to Integer">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type Integer interface {
+	~<a href="http://localhost:8080/builtin#int">int</a> | ~<a href="http://localhost:8080/builtin#int8">int8</a> | ~<a href="http://localhost:8080/builtin#int16">int16</a> | ~<a href="http://localhost:8080/builtin#int32">int32</a> | ~<a href="http://localhost:8080/builtin#int64">int64</a> |
+		~<a href="http://localhost:8080/builtin#uint">uint</a> | ~<a href="http://localhost:8080/builtin#uint8">uint8</a> | ~<a href="http://localhost:8080/builtin#uint16">uint16</a> | ~<a href="http://localhost:8080/builtin#uint32">uint32</a> | ~<a href="http://localhost:8080/builtin#uint64">uint64</a>
+}</pre>
+    </div>
+  
+
+  
+
+    </div><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="ManifestSchema" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/protocol.go#L48">ManifestSchema</a> <a class="Documentation-idLink" href="core.html#ManifestSchema" title="Go to ManifestSchema" aria-label="Go to ManifestSchema">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type ManifestSchema = <a href="core/transport.html">transport</a>.<a href="core/transport.html#ManifestSchema">ManifestSchema</a></pre>
+    </div>
+  
+
+  
+
+    </div><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="ParameterSchema" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/protocol.go#L54">ParameterSchema</a> <a class="Documentation-idLink" href="core.html#ParameterSchema" title="Go to ParameterSchema" aria-label="Go to ParameterSchema">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type ParameterSchema = <a href="core/transport.html">transport</a>.<a href="core/transport.html#ParameterSchema">ParameterSchema</a></pre>
+    </div>
+  <p>ParameterSchema defines the structure and validation logic for tool parameters.
+</p>
+
+  
+
+    </div><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="Protocol" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/protocol.go#L20">Protocol</a> <a class="Documentation-idLink" href="core.html#Protocol" title="Go to Protocol" aria-label="Go to Protocol">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type Protocol <a href="http://localhost:8080/builtin#string">string</a></pre>
+    </div>
+  <p>Protocol defines underlying transport protocols.
+</p>
+<div class="Documentation-typeConstant">
+    <div class="Documentation-declaration">
+      <pre>const (
+<span id="Toolbox" data-kind="constant">	<span class="comment">// Toolbox represents the Native Toolbox protocol.</span>
+</span>	<span class="comment">// Deprecated: Toolbox protocol is no longer supported and will be removed on March 4, 2026.</span>
+	<span class="comment">// Use MCP or a specific MCP version instead.</span>
+	Toolbox <a href="core.html#Protocol">Protocol</a> = &#34;toolbox&#34;
+
+	<span class="comment">// MCP Version Constants</span>
+<span id="MCPv20251125" data-kind="constant">	MCPv20251125 <a href="core.html#Protocol">Protocol</a> = &#34;2025-11-25&#34;
+</span><span id="MCPv20250618" data-kind="constant">	MCPv20250618 <a href="core.html#Protocol">Protocol</a> = &#34;2025-06-18&#34;
+</span><span id="MCPv20250326" data-kind="constant">	MCPv20250326 <a href="core.html#Protocol">Protocol</a> = &#34;2025-03-26&#34;
+</span><span id="MCPv20241105" data-kind="constant">	MCPv20241105 <a href="core.html#Protocol">Protocol</a> = &#34;2024-11-05&#34;
+</span>
+<span id="MCP" data-kind="constant">	<span class="comment">// MCP is the default alias pointing to the newest supported version.</span>
+</span>	MCP = <a href="core.html#MCPv20250618">MCPv20250618</a>
+)</pre>
+    </div>
+  
+</div>
+  
+
+    </div><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="ToolConfig" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L111">ToolConfig</a> <a class="Documentation-idLink" href="core.html#ToolConfig" title="Go to ToolConfig" aria-label="Go to ToolConfig">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type ToolConfig struct {
+<span id="ToolConfig.AuthTokenSources" data-kind="field">	AuthTokenSources map[<a href="http://localhost:8080/builtin#string">string</a>]<a href="http://localhost:8080/golang.org/x/oauth2">oauth2</a>.<a href="http://localhost:8080/golang.org/x/oauth2#TokenSource">TokenSource</a>
+</span><span id="ToolConfig.BoundParams" data-kind="field">	BoundParams      map[<a href="http://localhost:8080/builtin#string">string</a>]<a href="http://localhost:8080/builtin#any">any</a>
+</span><span id="ToolConfig.Strict" data-kind="field">	Strict           <a href="http://localhost:8080/builtin#bool">bool</a>
+</span>	<span class="comment">// contains filtered or unexported fields</span>
+}</pre>
+    </div>
+  <p>ToolConfig holds all configurable aspects for creating or deriving a tool.
+</p>
+
+  
+
+    </div><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="ToolOption" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L119">ToolOption</a> <a class="Documentation-idLink" href="core.html#ToolOption" title="Go to ToolOption" aria-label="Go to ToolOption">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type ToolOption func(*<a href="core.html#ToolConfig">ToolConfig</a>) <a href="http://localhost:8080/builtin#error">error</a></pre>
+    </div>
+  <p>ToolOption defines a single, universal type for a functional option that configures a tool.
+</p>
+<div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithAuthTokenSource" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L143">WithAuthTokenSource</a> <a class="Documentation-idLink" href="core.html#WithAuthTokenSource" title="Go to WithAuthTokenSource" aria-label="Go to WithAuthTokenSource">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithAuthTokenSource(authSourceName <a href="http://localhost:8080/builtin#string">string</a>, idToken <a href="http://localhost:8080/golang.org/x/oauth2">oauth2</a>.<a href="http://localhost:8080/golang.org/x/oauth2#TokenSource">TokenSource</a>) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithAuthTokenSource provides an authentication token from a standard TokenSource.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithAuthTokenString" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L154">WithAuthTokenString</a> <a class="Documentation-idLink" href="core.html#WithAuthTokenString" title="Go to WithAuthTokenString" aria-label="Go to WithAuthTokenString">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithAuthTokenString(authSourceName <a href="http://localhost:8080/builtin#string">string</a>, idToken <a href="http://localhost:8080/builtin#string">string</a>) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithAuthTokenString provides a static string authentication token.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamBool" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L207">WithBindParamBool</a> <a class="Documentation-idLink" href="core.html#WithBindParamBool" title="Go to WithBindParamBool" aria-label="Go to WithBindParamBool">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamBool(name <a href="http://localhost:8080/builtin#string">string</a>, value <a href="http://localhost:8080/builtin#bool">bool</a>) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamBool binds a static boolean value to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamBoolArray" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L247">WithBindParamBoolArray</a> <a class="Documentation-idLink" href="core.html#WithBindParamBoolArray" title="Go to WithBindParamBoolArray" aria-label="Go to WithBindParamBoolArray">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamBoolArray(name <a href="http://localhost:8080/builtin#string">string</a>, value []<a href="http://localhost:8080/builtin#bool">bool</a>) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamBoolArray binds a static slice of booleans to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamBoolArrayFunc" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L252">WithBindParamBoolArrayFunc</a> <a class="Documentation-idLink" href="core.html#WithBindParamBoolArrayFunc" title="Go to WithBindParamBoolArrayFunc" aria-label="Go to WithBindParamBoolArrayFunc">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamBoolArrayFunc(name <a href="http://localhost:8080/builtin#string">string</a>, fn func() ([]<a href="http://localhost:8080/builtin#bool">bool</a>, <a href="http://localhost:8080/builtin#error">error</a>)) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamBoolArrayFunc binds a function that returns a slice of booleans.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamBoolFunc" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L212">WithBindParamBoolFunc</a> <a class="Documentation-idLink" href="core.html#WithBindParamBoolFunc" title="Go to WithBindParamBoolFunc" aria-label="Go to WithBindParamBoolFunc">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamBoolFunc(name <a href="http://localhost:8080/builtin#string">string</a>, fn func() (<a href="http://localhost:8080/builtin#bool">bool</a>, <a href="http://localhost:8080/builtin#error">error</a>)) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamBoolFunc binds a function that returns a boolean to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamFloat" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L197">WithBindParamFloat</a> <a class="Documentation-idLink" href="core.html#WithBindParamFloat" title="Go to WithBindParamFloat" aria-label="Go to WithBindParamFloat">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamFloat[T <a href="core.html#Float">Float</a>](name <a href="http://localhost:8080/builtin#string">string</a>, value T) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamFloat binds a static float value to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamFloatArray" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L237">WithBindParamFloatArray</a> <a class="Documentation-idLink" href="core.html#WithBindParamFloatArray" title="Go to WithBindParamFloatArray" aria-label="Go to WithBindParamFloatArray">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamFloatArray[T <a href="core.html#Float">Float</a>](name <a href="http://localhost:8080/builtin#string">string</a>, value []T) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamFloatArray binds a static slice of floats to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamFloatArrayFunc" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L242">WithBindParamFloatArrayFunc</a> <a class="Documentation-idLink" href="core.html#WithBindParamFloatArrayFunc" title="Go to WithBindParamFloatArrayFunc" aria-label="Go to WithBindParamFloatArrayFunc">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamFloatArrayFunc[T <a href="core.html#Float">Float</a>](name <a href="http://localhost:8080/builtin#string">string</a>, fn func() ([]T, <a href="http://localhost:8080/builtin#error">error</a>)) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamFloatArrayFunc binds a function that returns a slice of floats.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamFloatFunc" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L202">WithBindParamFloatFunc</a> <a class="Documentation-idLink" href="core.html#WithBindParamFloatFunc" title="Go to WithBindParamFloatFunc" aria-label="Go to WithBindParamFloatFunc">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamFloatFunc[T <a href="core.html#Float">Float</a>](name <a href="http://localhost:8080/builtin#string">string</a>, fn func() (T, <a href="http://localhost:8080/builtin#error">error</a>)) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamFloatFunc binds a function that returns a float to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamInt" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L187">WithBindParamInt</a> <a class="Documentation-idLink" href="core.html#WithBindParamInt" title="Go to WithBindParamInt" aria-label="Go to WithBindParamInt">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamInt[T <a href="core.html#Integer">Integer</a>](name <a href="http://localhost:8080/builtin#string">string</a>, value T) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamInt binds a static integer value to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamIntArray" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L227">WithBindParamIntArray</a> <a class="Documentation-idLink" href="core.html#WithBindParamIntArray" title="Go to WithBindParamIntArray" aria-label="Go to WithBindParamIntArray">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamIntArray[T <a href="core.html#Integer">Integer</a>](name <a href="http://localhost:8080/builtin#string">string</a>, value []T) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamIntArray binds a static slice of integers to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamIntArrayFunc" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L232">WithBindParamIntArrayFunc</a> <a class="Documentation-idLink" href="core.html#WithBindParamIntArrayFunc" title="Go to WithBindParamIntArrayFunc" aria-label="Go to WithBindParamIntArrayFunc">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamIntArrayFunc[T <a href="core.html#Integer">Integer</a>](name <a href="http://localhost:8080/builtin#string">string</a>, fn func() ([]T, <a href="http://localhost:8080/builtin#error">error</a>)) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamIntArrayFunc binds a function that returns a slice of integers.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamIntFunc" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L192">WithBindParamIntFunc</a> <a class="Documentation-idLink" href="core.html#WithBindParamIntFunc" title="Go to WithBindParamIntFunc" aria-label="Go to WithBindParamIntFunc">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamIntFunc[T <a href="core.html#Integer">Integer</a>](name <a href="http://localhost:8080/builtin#string">string</a>, fn func() (T, <a href="http://localhost:8080/builtin#error">error</a>)) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamIntFunc binds a function that returns an integer to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamString" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L177">WithBindParamString</a> <a class="Documentation-idLink" href="core.html#WithBindParamString" title="Go to WithBindParamString" aria-label="Go to WithBindParamString">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamString(name <a href="http://localhost:8080/builtin#string">string</a>, value <a href="http://localhost:8080/builtin#string">string</a>) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamString binds a static string value to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamStringArray" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L217">WithBindParamStringArray</a> <a class="Documentation-idLink" href="core.html#WithBindParamStringArray" title="Go to WithBindParamStringArray" aria-label="Go to WithBindParamStringArray">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamStringArray(name <a href="http://localhost:8080/builtin#string">string</a>, value []<a href="http://localhost:8080/builtin#string">string</a>) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamStringArray binds a static slice of strings to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamStringArrayFunc" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L222">WithBindParamStringArrayFunc</a> <a class="Documentation-idLink" href="core.html#WithBindParamStringArrayFunc" title="Go to WithBindParamStringArrayFunc" aria-label="Go to WithBindParamStringArrayFunc">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamStringArrayFunc(name <a href="http://localhost:8080/builtin#string">string</a>, fn func() ([]<a href="http://localhost:8080/builtin#string">string</a>, <a href="http://localhost:8080/builtin#error">error</a>)) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamStringArrayFunc binds a function that returns a slice of strings.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithBindParamStringFunc" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L182">WithBindParamStringFunc</a> <a class="Documentation-idLink" href="core.html#WithBindParamStringFunc" title="Go to WithBindParamStringFunc" aria-label="Go to WithBindParamStringFunc">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithBindParamStringFunc(name <a href="http://localhost:8080/builtin#string">string</a>, fn func() (<a href="http://localhost:8080/builtin#string">string</a>, <a href="http://localhost:8080/builtin#error">error</a>)) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithBindParamStringFunc binds a function that returns a string to a parameter.
+</p>
+
+  
+
+  </div><div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="WithStrict" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go#L131">WithStrict</a> <a class="Documentation-idLink" href="core.html#WithStrict" title="Go to WithStrict" aria-label="Go to WithStrict">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func WithStrict(strict <a href="http://localhost:8080/builtin#bool">bool</a>) <a href="core.html#ToolOption">ToolOption</a></pre>
+    </div>
+  <p>WithStrict provides an option to enable strict validation for LoadToolset.
+</p>
+
+  
+
+  </div>
+  
+
+    </div><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="ToolSchema" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/protocol.go#L51">ToolSchema</a> <a class="Documentation-idLink" href="core.html#ToolSchema" title="Go to ToolSchema" aria-label="Go to ToolSchema">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type ToolSchema = <a href="core/transport.html">transport</a>.<a href="core/transport.html#ToolSchema">ToolSchema</a></pre>
+    </div>
+  <p>ToolSchema defines a single tool in the manifest.
+</p>
+
+  
+
+    </div><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="ToolboxClient" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/client.go#L36">ToolboxClient</a> <a class="Documentation-idLink" href="core.html#ToolboxClient" title="Go to ToolboxClient" aria-label="Go to ToolboxClient">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type ToolboxClient struct {
+	<span class="comment">// contains filtered or unexported fields</span>
+}</pre>
+    </div>
+  <p>The synchronous interface for a Toolbox service client.
+</p>
+<div class="Documentation-typeFunc">
+    
+  
+  
+    <h4 tabindex="-1" id="NewToolboxClient" data-kind="function" class="Documentation-typeFuncHeader">
+      <span>func <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/client.go#L60">NewToolboxClient</a> <a class="Documentation-idLink" href="core.html#NewToolboxClient" title="Go to NewToolboxClient" aria-label="Go to NewToolboxClient">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func NewToolboxClient(url <a href="http://localhost:8080/builtin#string">string</a>, opts ...<a href="core.html#ClientOption">ClientOption</a>) (*<a href="core.html#ToolboxClient">ToolboxClient</a>, <a href="http://localhost:8080/builtin#error">error</a>)</pre>
+    </div>
+  <p>NewToolboxClient creates and configures a new, immutable client for interacting with a
+Toolbox server.
+</p><p>Inputs:
+</p><ul class="Documentation-bulletList">
+  <li>url: The base URL of the Toolbox server.</li>
+  <li>opts: A variadic list of ClientOption functions to configure the client,
+such as setting a custom http.Client, default headers, or the underlying protocol.</li>
+</ul><p>Returns:
+</p><pre>A configured *ToolboxClient and a nil error on success, or a nil client
+and an error if configuration fails.
+</pre>
+
+  
+
+  </div><div class="Documentation-typeMethod">
+    
+  
+  
+    <h4 tabindex="-1" id="ToolboxClient.LoadTool" data-kind="method" class="Documentation-typeMethodHeader">
+      <span>func (*ToolboxClient) <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/client.go#L223">LoadTool</a> <a class="Documentation-idLink" href="core.html#ToolboxClient.LoadTool" title="Go to ToolboxClient.LoadTool" aria-label="Go to ToolboxClient.LoadTool">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func (tc *<a href="core.html#ToolboxClient">ToolboxClient</a>) LoadTool(name <a href="http://localhost:8080/builtin#string">string</a>, ctx <a href="http://localhost:8080/context">context</a>.<a href="http://localhost:8080/context#Context">Context</a>, opts ...<a href="core.html#ToolOption">ToolOption</a>) (*<a href="core.html#ToolboxTool">ToolboxTool</a>, <a href="http://localhost:8080/builtin#error">error</a>)</pre>
+    </div>
+  <p>LoadTool fetches a manifest for a single tool
+</p><p>Inputs:
+</p><ul class="Documentation-bulletList">
+  <li>name: The specific name of the tool to load.</li>
+  <li>ctx: The context to control the lifecycle of the request.</li>
+  <li>opts: A variadic list of ToolOption functions to configure auth tokens
+or bind parameters for this tool.</li>
+</ul><p>Returns:
+</p><pre>A configured *ToolboxTool and a nil error on success, or a nil tool and
+an error if loading or validation fails.
+</pre>
+
+  
+
+  </div><div class="Documentation-typeMethod">
+    
+  
+  
+    <h4 tabindex="-1" id="ToolboxClient.LoadToolset" data-kind="method" class="Documentation-typeMethodHeader">
+      <span>func (*ToolboxClient) <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/client.go#L318">LoadToolset</a> <a class="Documentation-idLink" href="core.html#ToolboxClient.LoadToolset" title="Go to ToolboxClient.LoadToolset" aria-label="Go to ToolboxClient.LoadToolset">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func (tc *<a href="core.html#ToolboxClient">ToolboxClient</a>) LoadToolset(name <a href="http://localhost:8080/builtin#string">string</a>, ctx <a href="http://localhost:8080/context">context</a>.<a href="http://localhost:8080/context#Context">Context</a>, opts ...<a href="core.html#ToolOption">ToolOption</a>) ([]*<a href="core.html#ToolboxTool">ToolboxTool</a>, <a href="http://localhost:8080/builtin#error">error</a>)</pre>
+    </div>
+  <p>LoadToolset fetches a manifest for a collection of tools.
+</p><p>Inputs:
+</p><ul class="Documentation-bulletList">
+  <li>name: Name of the toolset to be loaded.Set this arg to &#34;&#34; to load the default toolset</li>
+  <li>ctx: The context to control the lifecycle of the request.</li>
+  <li>opts: A variadic list of ToolOption functions. These can include WithStrict
+and options for auth or bound params that may apply to tools in the set.</li>
+</ul><p>Returns:
+</p><pre>A slice of configured *ToolboxTool and a nil error on success, or a nil
+slice and an error if loading or validation fails.
+</pre>
+
+  
+
+  </div>
+  
+
+    </div><div class="Documentation-type">
+      
+  
+  
+    <h4 tabindex="-1" id="ToolboxTool" data-kind="type" class="Documentation-typeHeader">
+      <span>type <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/tool.go#L31">ToolboxTool</a> <a class="Documentation-idLink" href="core.html#ToolboxTool" title="Go to ToolboxTool" aria-label="Go to ToolboxTool">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>type ToolboxTool struct {
+	<span class="comment">// contains filtered or unexported fields</span>
+}</pre>
+    </div>
+  <p>ToolboxTool represents an immutable, universal definition of a Toolbox tool.
+</p>
+<div class="Documentation-typeMethod">
+    
+  
+  
+    <h4 tabindex="-1" id="ToolboxTool.DescribeParameters" data-kind="method" class="Documentation-typeMethodHeader">
+      <span>func (*ToolboxTool) <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/tool.go#L98">DescribeParameters</a> <a class="Documentation-idLink" href="core.html#ToolboxTool.DescribeParameters" title="Go to ToolboxTool.DescribeParameters" aria-label="Go to ToolboxTool.DescribeParameters">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func (tt *<a href="core.html#ToolboxTool">ToolboxTool</a>) DescribeParameters() <a href="http://localhost:8080/builtin#string">string</a></pre>
+    </div>
+  <p>DescribeParameters returns a single, human-readable string that describes all
+of the tool&#39;s unbound parameters, including their names, types, and
+descriptions.
+</p><p>Returns:
+</p><pre>A formatted string of parameter descriptions, or an empty string if there
+are no unbound parameters.
+</pre>
+
+  
+
+  </div><div class="Documentation-typeMethod">
+    
+  
+  
+    <h4 tabindex="-1" id="ToolboxTool.Description" data-kind="method" class="Documentation-typeMethodHeader">
+      <span>func (*ToolboxTool) <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/tool.go#L49">Description</a> <a class="Documentation-idLink" href="core.html#ToolboxTool.Description" title="Go to ToolboxTool.Description" aria-label="Go to ToolboxTool.Description">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func (tt *<a href="core.html#ToolboxTool">ToolboxTool</a>) Description() <a href="http://localhost:8080/builtin#string">string</a></pre>
+    </div>
+  <p>Description returns the tool&#39;s description.
+</p>
+
+  
+
+  </div><div class="Documentation-typeMethod">
+    
+  
+  
+    <h4 tabindex="-1" id="ToolboxTool.InputSchema" data-kind="method" class="Documentation-typeMethodHeader">
+      <span>func (*ToolboxTool) <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/tool.go#L62">InputSchema</a> <a class="Documentation-idLink" href="core.html#ToolboxTool.InputSchema" title="Go to ToolboxTool.InputSchema" aria-label="Go to ToolboxTool.InputSchema">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func (tt *<a href="core.html#ToolboxTool">ToolboxTool</a>) InputSchema() ([]<a href="http://localhost:8080/builtin#byte">byte</a>, <a href="http://localhost:8080/builtin#error">error</a>)</pre>
+    </div>
+  <p>InputSchema generates an OpenAPI JSON Schema for the tool&#39;s input parameters and returns it as raw bytes.
+</p>
+
+  
+
+  </div><div class="Documentation-typeMethod">
+    
+  
+  
+    <h4 tabindex="-1" id="ToolboxTool.Invoke" data-kind="method" class="Documentation-typeMethodHeader">
+      <span>func (*ToolboxTool) <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/tool.go#L240">Invoke</a> <a class="Documentation-idLink" href="core.html#ToolboxTool.Invoke" title="Go to ToolboxTool.Invoke" aria-label="Go to ToolboxTool.Invoke">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func (tt *<a href="core.html#ToolboxTool">ToolboxTool</a>) Invoke(ctx <a href="http://localhost:8080/context">context</a>.<a href="http://localhost:8080/context#Context">Context</a>, input map[<a href="http://localhost:8080/builtin#string">string</a>]<a href="http://localhost:8080/builtin#any">any</a>) (<a href="http://localhost:8080/builtin#any">any</a>, <a href="http://localhost:8080/builtin#error">error</a>)</pre>
+    </div>
+  <p>Invoke executes the tool with the given input.
+</p><p>Inputs:
+</p><ul class="Documentation-bulletList">
+  <li>ctx: The context to control the lifecycle of the API request.</li>
+  <li>input: A map of parameter names to values provided by the user for this
+specific invocation.</li>
+</ul><p>Returns:
+</p><pre>The result from the API call, which can be a structured object (from a JSON
+&#39;result&#39; field) or a raw string. Returns an error if any step of the
+process fails.
+</pre>
+
+  
+
+  </div><div class="Documentation-typeMethod">
+    
+  
+  
+    <h4 tabindex="-1" id="ToolboxTool.Name" data-kind="method" class="Documentation-typeMethodHeader">
+      <span>func (*ToolboxTool) <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/tool.go#L44">Name</a> <a class="Documentation-idLink" href="core.html#ToolboxTool.Name" title="Go to ToolboxTool.Name" aria-label="Go to ToolboxTool.Name">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func (tt *<a href="core.html#ToolboxTool">ToolboxTool</a>) Name() <a href="http://localhost:8080/builtin#string">string</a></pre>
+    </div>
+  <p>Name returns the tool&#39;s name.
+</p>
+
+  
+
+  </div><div class="Documentation-typeMethod">
+    
+  
+  
+    <h4 tabindex="-1" id="ToolboxTool.Parameters" data-kind="method" class="Documentation-typeMethodHeader">
+      <span>func (*ToolboxTool) <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/tool.go#L55">Parameters</a> <a class="Documentation-idLink" href="core.html#ToolboxTool.Parameters" title="Go to ToolboxTool.Parameters" aria-label="Go to ToolboxTool.Parameters">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func (tt *<a href="core.html#ToolboxTool">ToolboxTool</a>) Parameters() []<a href="core.html#ParameterSchema">ParameterSchema</a></pre>
+    </div>
+  <p>Parameters returns the list of parameters that must be provided by a user
+at invocation time.
+</p>
+
+  
+
+  </div><div class="Documentation-typeMethod">
+    
+  
+  
+    <h4 tabindex="-1" id="ToolboxTool.ToolFrom" data-kind="method" class="Documentation-typeMethodHeader">
+      <span>func (*ToolboxTool) <a class="Documentation-source" href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/tool.go#L122">ToolFrom</a> <a class="Documentation-idLink" href="core.html#ToolboxTool.ToolFrom" title="Go to ToolboxTool.ToolFrom" aria-label="Go to ToolboxTool.ToolFrom">¶</a></span>
+  <span class="Documentation-sinceVersion">
+    
+  </span>
+</h4>
+
+    
+    <div class="Documentation-declaration">
+      <pre>func (tt *<a href="core.html#ToolboxTool">ToolboxTool</a>) ToolFrom(opts ...<a href="core.html#ToolOption">ToolOption</a>) (*<a href="core.html#ToolboxTool">ToolboxTool</a>, <a href="http://localhost:8080/builtin#error">error</a>)</pre>
+    </div>
+  <p>ToolFrom creates a new, more specialized tool from an existing one by applying
+additional options. This is useful for creating variations of a tool with
+different bound parameters without modifying the original and
+all provided options must be applicable.
+</p><p>Inputs:
+</p><ul class="Documentation-bulletList">
+  <li>opts: A variadic list of ToolOption functions to further configure the
+new tool, such as binding more parameters.</li>
+</ul><p>Returns:
+</p><pre>A new, specialized *ToolboxTool and a nil error, or a nil tool and an
+error if the new options are invalid or conflict with existing settings.
+</pre>
+
+  
+
+  </div>
+  
+
+    </div></section></div> 
+
+
+
+
+
+
+
+      
+    </div>
+  </div>
+
+        
+      
+      
+        
+  <div class="UnitFiles js-unitFiles">
+    <h2 class="UnitFiles-title" id="section-sourcefiles">
+      <img class="go-Icon" height="24" width="24" src="../../../static/shared/icon/insert_drive_file_gm_grey_24dp.svg" alt="">
+      Source Files
+      <a class="UnitFiles-idLink" href="core.html#section-sourcefiles" title="Go to Source Files" aria-label="Go to Source Files">¶</a>
+    </h2><div class="UnitFiles-titleLink">
+      <a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core" target="_blank" rel="noopener">View all Source files</a>
+    </div><div>
+      <ul class="UnitFiles-fileList"><li><a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/auth.go" target="_blank" rel="noopener" title="auth.go">auth.go</a></li><li><a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/client.go" target="_blank" rel="noopener" title="client.go">client.go</a></li><li><a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/options.go" target="_blank" rel="noopener" title="options.go">options.go</a></li><li><a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/protocol.go" target="_blank" rel="noopener" title="protocol.go">protocol.go</a></li><li><a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/tool.go" target="_blank" rel="noopener" title="tool.go">tool.go</a></li><li><a href="http://localhost:8080/files/home/runner/work/mcp-toolbox-sdk-go/mcp-toolbox-sdk-go/github.com/googleapis/mcp-toolbox-sdk-go/core/utils.go" target="_blank" rel="noopener" title="utils.go">utils.go</a></li></ul>
+    </div>
+  </div>
+
+      
+      
+        
+  <div class="UnitDirectories js-unitDirectories">
+    <h2 class="UnitDirectories-title" id="section-directories">
+      <img class="go-Icon" height="24" width="24" src="../../../static/shared/icon/folder_gm_grey_24dp.svg" alt="">
+      Directories
+      <a class="UnitDirectories-idLink" href="core.html#section-directories" title="Go to Directories" aria-label="Go to Directories">¶</a>
+    </h2>
+    <div class="UnitDirectories-toggles">
+      <div class="UnitDirectories-toggleButtons">
+        <button class="js-showInternalDirectories" data-test-id="internal-directories-toggle"
+            data-gtmc="directories button" aria-label="Show Internal Directories">
+          Show internal
+        </button>
+        <button class="js-expandAllDirectories" data-test-id="directories-toggle"
+            data-gtmc="directories button" aria-label="Expand All Directories">
+          Expand all
+        </button>
+      </div>
+    </div>
+    <table class="UnitDirectories-table UnitDirectories-table--tree js-expandableTable"
+          data-test-id="UnitDirectories-table">
+      <tr class="UnitDirectories-tableHeader UnitDirectories-tableHeader--tree">
+        <th>Path</th>
+        <th class="UnitDirectories-desktopSynopsis">Synopsis</th>
+      </tr>
+      
+          
+  
+  <tr data-aria-controls="transport-mcp transport-mcp/v20241105 transport-mcp/v20250326 transport-mcp/v20250618 transport-mcp/v20251125 transport-toolboxtransport "
+      class="">
+    <td data-id="transport" data-aria-owns="transport-mcp transport-mcp/v20241105 transport-mcp/v20250326 transport-mcp/v20250618 transport-mcp/v20251125 transport-toolboxtransport ">
+      <div class="UnitDirectories-pathCell">
+        <div><button type="button" class="go-Button go-Button--inline UnitDirectories-toggleButton"
+                aria-expanded="false"
+                aria-label="6 more from"
+                data-aria-controls="transport-mcp transport-mcp/v20241105 transport-mcp/v20250326 transport-mcp/v20250618 transport-mcp/v20251125 transport-toolboxtransport "
+                data-aria-labelledby="transport-button transport"
+                data-id="transport-button">
+              <img class="go-Icon" height="24" width="24" src="../../../static/shared/icon/arrow_right_gm_grey_24dp.svg"
+                  alt="">
+            </button><a href="core/transport.html">transport</a>
+            
+          </div>
+          <div class="UnitDirectories-mobileSynopsis"></div>
+        </div>
+      </td>
+      <td class="UnitDirectories-desktopSynopsis"></td></tr><tr data-id="transport-mcp" class="">
+      <td>
+        <div class="UnitDirectories-subdirectory">
+          <span>
+            <a href="core/transport/mcp.html">mcp</a>
+            
+            
+          </span>
+          <div class="UnitDirectories-mobileSynopsis"></div>
+        </div>
+      </td>
+      <td class="UnitDirectories-desktopSynopsis"></td><tr data-id="transport-mcp/v20241105" class="">
+      <td>
+        <div class="UnitDirectories-subdirectory">
+          <span>
+            <a href="core/transport/mcp/v20241105.html">mcp/v20241105</a>
+            
+            
+          </span>
+          <div class="UnitDirectories-mobileSynopsis"></div>
+        </div>
+      </td>
+      <td class="UnitDirectories-desktopSynopsis"></td><tr data-id="transport-mcp/v20250326" class="">
+      <td>
+        <div class="UnitDirectories-subdirectory">
+          <span>
+            <a href="core/transport/mcp/v20250326.html">mcp/v20250326</a>
+            
+            
+          </span>
+          <div class="UnitDirectories-mobileSynopsis"></div>
+        </div>
+      </td>
+      <td class="UnitDirectories-desktopSynopsis"></td><tr data-id="transport-mcp/v20250618" class="">
+      <td>
+        <div class="UnitDirectories-subdirectory">
+          <span>
+            <a href="core/transport/mcp/v20250618.html">mcp/v20250618</a>
+            
+            
+          </span>
+          <div class="UnitDirectories-mobileSynopsis"></div>
+        </div>
+      </td>
+      <td class="UnitDirectories-desktopSynopsis"></td><tr data-id="transport-mcp/v20251125" class="">
+      <td>
+        <div class="UnitDirectories-subdirectory">
+          <span>
+            <a href="core/transport/mcp/v20251125.html">mcp/v20251125</a>
+            
+            
+          </span>
+          <div class="UnitDirectories-mobileSynopsis"></div>
+        </div>
+      </td>
+      <td class="UnitDirectories-desktopSynopsis"></td><tr data-id="transport-toolboxtransport" class="">
+      <td>
+        <div class="UnitDirectories-subdirectory">
+          <span>
+            <a href="core/transport/toolboxtransport.html">toolboxtransport</a>
+            
+            
+          </span>
+          <div class="UnitDirectories-mobileSynopsis"></div>
+        </div>
+      </td>
+      <td class="UnitDirectories-desktopSynopsis"></td></tr>
+
+      
+    </table>
+  </div>
+
+      
+    </div>
+  </div>
+  <div id="showInternal-description" hidden> Click to show internal directories. </div>
+  <div id="hideInternal-description" hidden> Click to hide internal directories. </div>
+</article>
+    <footer class="go-Main-footer"></footer>
+  </main>
+
+    
+  <footer class="go-Footer">
+    
+    <div class="go-Footer-links">
+      <div class="go-Footer-linkColumn">
+        <a href="https://go.dev/solutions" class="go-Footer-link go-Footer-link--primary"
+            data-gtmc="footer link">
+          Why Go
+        </a>
+        <a href="https://go.dev/solutions#use-cases" class="go-Footer-link"
+            data-gtmc="footer link">
+          Use Cases
+        </a>
+        <a href="https://go.dev/solutions#case-studies" class="go-Footer-link"
+            data-gtmc="footer link">
+          Case Studies
+        </a>
+      </div>
+      <div class="go-Footer-linkColumn">
+        <a href="https://learn.go.dev/" class="go-Footer-link go-Footer-link--primary"
+            data-gtmc="footer link">
+          Get Started
+        </a>
+        <a href="https://play.golang.org" class="go-Footer-link" data-gtmc="footer link">
+          Playground
+        </a>
+        <a href="https://tour.golang.org" class="go-Footer-link" data-gtmc="footer link">
+          Tour
+        </a>
+        <a href="https://stackoverflow.com/questions/tagged/go?tab=Newest" class="go-Footer-link"
+            data-gtmc="footer link">
+          Stack Overflow
+        </a>
+        <a href="https://go.dev/help" class="go-Footer-link"
+            data-gtmc="footer link">
+          Help
+        </a>
+      </div>
+      <div class="go-Footer-linkColumn">
+        <a href="https://pkg.go.dev" class="go-Footer-link go-Footer-link--primary"
+            data-gtmc="footer link">
+          Packages
+        </a>
+        <a href="http://localhost:8080/std" class="go-Footer-link" data-gtmc="footer link">
+          Standard Library
+        </a>
+        <a href="http://localhost:8080/golang.org/x" class="go-Footer-link" data-gtmc="footer link">
+          Sub-repositories
+        </a>
+        <a href="https://pkg.go.dev/about" class="go-Footer-link" data-gtmc="footer link">
+          About Go Packages
+        </a>
+      </div>
+      <div class="go-Footer-linkColumn">
+        <a href="https://go.dev/project" class="go-Footer-link go-Footer-link--primary"
+            data-gtmc="footer link">
+          About
+        </a>
+        <a href="https://go.dev/dl/" class="go-Footer-link" data-gtmc="footer link">Download</a>
+        <a href="https://go.dev/blog" class="go-Footer-link" data-gtmc="footer link">Blog</a>
+        <a href="https://github.com/golang/go/issues" class="go-Footer-link" data-gtmc="footer link">
+          Issue Tracker
+        </a>
+        <a href="https://go.dev/doc/devel/release.html" class="go-Footer-link"
+            data-gtmc="footer link">
+          Release Notes
+        </a>
+        <a href="https://go.dev/brand" class="go-Footer-link" data-gtmc="footer link">
+          Brand Guidelines
+        </a>
+        <a href="https://go.dev/conduct" class="go-Footer-link" data-gtmc="footer link">
+          Code of Conduct
+        </a>
+      </div>
+      <div class="go-Footer-linkColumn">
+        <a href="https://www.twitter.com/golang" class="go-Footer-link go-Footer-link--primary"
+            data-gtmc="footer link">
+          Connect
+        </a>
+        <a href="https://www.twitter.com/golang" class="go-Footer-link" data-gtmc="footer link">
+          Twitter
+        </a>
+        <a href="https://github.com/golang" class="go-Footer-link" data-gtmc="footer link">GitHub</a>
+        <a href="https://invite.slack.golangbridge.org/" class="go-Footer-link"
+            data-gtmc="footer link">
+          Slack
+        </a>
+        <a href="https://reddit.com/r/golang" class="go-Footer-link" data-gtmc="footer link">
+          r/golang
+        </a>
+        <a href="https://www.meetup.com/pro/go" class="go-Footer-link" data-gtmc="footer link">
+          Meetup
+        </a>
+        <a href="https://golangweekly.com/" class="go-Footer-link" data-gtmc="footer link">
+          Golang Weekly
+        </a>
+      </div>
+    </div>
+    <div class="go-Footer-bottom">
+      <img class="go-Footer-gopher"  width="1431" height="901"
+          src="../../../static/shared/gopher/pilot-bust-1431x901.svg" alt="Gopher in flight goggles">
+      <ul class="go-Footer-listRow">
+        <li class="go-Footer-listItem">
+          <a href="https://go.dev/copyright" data-gtmc="footer link">Copyright</a>
+        </li>
+        <li class="go-Footer-listItem">
+          <a href="https://go.dev/tos" data-gtmc="footer link">Terms of Service</a>
+        </li>
+        <li class="go-Footer-listItem">
+          <a href="http://www.google.com/intl/en/policies/privacy/" data-gtmc="footer link"
+              target="_blank" rel="noopener">
+            Privacy Policy
+          </a>
+        </li>
+        <li class="go-Footer-listItem">
+          <a href="https://go.dev/s/pkgsite-feedback" target="_blank" rel="noopener"
+              data-gtmc="footer link">
+            Report an Issue
+          </a>
+        </li>
+        <li class="go-Footer-listItem">
+          <button class="go-Button go-Button--text go-Footer-toggleTheme js-toggleTheme" aria-label="Theme Toggle">
+            <img data-value="auto" class="go-Icon go-Icon--inverted" height="24" width="24" src="../../../static/shared/icon/brightness_6_gm_grey_24dp.svg" alt="System theme">
+            <img data-value="dark" class="go-Icon go-Icon--inverted" height="24" width="24" src="../../../static/shared/icon/brightness_2_gm_grey_24dp.svg" alt="Dark theme">
+            <img data-value="light" class="go-Icon go-Icon--inverted" height="24" width="24" src="../../../static/shared/icon/light_mode_gm_grey_24dp.svg" alt="Light theme">
+            <p> Theme Toggle </p>
+          </button>
+        </li>
+        <li class="go-Footer-listItem">
+          <button class="go-Button go-Button--text go-Footer-keyboard js-openShortcuts" aria-label="Shorcuts Modal">
+            <img class="go-Icon go-Icon--inverted" height="24" width="24" src="../../../static/shared/icon/keyboard_grey_24dp.svg" alt="">
+            <p> Shortcuts Modal </p>
+          </button>
+        </li>
+      </ul>
+      <a class="go-Footer-googleLogo" href="https://google.com" target="_blank"rel="noopener"
+          data-gtmc="footer link">
+        <img class="go-Footer-googleLogoImg" height="24" width="72"
+            src="../../../static/shared/logo/google-white.svg" alt="Google logo">
+      </a>
+    </div>
+  </footer>
+
+    
+  <dialog id="jump-to-modal" class="JumpDialog go-Modal go-Modal--md js-modal">
+    <form method="dialog" data-gmtc="jump to form" aria-label="Jump to Identifier">
+      <div class="Dialog-title go-Modal-header">
+        <h2>Jump to</h2>
+        <button
+          class="go-Button go-Button--inline"
+          type="button"
+          data-modal-close
+          data-gtmc="modal button"
+          aria-label="Close"
+        >
+          <img
+            class="go-Icon"
+            height="24"
+            width="24"
+            src="../../../static/shared/icon/close_gm_grey_24dp.svg"
+            alt=""
+          />
+        </button>
+      </div>
+      <div class="JumpDialog-filter">
+        <input class="JumpDialog-input go-Input" autocomplete="off" type="text">
+      </div>
+      <div class="JumpDialog-body go-Modal-body">
+        <div class="JumpDialog-list"></div>
+      </div>
+      <div class="go-Modal-actions">
+        <button class="go-Button" data-test-id="close-dialog">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="ShortcutsDialog go-Modal go-Modal--sm js-modal">
+    <form method="dialog">
+      <div class="go-Modal-header">
+        <h2>Keyboard shortcuts</h2>
+        <button
+          class="go-Button go-Button--inline"
+          type="button"
+          data-modal-close
+          data-gtmc="modal button"
+          aria-label="Close"
+        >
+          <img
+            class="go-Icon"
+            height="24"
+            width="24"
+            src="../../../static/shared/icon/close_gm_grey_24dp.svg"
+            alt=""
+          />
+        </button>
+      </div>
+      <div class="go-Modal-body">
+        <table>
+          <tbody>
+            <tr><td class="ShortcutsDialog-key">
+              <strong>?</strong></td><td> : This menu</td>
+            </tr>
+            <tr><td class="ShortcutsDialog-key">
+              <strong>/</strong></td><td> : Search site</td>
+            </tr>
+            <tr><td class="ShortcutsDialog-key">
+              <strong>f</strong> or <strong>F</strong></td><td> : Jump to</td>
+            </tr>
+            <tr>
+              <td class="ShortcutsDialog-key"><strong>y</strong> or <strong>Y</strong></td>
+              <td> : Canonical URL</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="go-Modal-actions">
+        <button class="go-Button" data-test-id="close-dialog">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+    
+    
+    
+  
+  <div class="js-canonicalURLPath" data-canonical-url-path="/github.com/googleapis/mcp-toolbox-sdk-go@v0.0.0/core" hidden></div>
+  <div class="js-playgroundVars" data-modulepath="github.com/googleapis/mcp-toolbox-sdk-go" data-version="v0.0.0" hidden></div>
+  <script>
+    loadScript('/static/frontend/unit/main/main.js')
+  </script>
+
+  <script>
+    loadScript('/static/frontend/unit/unit.js')
+  </script>
+
+  </body>
+</html>
