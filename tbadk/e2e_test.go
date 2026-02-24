@@ -1,4 +1,5 @@
 //go:build e2e
+
 // Copyright 2025 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,6 +83,21 @@ func (m *mockToolContext) SearchMemory(ctx context.Context, query string) (*memo
 
 var _ tool.Context = (*mockToolContext)(nil)
 
+type protocolTestCase struct {
+	name      string
+	protocol  core.Protocol
+	isDefault bool
+}
+
+var protocolsToTest = []protocolTestCase{
+	{name: "Default (Latest)", isDefault: true},
+	{name: "v20241105", protocol: core.MCPv20241105},
+	{name: "v20250326", protocol: core.MCPv20250326},
+	{name: "v20250618", protocol: core.MCPv20250618},
+	{name: "v20251125", protocol: core.MCPv20251125},
+	{name: "MCP Alias (Latest)", protocol: core.MCP},
+}
+
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	log.Println("Starting E2E test setup...")
@@ -124,668 +140,724 @@ func TestMain(m *testing.M) {
 }
 
 func TestE2E_Basic(t *testing.T) {
-	// Helper to create a new client for each sub-test, like a function-scoped fixture
-	newClient := func(t *testing.T) tbadk.ToolboxClient {
-		client, err := tbadk.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err, "Failed to create ToolboxClient")
-		return client
-	}
-	agentCtx := mockAgentContext{
-		Context: context.Background(),
-	}
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			// Helper to create a new client for each sub-test, like a function-scoped fixture
+			newClient := func(t *testing.T) tbadk.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err, "Failed to create ToolboxClient")
+				return client
+			}
+			agentCtx := mockAgentContext{
+				Context: context.Background(),
+			}
 
-	testToolCtx := &mockToolContext{
-		mockAgentContext: agentCtx,
-		MockFuncCallID:   "specific-test-id",
-	}
+			testToolCtx := &mockToolContext{
+				mockAgentContext: agentCtx,
+				MockFuncCallID:   "specific-test-id",
+			}
 
-	// Helper to load the get-n-rows tool, like the get_n_rows_tool fixture
-	getNRowsTool := func(t *testing.T, client tbadk.ToolboxClient) tbadk.ToolboxTool {
-		tool, err := client.LoadTool("get-n-rows", context.Background())
-		require.NoError(t, err, "Failed to load tool 'get-n-rows'")
-		require.Equal(t, "get-n-rows", tool.Name())
-		return tool
-	}
+			// Helper to load the get-n-rows tool, like the get_n_rows_tool fixture
+			getNRowsTool := func(t *testing.T, client tbadk.ToolboxClient) tbadk.ToolboxTool {
+				tool, err := client.LoadTool("get-n-rows", context.Background())
+				require.NoError(t, err, "Failed to load tool 'get-n-rows'")
+				require.Equal(t, "get-n-rows", tool.Name())
+				return tool
+			}
 
-	t.Run("test_load_toolset_specific", func(t *testing.T) {
-		testCases := []struct {
-			name           string
-			toolsetName    string
-			expectedLength int
-			expectedTools  []string
-		}{
-			{"my-toolset", "my-toolset", 1, []string{"get-row-by-id"}},
-			{"my-toolset-2", "my-toolset-2", 2, []string{"get-n-rows", "get-row-by-id"}},
-		}
+			t.Run("test_load_toolset_specific", func(t *testing.T) {
+				testCases := []struct {
+					name           string
+					toolsetName    string
+					expectedLength int
+					expectedTools  []string
+				}{
+					{"my-toolset", "my-toolset", 1, []string{"get-row-by-id"}},
+					{"my-toolset-2", "my-toolset-2", 2, []string{"get-n-rows", "get-row-by-id"}},
+				}
 
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
+				for _, tc := range testCases {
+					t.Run(tc.name, func(t *testing.T) {
+						client := newClient(t)
+						toolset, err := client.LoadToolset(tc.toolsetName, context.Background())
+
+						require.NoError(t, err)
+
+						assert.Len(t, toolset, tc.expectedLength)
+
+						toolNames := make(map[string]struct{})
+						for _, tool := range toolset {
+							toolNames[tool.Name()] = struct{}{}
+						}
+						expectedToolsSet := make(map[string]struct{})
+						for _, name := range tc.expectedTools {
+							expectedToolsSet[name] = struct{}{}
+						}
+						assert.Equal(t, expectedToolsSet, toolNames)
+						log.Println("Finished test")
+					})
+				}
+			})
+
+			t.Run("test_load_toolset_default", func(t *testing.T) {
 				client := newClient(t)
-				toolset, err := client.LoadToolset(tc.toolsetName, context.Background())
-
+				toolset, err := client.LoadToolset("", context.Background())
 				require.NoError(t, err)
 
-				assert.Len(t, toolset, tc.expectedLength)
-
+				assert.Len(t, toolset, 7)
 				toolNames := make(map[string]struct{})
+
 				for _, tool := range toolset {
 					toolNames[tool.Name()] = struct{}{}
 				}
-				expectedToolsSet := make(map[string]struct{})
-				for _, name := range tc.expectedTools {
-					expectedToolsSet[name] = struct{}{}
+				expectedTools := map[string]struct{}{
+					"get-row-by-content-auth": {},
+					"get-row-by-email-auth":   {},
+					"get-row-by-id-auth":      {},
+					"get-row-by-id":           {},
+					"get-n-rows":              {},
+					"search-rows":             {},
+					"process-data":            {},
 				}
-				assert.Equal(t, expectedToolsSet, toolNames)
-				log.Println("Finished test")
+				assert.Equal(t, expectedTools, toolNames)
 			})
-		}
-	})
 
-	t.Run("test_load_toolset_default", func(t *testing.T) {
-		client := newClient(t)
-		toolset, err := client.LoadToolset("", context.Background())
-		require.NoError(t, err)
+			t.Run("test_run_tool", func(t *testing.T) {
+				client := newClient(t)
+				tool := getNRowsTool(t, client)
 
-		assert.Len(t, toolset, 7)
-		toolNames := make(map[string]struct{})
+				response, err := tool.Run(testToolCtx, map[string]any{"num_rows": "2"})
+				require.NoError(t, err)
 
-		for _, tool := range toolset {
-			toolNames[tool.Name()] = struct{}{}
-		}
-		expectedTools := map[string]struct{}{
-			"get-row-by-content-auth": {},
-			"get-row-by-email-auth":   {},
-			"get-row-by-id-auth":      {},
-			"get-row-by-id":           {},
-			"get-n-rows":              {},
-			"search-rows":             {},
-			"process-data":            {},
-		}
-		assert.Equal(t, expectedTools, toolNames)
-	})
+				respStr, ok := response["output"].(string)
+				require.True(t, ok, "Response should be a string")
+				assert.Contains(t, respStr, "row1")
+				assert.Contains(t, respStr, "row2")
+				assert.NotContains(t, respStr, "row3")
+			})
 
-	t.Run("test_run_tool", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
+			t.Run("test_run_tool_missing_params", func(t *testing.T) {
+				client := newClient(t)
+				tool := getNRowsTool(t, client)
 
-		response, err := tool.Run(testToolCtx, map[string]any{"num_rows": "2"})
-		require.NoError(t, err)
+				_, err := tool.Run(testToolCtx, map[string]any{})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "missing required parameter 'num_rows'")
+			})
 
-		respStr, ok := response["output"].(string)
-		require.True(t, ok, "Response should be a string")
-		assert.Contains(t, respStr, "row1")
-		assert.Contains(t, respStr, "row2")
-		assert.NotContains(t, respStr, "row3")
-	})
+			t.Run("test_run_tool_wrong_param_type", func(t *testing.T) {
+				client := newClient(t)
+				tool := getNRowsTool(t, client)
 
-	t.Run("test_run_tool_missing_params", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-
-		_, err := tool.Run(testToolCtx, map[string]any{})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "missing required parameter 'num_rows'")
-	})
-
-	t.Run("test_run_tool_wrong_param_type", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-
-		_, err := tool.Run(testToolCtx, map[string]any{"num_rows": 2})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "parameter 'num_rows' expects a string, but got int")
-	})
+				_, err := tool.Run(testToolCtx, map[string]any{"num_rows": 2})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "parameter 'num_rows' expects a string, but got int")
+			})
+		})
+	}
 }
 
 func TestE2E_LoadErrors(t *testing.T) {
-	newClient := func(t *testing.T) tbadk.ToolboxClient {
-		client, err := tbadk.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err, "Failed to create ToolboxClient")
-		return client
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			newClient := func(t *testing.T) tbadk.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err, "Failed to create ToolboxClient")
+				return client
+			}
+
+			t.Run("test_load_non_existent_tool", func(t *testing.T) {
+				client := newClient(t)
+				_, err := client.LoadTool("non-existent-tool", context.Background())
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "tool 'non-existent-tool' not found")
+			})
+
+			t.Run("test_load_non_existent_toolset", func(t *testing.T) {
+				client := newClient(t)
+				_, err := client.LoadToolset("non-existent-toolset", context.Background())
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "toolset does not exist")
+			})
+
+			t.Run("test_new_client_with_nil_option", func(t *testing.T) {
+				_, err := tbadk.NewToolboxClient("http://localhost:5000", nil)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "received a nil ClientOption")
+			})
+
+			t.Run("test_load_tool_with_nil_option", func(t *testing.T) {
+				client := newClient(t)
+				_, err := client.LoadTool("get-n-rows", context.Background(), nil)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "received a nil ToolOption")
+			})
+		})
 	}
-
-	t.Run("test_load_non_existent_tool", func(t *testing.T) {
-		client := newClient(t)
-		_, err := client.LoadTool("non-existent-tool", context.Background())
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "tool 'non-existent-tool' not found")
-	})
-
-	t.Run("test_load_non_existent_toolset", func(t *testing.T) {
-		client := newClient(t)
-		_, err := client.LoadToolset("non-existent-toolset", context.Background())
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "toolset does not exist")
-	})
-
-	t.Run("test_new_client_with_nil_option", func(t *testing.T) {
-		_, err := tbadk.NewToolboxClient("http://localhost:5000", nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "received a nil ClientOption")
-	})
-
-	t.Run("test_load_tool_with_nil_option", func(t *testing.T) {
-		client := newClient(t)
-		_, err := client.LoadTool("get-n-rows", context.Background(), nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "received a nil ToolOption")
-	})
 }
 
 func TestE2E_BindParams(t *testing.T) {
-	newClient := func(t *testing.T) tbadk.ToolboxClient {
-		client, err := tbadk.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err)
-		return client
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			newClient := func(t *testing.T) tbadk.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err)
+				return client
+			}
+			getNRowsTool := func(t *testing.T, client tbadk.ToolboxClient) tbadk.ToolboxTool {
+				tool, err := client.LoadTool("get-n-rows", context.Background())
+				require.NoError(t, err)
+				return tool
+			}
+			agentCtx := mockAgentContext{
+				Context: context.Background(),
+			}
+
+			testToolCtx := &mockToolContext{
+				mockAgentContext: agentCtx,
+				MockFuncCallID:   "specific-test-id",
+			}
+
+			t.Run("test_bind_params", func(t *testing.T) {
+				client := newClient(t)
+				tool := getNRowsTool(t, client)
+
+				newTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "3"))
+				require.NoError(t, err)
+
+				response, err := newTool.Run(testToolCtx, map[string]any{})
+				require.NoError(t, err)
+
+				respStr, ok := response["output"].(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, "row1")
+				assert.Contains(t, respStr, "row2")
+				assert.Contains(t, respStr, "row3")
+				assert.NotContains(t, respStr, "row4")
+			})
+
+			t.Run("test_bind_params_callable", func(t *testing.T) {
+				client := newClient(t)
+				tool := getNRowsTool(t, client)
+
+				callable := func() (string, error) {
+					return "3", nil
+				}
+
+				newTool, err := tool.ToolFrom(core.WithBindParamStringFunc("num_rows", callable))
+				require.NoError(t, err)
+
+				response, err := newTool.Run(testToolCtx, map[string]any{})
+				require.NoError(t, err)
+
+				respStr, ok := response["output"].(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, "row1")
+				assert.Contains(t, respStr, "row2")
+				assert.Contains(t, respStr, "row3")
+				assert.NotContains(t, respStr, "row4")
+			})
+		})
 	}
-	getNRowsTool := func(t *testing.T, client tbadk.ToolboxClient) tbadk.ToolboxTool {
-		tool, err := client.LoadTool("get-n-rows", context.Background())
-		require.NoError(t, err)
-		return tool
-	}
-	agentCtx := mockAgentContext{
-		Context: context.Background(),
-	}
-
-	testToolCtx := &mockToolContext{
-		mockAgentContext: agentCtx,
-		MockFuncCallID:   "specific-test-id",
-	}
-
-	t.Run("test_bind_params", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-
-		newTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "3"))
-		require.NoError(t, err)
-
-		response, err := newTool.Run(testToolCtx, map[string]any{})
-		require.NoError(t, err)
-
-		respStr, ok := response["output"].(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, "row1")
-		assert.Contains(t, respStr, "row2")
-		assert.Contains(t, respStr, "row3")
-		assert.NotContains(t, respStr, "row4")
-	})
-
-	t.Run("test_bind_params_callable", func(t *testing.T) {
-		client := newClient(t)
-		tool := getNRowsTool(t, client)
-
-		callable := func() (string, error) {
-			return "3", nil
-		}
-
-		newTool, err := tool.ToolFrom(core.WithBindParamStringFunc("num_rows", callable))
-		require.NoError(t, err)
-
-		response, err := newTool.Run(testToolCtx, map[string]any{})
-		require.NoError(t, err)
-
-		respStr, ok := response["output"].(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, "row1")
-		assert.Contains(t, respStr, "row2")
-		assert.Contains(t, respStr, "row3")
-		assert.NotContains(t, respStr, "row4")
-	})
 }
 
 func TestE2E_BindParamErrors(t *testing.T) {
-	client, err := tbadk.NewToolboxClient("http://localhost:5000")
-	require.NoError(t, err)
-	tool, err := client.LoadTool("get-n-rows", context.Background())
-	require.NoError(t, err)
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			opts := []core.ClientOption{}
+			if !proto.isDefault {
+				opts = append(opts, core.WithProtocol(proto.protocol))
+			}
+			client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+			require.NoError(t, err)
+			tool, err := client.LoadTool("get-n-rows", context.Background())
+			require.NoError(t, err)
 
-	t.Run("test_bind_non_existent_param", func(t *testing.T) {
-		_, err := tool.ToolFrom(core.WithBindParamString("non-existent-param", "3"))
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unable to bind parameter: no parameter named 'non-existent-param' on the tool")
-	})
+			t.Run("test_bind_non_existent_param", func(t *testing.T) {
+				_, err := tool.ToolFrom(core.WithBindParamString("non-existent-param", "3"))
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unable to bind parameter: no parameter named 'non-existent-param' on the tool")
+			})
 
-	t.Run("test_override_bound_param", func(t *testing.T) {
-		newTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "2"))
-		require.NoError(t, err)
+			t.Run("test_override_bound_param", func(t *testing.T) {
+				newTool, err := tool.ToolFrom(core.WithBindParamString("num_rows", "2"))
+				require.NoError(t, err)
 
-		_, err = newTool.ToolFrom(core.WithBindParamString("num_rows", "3"))
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot override existing bound parameter: 'num_rows'")
-	})
+				_, err = newTool.ToolFrom(core.WithBindParamString("num_rows", "3"))
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "cannot override existing bound parameter: 'num_rows'")
+			})
+		})
+	}
 }
 
 func TestE2E_Auth(t *testing.T) {
-	newClient := func(t *testing.T) tbadk.ToolboxClient {
-		client, err := tbadk.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err)
-		return client
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			newClient := func(t *testing.T) tbadk.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err)
+				return client
+			}
+
+			// Helper to create a static token source from a string token
+			staticTokenSource := func(token string) oauth2.TokenSource {
+				return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
+			}
+
+			agentCtx := mockAgentContext{
+				Context: context.Background(),
+			}
+
+			testToolCtx := &mockToolContext{
+				mockAgentContext: agentCtx,
+				MockFuncCallID:   "specific-test-id",
+			}
+
+			t.Run("test_run_tool_unauth_with_auth", func(t *testing.T) {
+				client := newClient(t)
+				_, err := client.LoadTool("get-row-by-id", context.Background(),
+					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken2)),
+				)
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "validation failed for tool 'get-row-by-id': unused auth tokens: my-test-auth")
+			})
+
+			t.Run("test_run_tool_no_auth", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-id-auth", context.Background())
+				require.NoError(t, err)
+
+				_, err = tool.Run(testToolCtx, map[string]any{"id": "2"})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "permission error: auth service 'my-test-auth' is required")
+			})
+
+			t.Run("test_run_tool_wrong_auth", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-id-auth", context.Background())
+				require.NoError(t, err)
+
+				authedTool, err := tool.ToolFrom(
+					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken2)),
+				)
+				require.NoError(t, err)
+
+				_, err = authedTool.Run(testToolCtx, map[string]any{"id": "2"})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unauthorized Tool call")
+			})
+
+			t.Run("test_run_tool_auth", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-id-auth", context.Background(),
+					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
+				)
+				require.NoError(t, err)
+
+				response, err := tool.Run(testToolCtx, map[string]any{"id": "2"})
+				require.NoError(t, err)
+
+				respStr, ok := response["output"].(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, "row2")
+			})
+
+			t.Run("test_run_tool_param_auth_no_auth", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-email-auth", context.Background())
+				require.NoError(t, err)
+
+				_, err = tool.Run(testToolCtx, map[string]any{})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "permission error: auth service 'my-test-auth' is required")
+			})
+
+			t.Run("test_run_tool_param_auth", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-email-auth", context.Background(),
+					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
+				)
+				require.NoError(t, err)
+
+				response, err := tool.Run(testToolCtx, map[string]any{})
+				require.NoError(t, err)
+
+				respStr, ok := response["output"].(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, "row4")
+				assert.Contains(t, respStr, "row5")
+				assert.Contains(t, respStr, "row6")
+			})
+
+			t.Run("test_run_tool_param_auth_no_field", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-content-auth", context.Background(),
+					core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
+				)
+				require.NoError(t, err)
+
+				_, err = tool.Run(testToolCtx, map[string]any{})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "no field named row_data in claims")
+			})
+
+			t.Run("test_run_tool_with_failing_token_source", func(t *testing.T) {
+				client := newClient(t)
+				tool, err := client.LoadTool("get-row-by-id-auth", context.Background(),
+					core.WithAuthTokenSource("my-test-auth", &failingTokenSource{}),
+				)
+				require.NoError(t, err)
+
+				_, err = tool.Run(testToolCtx, map[string]any{"id": "2"})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "failed to resolve auth token my-test-auth")
+				assert.Contains(t, err.Error(), "token source failed as designed")
+			})
+		})
 	}
-
-	// Helper to create a static token source from a string token
-	staticTokenSource := func(token string) oauth2.TokenSource {
-		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
-	}
-
-	agentCtx := mockAgentContext{
-		Context: context.Background(),
-	}
-
-	testToolCtx := &mockToolContext{
-		mockAgentContext: agentCtx,
-		MockFuncCallID:   "specific-test-id",
-	}
-
-	t.Run("test_run_tool_unauth_with_auth", func(t *testing.T) {
-		client := newClient(t)
-		_, err := client.LoadTool("get-row-by-id", context.Background(),
-			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken2)),
-		)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "validation failed for tool 'get-row-by-id': unused auth tokens: my-test-auth")
-	})
-
-	t.Run("test_run_tool_no_auth", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-id-auth", context.Background())
-		require.NoError(t, err)
-
-		_, err = tool.Run(testToolCtx, map[string]any{"id": "2"})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "permission error: auth service 'my-test-auth' is required")
-	})
-
-	t.Run("test_run_tool_wrong_auth", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-id-auth", context.Background())
-		require.NoError(t, err)
-
-		authedTool, err := tool.ToolFrom(
-			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken2)),
-		)
-		require.NoError(t, err)
-
-		_, err = authedTool.Run(testToolCtx, map[string]any{"id": "2"})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "unauthorized Tool call")
-	})
-
-	t.Run("test_run_tool_auth", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-id-auth", context.Background(),
-			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
-		)
-		require.NoError(t, err)
-
-		response, err := tool.Run(testToolCtx, map[string]any{"id": "2"})
-		require.NoError(t, err)
-
-		respStr, ok := response["output"].(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, "row2")
-	})
-
-	t.Run("test_run_tool_param_auth_no_auth", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-email-auth", context.Background())
-		require.NoError(t, err)
-
-		_, err = tool.Run(testToolCtx, map[string]any{})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "permission error: auth service 'my-test-auth' is required")
-	})
-
-	t.Run("test_run_tool_param_auth", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-email-auth", context.Background(),
-			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
-		)
-		require.NoError(t, err)
-
-		response, err := tool.Run(testToolCtx, map[string]any{})
-		require.NoError(t, err)
-
-		respStr, ok := response["output"].(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, "row4")
-		assert.Contains(t, respStr, "row5")
-		assert.Contains(t, respStr, "row6")
-	})
-
-	t.Run("test_run_tool_param_auth_no_field", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-content-auth", context.Background(),
-			core.WithAuthTokenSource("my-test-auth", staticTokenSource(authToken1)),
-		)
-		require.NoError(t, err)
-
-		_, err = tool.Run(testToolCtx, map[string]any{})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "no field named row_data in claims")
-	})
-
-	t.Run("test_run_tool_with_failing_token_source", func(t *testing.T) {
-		client := newClient(t)
-		tool, err := client.LoadTool("get-row-by-id-auth", context.Background(),
-			core.WithAuthTokenSource("my-test-auth", &failingTokenSource{}),
-		)
-		require.NoError(t, err)
-
-		_, err = tool.Run(testToolCtx, map[string]any{"id": "2"})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to resolve auth token my-test-auth")
-		assert.Contains(t, err.Error(), "token source failed as designed")
-	})
 }
 
 func TestE2E_OptionalParams(t *testing.T) {
-	// Helper to create a new client
-	newClient := func(t *testing.T) tbadk.ToolboxClient {
-		client, err := tbadk.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err, "Failed to create ToolboxClient")
-		return client
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			// Helper to create a new client
+			newClient := func(t *testing.T) tbadk.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err, "Failed to create ToolboxClient")
+				return client
+			}
+
+			// Helper to load the search-rows tool
+			searchRowsTool := func(t *testing.T, client tbadk.ToolboxClient) tbadk.ToolboxTool {
+				tool, err := client.LoadTool("search-rows", context.Background())
+				require.NoError(t, err, "Failed to load tool 'search-rows'")
+				return tool
+			}
+
+			agentCtx := mockAgentContext{
+				Context: context.Background(),
+			}
+
+			testToolCtx := &mockToolContext{
+				mockAgentContext: agentCtx,
+				MockFuncCallID:   "specific-test-id",
+			}
+
+			t.Run("test_tool_schema_is_correct", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+				params := tool.Parameters()
+
+				// Convert slice to map for easy lookup
+				paramMap := make(map[string]core.ParameterSchema)
+				for _, p := range params {
+					paramMap[p.Name] = p
+				}
+
+				// Check required parameter 'email'
+				emailParam, ok := paramMap["email"]
+				require.True(t, ok, "email parameter should exist")
+				assert.True(t, emailParam.Required, "'email' should be required")
+				assert.Equal(t, "string", emailParam.Type)
+
+				// Check optional parameter 'data'
+				dataParam, ok := paramMap["data"]
+				require.True(t, ok, "data parameter should exist")
+				assert.False(t, dataParam.Required, "'data' should be optional")
+				assert.Equal(t, "string", dataParam.Type)
+
+				// Check optional parameter 'id'
+				idParam, ok := paramMap["id"]
+				require.True(t, ok, "id parameter should exist")
+				assert.False(t, idParam.Required, "'id' should be optional")
+				assert.Equal(t, "integer", idParam.Type)
+			})
+
+			t.Run("test_run_tool_omitting_optionals", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+
+				// Test case 1: Optional params are completely omitted
+				response1, err1 := tool.Run(testToolCtx, map[string]any{
+					"email": "twishabansal@google.com",
+				})
+				require.NoError(t, err1)
+				respStr1, ok1 := response1["output"].(string)
+				require.True(t, ok1)
+				assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
+				assert.Contains(t, respStr1, "row2")
+				assert.NotContains(t, respStr1, "row3")
+
+				// Test case 2: Optional params are explicitly nil
+				// This should produce the same result as omitting them
+				response2, err2 := tool.Run(testToolCtx, map[string]any{
+					"email": "twishabansal@google.com",
+					"data":  nil,
+					"id":    nil,
+				})
+				require.NoError(t, err2)
+				respStr2, ok2 := response2["output"].(string)
+				require.True(t, ok2)
+				assert.Equal(t, respStr1, respStr2)
+			})
+
+			t.Run("test_run_tool_with_all_params_provided", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+				response, err := tool.Run(testToolCtx, map[string]any{
+					"email": "twishabansal@google.com",
+					"data":  "row3",
+					"id":    3,
+				})
+				require.NoError(t, err)
+				respStr, ok := response["output"].(string)
+				require.True(t, ok)
+				assert.Contains(t, respStr, `"email":"twishabansal@google.com"`)
+				assert.Contains(t, respStr, `"id":3`)
+				assert.Contains(t, respStr, "row3")
+				assert.NotContains(t, respStr, "row2")
+			})
+
+			t.Run("test_run_tool_missing_required_param", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+				_, err := tool.Run(testToolCtx, map[string]any{
+					"data": "row5",
+					"id":   5,
+				})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "missing required parameter 'email'")
+			})
+
+			t.Run("test_run_tool_required_param_is_nil", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+				_, err := tool.Run(testToolCtx, map[string]any{
+					"email": nil,
+					"id":    5,
+				})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "parameter 'email' is required but received a nil value")
+			})
+
+			// Corresponds to tests that check server-side logic by providing data that doesn't match
+			t.Run("test_run_tool_with_non_matching_data", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+
+				// Test with a different email
+				response, err := tool.Run(testToolCtx, map[string]any{
+					"email": "anubhavdhawan@google.com",
+					"id":    3,
+					"data":  "row3",
+				})
+				result := response["output"]
+				require.NoError(t, err)
+				assert.Equal(t, "null", result, "Response should be null for non-matching email")
+
+				// Test with different data
+				response, err = tool.Run(testToolCtx, map[string]any{
+					"email": "twishabansal@google.com",
+					"id":    3,
+					"data":  "row4", // This data doesn't match the id
+				})
+				result = response["output"]
+				require.NoError(t, err)
+				assert.Equal(t, "null", result, "Response should be null for non-matching data")
+			})
+
+			t.Run("test_run_tool_wrong_type_for_integer", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+
+				_, err := tool.Run(testToolCtx, map[string]any{
+					"email": "twishabansal@google.com",
+					"id":    "not-an-integer",
+				})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "parameter 'id' expects an integer, but got string")
+			})
+
+			t.Run("test_run_tool_with_default_behavior", func(t *testing.T) {
+				client := newClient(t)
+				tool := searchRowsTool(t, client)
+
+				// Omit default params, ensure they fallback to defaults
+				response1, err1 := tool.Run(testToolCtx, map[string]any{
+					"email": "twishabansal@google.com",
+				})
+				require.NoError(t, err1)
+				respStr1, ok1 := response1["output"].(string)
+				require.True(t, ok1)
+				assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
+				assert.Contains(t, respStr1, "row2")
+
+				// Override 'data' default
+				response2, err2 := tool.Run(testToolCtx, map[string]any{
+					"email": "twishabansal@google.com",
+					"data":  "row3",
+				})
+				require.NoError(t, err2)
+				respStr2, ok2 := response2["output"].(string)
+				require.True(t, ok2)
+				assert.Contains(t, respStr2, `"email":"twishabansal@google.com"`)
+				assert.Contains(t, respStr2, "row3")
+
+				// Override 'id' default
+				response3, err3 := tool.Run(testToolCtx, map[string]any{
+					"email": "twishabansal@google.com",
+					"id":    4,
+				})
+				require.NoError(t, err3)
+				assert.Equal(t, "null", response3["output"])
+			})
+		})
 	}
-
-	// Helper to load the search-rows tool
-	searchRowsTool := func(t *testing.T, client tbadk.ToolboxClient) tbadk.ToolboxTool {
-		tool, err := client.LoadTool("search-rows", context.Background())
-		require.NoError(t, err, "Failed to load tool 'search-rows'")
-		return tool
-	}
-
-	agentCtx := mockAgentContext{
-		Context: context.Background(),
-	}
-
-	testToolCtx := &mockToolContext{
-		mockAgentContext: agentCtx,
-		MockFuncCallID:   "specific-test-id",
-	}
-
-	t.Run("test_tool_schema_is_correct", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-		params := tool.Parameters()
-
-		// Convert slice to map for easy lookup
-		paramMap := make(map[string]core.ParameterSchema)
-		for _, p := range params {
-			paramMap[p.Name] = p
-		}
-
-		// Check required parameter 'email'
-		emailParam, ok := paramMap["email"]
-		require.True(t, ok, "email parameter should exist")
-		assert.True(t, emailParam.Required, "'email' should be required")
-		assert.Equal(t, "string", emailParam.Type)
-
-		// Check optional parameter 'data'
-		dataParam, ok := paramMap["data"]
-		require.True(t, ok, "data parameter should exist")
-		assert.False(t, dataParam.Required, "'data' should be optional")
-		assert.Equal(t, "string", dataParam.Type)
-
-		// Check optional parameter 'id'
-		idParam, ok := paramMap["id"]
-		require.True(t, ok, "id parameter should exist")
-		assert.False(t, idParam.Required, "'id' should be optional")
-		assert.Equal(t, "integer", idParam.Type)
-	})
-
-	t.Run("test_run_tool_omitting_optionals", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-
-		// Test case 1: Optional params are completely omitted
-		response1, err1 := tool.Run(testToolCtx, map[string]any{
-			"email": "twishabansal@google.com",
-		})
-		require.NoError(t, err1)
-		respStr1, ok1 := response1["output"].(string)
-		require.True(t, ok1)
-		assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
-		assert.Contains(t, respStr1, "row2")
-		assert.NotContains(t, respStr1, "row3")
-
-		// Test case 2: Optional params are explicitly nil
-		// This should produce the same result as omitting them
-		response2, err2 := tool.Run(testToolCtx, map[string]any{
-			"email": "twishabansal@google.com",
-			"data":  nil,
-			"id":    nil,
-		})
-		require.NoError(t, err2)
-		respStr2, ok2 := response2["output"].(string)
-		require.True(t, ok2)
-		assert.Equal(t, respStr1, respStr2)
-	})
-
-	t.Run("test_run_tool_with_all_params_provided", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-		response, err := tool.Run(testToolCtx, map[string]any{
-			"email": "twishabansal@google.com",
-			"data":  "row3",
-			"id":    3,
-		})
-		require.NoError(t, err)
-		respStr, ok := response["output"].(string)
-		require.True(t, ok)
-		assert.Contains(t, respStr, `"email":"twishabansal@google.com"`)
-		assert.Contains(t, respStr, `"id":3`)
-		assert.Contains(t, respStr, "row3")
-		assert.NotContains(t, respStr, "row2")
-	})
-
-	t.Run("test_run_tool_missing_required_param", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-		_, err := tool.Run(testToolCtx, map[string]any{
-			"data": "row5",
-			"id":   5,
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "missing required parameter 'email'")
-	})
-
-	t.Run("test_run_tool_required_param_is_nil", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-		_, err := tool.Run(testToolCtx, map[string]any{
-			"email": nil,
-			"id":    5,
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "parameter 'email' is required but received a nil value")
-	})
-
-	// Corresponds to tests that check server-side logic by providing data that doesn't match
-	t.Run("test_run_tool_with_non_matching_data", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-
-		// Test with a different email
-		response, err := tool.Run(testToolCtx, map[string]any{
-			"email": "anubhavdhawan@google.com",
-			"id":    3,
-			"data":  "row3",
-		})
-		result := response["output"]
-		require.NoError(t, err)
-		assert.Equal(t, "null", result, "Response should be null for non-matching email")
-
-		// Test with different data
-		response, err = tool.Run(testToolCtx, map[string]any{
-			"email": "twishabansal@google.com",
-			"id":    3,
-			"data":  "row4", // This data doesn't match the id
-		})
-		result = response["output"]
-		require.NoError(t, err)
-		assert.Equal(t, "null", result, "Response should be null for non-matching data")
-	})
-
-	t.Run("test_run_tool_wrong_type_for_integer", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-
-		_, err := tool.Run(testToolCtx, map[string]any{
-			"email": "twishabansal@google.com",
-			"id":    "not-an-integer",
-		})
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "parameter 'id' expects an integer, but got string")
-	})
-
-	t.Run("test_run_tool_with_default_behavior", func(t *testing.T) {
-		client := newClient(t)
-		tool := searchRowsTool(t, client)
-
-		// Omit default params, ensure they fallback to defaults
-		response1, err1 := tool.Run(testToolCtx, map[string]any{
-			"email": "twishabansal@google.com",
-		})
-		require.NoError(t, err1)
-		respStr1, ok1 := response1["output"].(string)
-		require.True(t, ok1)
-		assert.Contains(t, respStr1, `"email":"twishabansal@google.com"`)
-		assert.Contains(t, respStr1, "row2")
-
-		// Override 'data' default
-		response2, err2 := tool.Run(testToolCtx, map[string]any{
-			"email": "twishabansal@google.com",
-			"data":  "row3",
-		})
-		require.NoError(t, err2)
-		respStr2, ok2 := response2["output"].(string)
-		require.True(t, ok2)
-		assert.Contains(t, respStr2, `"email":"twishabansal@google.com"`)
-		assert.Contains(t, respStr2, "row3")
-
-		// Override 'id' default
-		response3, err3 := tool.Run(testToolCtx, map[string]any{
-			"email": "twishabansal@google.com",
-			"id":    4,
-		})
-		require.NoError(t, err3)
-		assert.Equal(t, "null", response3["output"])
-	})
 }
 
 func TestE2E_MapParams(t *testing.T) {
-	// Helper to create a new client
-	newClient := func(t *testing.T) tbadk.ToolboxClient {
-		client, err := tbadk.NewToolboxClient("http://localhost:5000")
-		require.NoError(t, err, "Failed to create ToolboxClient")
-		return client
-	}
+	for _, proto := range protocolsToTest {
+		t.Run(proto.name, func(t *testing.T) {
+			// Helper to create a new client
+			newClient := func(t *testing.T) tbadk.ToolboxClient {
+				opts := []core.ClientOption{}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err, "Failed to create ToolboxClient")
+				return client
+			}
 
-	// Helper to load the process-data tool
-	processDataTool := func(t *testing.T, client tbadk.ToolboxClient) tbadk.ToolboxTool {
-		tool, err := client.LoadTool("process-data", context.Background())
-		require.NoError(t, err, "Failed to load tool 'process-data'")
-		return tool
-	}
+			// Helper to load the process-data tool
+			processDataTool := func(t *testing.T, client tbadk.ToolboxClient) tbadk.ToolboxTool {
+				tool, err := client.LoadTool("process-data", context.Background())
+				require.NoError(t, err, "Failed to load tool 'process-data'")
+				return tool
+			}
 
-	agentCtx := mockAgentContext{
-		Context: context.Background(),
-	}
+			agentCtx := mockAgentContext{
+				Context: context.Background(),
+			}
 
-	testToolCtx := &mockToolContext{
-		mockAgentContext: agentCtx,
-		MockFuncCallID:   "specific-test-id",
-	}
+			testToolCtx := &mockToolContext{
+				mockAgentContext: agentCtx,
+				MockFuncCallID:   "specific-test-id",
+			}
 
-	t.Run("test_tool_schema_is_correct", func(t *testing.T) {
-		client := newClient(t)
-		tool := processDataTool(t, client)
-		params := tool.Parameters()
+			t.Run("test_tool_schema_is_correct", func(t *testing.T) {
+				client := newClient(t)
+				tool := processDataTool(t, client)
+				params := tool.Parameters()
 
-		// Convert slice to map for easy lookup
-		paramMap := make(map[string]core.ParameterSchema)
-		for _, p := range params {
-			paramMap[p.Name] = p
-		}
+				// Convert slice to map for easy lookup
+				paramMap := make(map[string]core.ParameterSchema)
+				for _, p := range params {
+					paramMap[p.Name] = p
+				}
 
-		// Verify 'execution_context' parameter.
-		execCtxParam, ok := paramMap["execution_context"]
-		require.True(t, ok, "'execution_context' parameter should exist")
-		assert.True(t, execCtxParam.Required, "'execution_context' should be required")
-		assert.Equal(t, "object", execCtxParam.Type, "'execution_context' type should be object")
+				// Verify 'execution_context' parameter.
+				execCtxParam, ok := paramMap["execution_context"]
+				require.True(t, ok, "'execution_context' parameter should exist")
+				assert.True(t, execCtxParam.Required, "'execution_context' should be required")
+				assert.Equal(t, "object", execCtxParam.Type, "'execution_context' type should be object")
 
-		// Verify 'user_scores' parameter.
-		userScoresParam, ok := paramMap["user_scores"]
-		require.True(t, ok, "'user_scores' parameter should exist")
-		assert.True(t, userScoresParam.Required, "'user_scores' should be required")
-		assert.Equal(t, "object", userScoresParam.Type, "'user_scores' type should be object")
+				// Verify 'user_scores' parameter.
+				userScoresParam, ok := paramMap["user_scores"]
+				require.True(t, ok, "'user_scores' parameter should exist")
+				assert.True(t, userScoresParam.Required, "'user_scores' should be required")
+				assert.Equal(t, "object", userScoresParam.Type, "'user_scores' type should be object")
 
-		// Verify 'feature_flags' parameter.
-		featureFlagsParam, ok := paramMap["feature_flags"]
-		require.True(t, ok, "'feature_flags' parameter should exist")
-		assert.False(t, featureFlagsParam.Required, "'feature_flags' should be optional")
-		assert.Equal(t, "object", featureFlagsParam.Type, "'feature_flags' type should be object")
-	})
+				// Verify 'feature_flags' parameter.
+				featureFlagsParam, ok := paramMap["feature_flags"]
+				require.True(t, ok, "'feature_flags' parameter should exist")
+				assert.False(t, featureFlagsParam.Required, "'feature_flags' should be optional")
+				assert.Equal(t, "object", featureFlagsParam.Type, "'feature_flags' type should be object")
+			})
 
-	t.Run("test_run_tool_with_all_map_params", func(t *testing.T) {
-		client := newClient(t)
-		tool := processDataTool(t, client)
+			t.Run("test_run_tool_with_all_map_params", func(t *testing.T) {
+				client := newClient(t)
+				tool := processDataTool(t, client)
 
-		// Invoke the tool with valid map parameters.
-		response, err := tool.Run(testToolCtx, map[string]any{
-			"execution_context": map[string]any{
-				"env":  "prod",
-				"id":   1234,
-				"user": 1234.5,
-			},
-			"user_scores": map[string]any{
-				"user1": 100,
-				"user2": 200,
-			},
-			"feature_flags": map[string]any{
-				"new_feature": true,
-			},
+				// Invoke the tool with valid map parameters.
+				response, err := tool.Run(testToolCtx, map[string]any{
+					"execution_context": map[string]any{
+						"env":  "prod",
+						"id":   1234,
+						"user": 1234.5,
+					},
+					"user_scores": map[string]any{
+						"user1": 100,
+						"user2": 200,
+					},
+					"feature_flags": map[string]any{
+						"new_feature": true,
+					},
+				})
+				require.NoError(t, err)
+				respStr, ok := response["output"].(string)
+				require.True(t, ok, "Response should be a string")
+
+				assert.Contains(t, respStr, `"execution_context":{"env":"prod","id":1234,"user":1234.5}`)
+				assert.Contains(t, respStr, `"user_scores":{"user1":100,"user2":200}`)
+				assert.Contains(t, respStr, `"feature_flags":{"new_feature":true}`)
+			})
+
+			t.Run("test_run_tool_omitting_optional_map", func(t *testing.T) {
+				client := newClient(t)
+				tool := processDataTool(t, client)
+
+				// Invoke the tool without the optional 'feature_flags' parameter.
+				response, err := tool.Run(testToolCtx, map[string]any{
+					"execution_context": map[string]any{"env": "dev"},
+					"user_scores":       map[string]any{"user3": 300},
+				})
+				require.NoError(t, err)
+				respStr, ok := response["output"].(string)
+				require.True(t, ok, "Response should be a string")
+
+				assert.Contains(t, respStr, `"execution_context":{"env":"dev"}`)
+				assert.Contains(t, respStr, `"user_scores":{"user3":300}`)
+				assert.Contains(t, respStr, `"feature_flags":null`)
+			})
+
+			t.Run("test_run_tool_with_wrong_map_value_type", func(t *testing.T) {
+				client := newClient(t)
+				tool := processDataTool(t, client)
+
+				// Attempt to invoke the tool with an incorrect type in a map value.
+				_, err := tool.Run(testToolCtx, map[string]any{
+					"execution_context": map[string]any{"env": "staging"},
+					"user_scores": map[string]any{
+						"user4": "not-an-integer",
+					},
+				})
+
+				// Assert that an error was returned.
+				require.Error(t, err, "Expected an error for wrong map value type")
+				assert.Contains(t, err.Error(), "expects an integer, but got string", "Error message should indicate a validation failure")
+			})
 		})
-		require.NoError(t, err)
-		respStr, ok := response["output"].(string)
-		require.True(t, ok, "Response should be a string")
-
-		assert.Contains(t, respStr, `"execution_context":{"env":"prod","id":1234,"user":1234.5}`)
-		assert.Contains(t, respStr, `"user_scores":{"user1":100,"user2":200}`)
-		assert.Contains(t, respStr, `"feature_flags":{"new_feature":true}`)
-	})
-
-	t.Run("test_run_tool_omitting_optional_map", func(t *testing.T) {
-		client := newClient(t)
-		tool := processDataTool(t, client)
-
-		// Invoke the tool without the optional 'feature_flags' parameter.
-		response, err := tool.Run(testToolCtx, map[string]any{
-			"execution_context": map[string]any{"env": "dev"},
-			"user_scores":       map[string]any{"user3": 300},
-		})
-		require.NoError(t, err)
-		respStr, ok := response["output"].(string)
-		require.True(t, ok, "Response should be a string")
-
-		assert.Contains(t, respStr, `"execution_context":{"env":"dev"}`)
-		assert.Contains(t, respStr, `"user_scores":{"user3":300}`)
-		assert.Contains(t, respStr, `"feature_flags":null`)
-	})
-
-	t.Run("test_run_tool_with_wrong_map_value_type", func(t *testing.T) {
-		client := newClient(t)
-		tool := processDataTool(t, client)
-
-		// Attempt to invoke the tool with an incorrect type in a map value.
-		_, err := tool.Run(testToolCtx, map[string]any{
-			"execution_context": map[string]any{"env": "staging"},
-			"user_scores": map[string]any{
-				"user4": "not-an-integer",
-			},
-		})
-
-		// Assert that an error was returned.
-		require.Error(t, err, "Expected an error for wrong map value type")
-		assert.Contains(t, err.Error(), "expects an integer, but got string", "Error message should indicate a validation failure")
-	})
+	}
 }

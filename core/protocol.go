@@ -20,11 +20,6 @@ import "github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 type Protocol string
 
 const (
-	// Toolbox represents the Native Toolbox protocol.
-	// Deprecated: Toolbox protocol is no longer supported and will be removed on March 4, 2026.
-	// Use MCP or a specific MCP version instead.
-	Toolbox Protocol = "toolbox"
-
 	// MCP Version Constants
 	MCPv20251125 Protocol = "2025-11-25"
 	MCPv20250618 Protocol = "2025-06-18"

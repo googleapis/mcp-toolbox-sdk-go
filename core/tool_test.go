@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -30,7 +31,7 @@ import (
 	"testing"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/toolboxtransport"
+	mcp "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250618"
 	"golang.org/x/oauth2"
 )
 
@@ -579,10 +580,30 @@ func (ft *failingTransport) RoundTrip(req *http.Request) (*http.Response, error)
 	}, nil
 }
 
+// JSON-RPC Structures
+type jsonRPCRequest struct {
+	JSONRPC string `json:"jsonrpc"`
+	Method  string `json:"method"`
+	ID      any    `json:"id,omitempty"`
+	Params  any    `json:"params,omitempty"`
+}
+
+type jsonRPCResponse struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      any             `json:"id"`
+	Result  json.RawMessage `json:"result,omitempty"`
+	Error   any             `json:"error,omitempty"`
+}
+
+type mcpToolCallParams struct {
+	Name      string         `json:"name"`
+	Arguments map[string]any `json:"arguments"`
+}
+
 func TestToolboxTool_Invoke(t *testing.T) {
 	// A base tool for successful invocations
 	createBaseTool := func(httpClient *http.Client, baseURL string) *ToolboxTool {
-		tr := toolboxtransport.New(baseURL, httpClient)
+		tr, _ := mcp.New(baseURL, httpClient, "test-client")
 
 		return &ToolboxTool{
 			name:        "weather",
@@ -604,29 +625,78 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		}
 	}
 
-	t.Run("Successful invocation", func(t *testing.T) {
-		// Setup a mock server that validates the incoming request
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// MCP Mock Server Factory
+	newMockMCPServer := func(handler func(req jsonRPCRequest) (any, error)) *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Basic header validation
 			if r.Header.Get("Content-Type") != "application/json" {
-				t.Error("Request missing Content-Type header")
-			}
-			if r.Header.Get("X-Client-Version") != "v1.0.0" {
-				t.Error("Request missing client version header")
-			}
-			if r.Header.Get("weather_api_token") != "api-token-123" {
-				t.Error("Request missing auth token header")
+				http.Error(w, "invalid content type", http.StatusBadRequest)
+				return
 			}
 
+			// Read body
 			body, _ := io.ReadAll(r.Body)
-			var payload map[string]any
-			_ = json.Unmarshal(body, &payload)
-			if payload["city"] != "London" || payload["units"] != "metric" {
-				t.Errorf("Received incorrect payload: %v", payload)
+			var req jsonRPCRequest
+			json.Unmarshal(body, &req)
+
+			// Handle Handshake
+			if req.Method == "initialize" {
+				res := map[string]any{
+					"protocolVersion": "2025-06-18",
+					"capabilities":    map[string]any{"tools": map[string]any{}},
+					"serverInfo":      map[string]any{"name": "mock", "version": "1"},
+				}
+				resp, _ := json.Marshal(res)
+				json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: resp})
+				return
+			}
+			if req.Method == "notifications/initialized" {
+				w.WriteHeader(http.StatusOK)
+				return
 			}
 
-			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(map[string]any{"result": "sunny"})
+			// Invoke custom handler for 'tools/call'
+			res, err := handler(req)
+			w.Header().Set("Content-Type", "application/json")
+
+			resp := jsonRPCResponse{JSONRPC: "2.0", ID: req.ID}
+			if err != nil {
+				// MCP error struct
+				resp.Error = map[string]any{
+					"code":    -32000,
+					"message": err.Error(),
+				}
+			} else {
+				resBytes, _ := json.Marshal(res)
+				resp.Result = resBytes
+			}
+			json.NewEncoder(w).Encode(resp)
 		}))
+	}
+
+	t.Run("Successful invocation", func(t *testing.T) {
+		server := newMockMCPServer(func(req jsonRPCRequest) (any, error) {
+			var params mcpToolCallParams
+			argsBytes, _ := json.Marshal(req.Params)
+			json.Unmarshal(argsBytes, &params)
+
+			// Validate payload
+			if params.Name != "weather" {
+				return nil, fmt.Errorf("unexpected tool name: %s", params.Name)
+			}
+			city, _ := params.Arguments["city"].(string)
+			units, _ := params.Arguments["units"].(string)
+
+			if city != "London" || units != "metric" {
+				return nil, fmt.Errorf("incorrect args")
+			}
+
+			return map[string]any{
+				"content": []map[string]string{
+					{"type": "text", "text": "sunny"},
+				},
+			}, nil
+		})
 		defer server.Close()
 
 		tool := createBaseTool(server.Client(), server.URL)
@@ -641,8 +711,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 	})
 
 	t.Run("Applies correct _token suffix to auth headers but not client headers", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Assert client header is present without suffix
+		checkHeaders := func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("X-Custom-Header") != "client-val" {
 				t.Errorf("Expected client header 'X-Custom-Header' to be 'client-val', got %q", r.Header.Get("X-Custom-Header"))
 			}
@@ -656,9 +725,27 @@ func TestToolboxTool_Invoke(t *testing.T) {
 			if r.Header.Get("my_auth") != "" {
 				t.Errorf("Auth header 'my_auth' should not exist, but it does")
 			}
+		}
 
-			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(map[string]any{"result": "ok"})
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			checkHeaders(w, r)
+			// Respond to handshake/call minimally
+			body, _ := io.ReadAll(r.Body)
+			var req jsonRPCRequest
+			json.Unmarshal(body, &req)
+
+			if req.Method == "initialize" {
+				res, _ := json.Marshal(map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "mock", "version": "1"}})
+				json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
+				return
+			}
+			if req.Method == "notifications/initialized" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			// tools/call
+			res, _ := json.Marshal(map[string]any{"content": []map[string]string{{"type": "text", "text": "ok"}}})
+			json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
 		}))
 		defer server.Close()
 
@@ -678,8 +765,21 @@ func TestToolboxTool_Invoke(t *testing.T) {
 			if r.Header.Get("special_api_token") != "auth_value_should_win" {
 				t.Errorf("Expected header 'special_api_token' to be overwritten by auth token source, but it was not. Got: %q", r.Header.Get("special_api_token"))
 			}
-			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(map[string]any{"result": "ok"})
+			// Respond OK
+			body, _ := io.ReadAll(r.Body)
+			var req jsonRPCRequest
+			json.Unmarshal(body, &req)
+			if req.Method == "initialize" {
+				res, _ := json.Marshal(map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "mock", "version": "1"}})
+				json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
+				return
+			}
+			if req.Method == "notifications/initialized" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			res, _ := json.Marshal(map[string]any{"content": []map[string]string{{"type": "text", "text": "ok"}}})
+			json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
 		}))
 		defer server.Close()
 
@@ -690,18 +790,6 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		_, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
 		if err != nil {
 			t.Fatalf("Invoke failed unexpectedly: %v", err)
-		}
-	})
-
-	t.Run("Negative Test - Fails when http client is nil", func(t *testing.T) {
-		tool := createBaseTool(nil, "") // httpClient is nil
-		_, err := tool.Invoke(context.Background(), nil)
-
-		if err == nil {
-			t.Fatal("Expected an error for nil http client, but got nil")
-		}
-		if !strings.Contains(err.Error(), "http client is not set") {
-			t.Errorf("Incorrect error message for nil client. Got: %v", err)
 		}
 	})
 
@@ -734,10 +822,9 @@ func TestToolboxTool_Invoke(t *testing.T) {
 	})
 
 	t.Run("Negative Test - Fails when server returns an error status", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusBadRequest)
-			_ = json.NewEncoder(w).Encode(map[string]any{"error": "invalid city format"})
-		}))
+		server := newMockMCPServer(func(req jsonRPCRequest) (any, error) {
+			return nil, errors.New("invalid city format")
+		})
 		defer server.Close()
 
 		tool := createBaseTool(server.Client(), server.URL)
@@ -746,16 +833,20 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a non-200 server response, but got nil")
 		}
-		if !strings.Contains(err.Error(), "API returned error status 400: invalid city format") {
+		// Updated error message expectation for MCP transport
+		if !strings.Contains(err.Error(), "invalid city format") {
 			t.Errorf("Incorrect error message for server error. Got: %v", err)
 		}
 	})
 
 	t.Run("Success Path - Handles non-json successful response", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("Plain text success message"))
-		}))
+		server := newMockMCPServer(func(req jsonRPCRequest) (any, error) {
+			return map[string]any{
+				"content": []map[string]string{
+					{"type": "text", "text": "Plain text success message"},
+				},
+			}, nil
+		})
 		defer server.Close()
 
 		tool := createBaseTool(server.Client(), server.URL)
@@ -802,6 +893,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 	})
 
 	t.Run("Negative Test - Fails when server returns an error status with non-JSON body", func(t *testing.T) {
+		// MCP server returns 500
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte("Internal Server Error"))
@@ -814,7 +906,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a non-200 server response, but got nil")
 		}
-		if !strings.Contains(err.Error(), "API returned unexpected status: 500") {
+		if !strings.Contains(err.Error(), "API request failed with status 500") {
 			t.Errorf("Incorrect error message for non-JSON server error. Got: %v", err)
 		}
 	})
@@ -830,23 +922,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a failed API call, but got nil")
 		}
-		if !strings.Contains(err.Error(), "HTTP call to tool 'weather' failed") {
-			t.Errorf("Incorrect error message for failed API call. Got: %v", err)
-		}
-	})
-
-	t.Run("Negative Test - Fails when API call itself fails", func(t *testing.T) {
-		// Create a server and immediately close it to simulate a network error
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-		server.Close()
-
-		tool := createBaseTool(server.Client(), server.URL)
-		_, err := tool.Invoke(context.Background(), map[string]any{"city": "London"})
-
-		if err == nil {
-			t.Fatal("Expected an error from a failed API call, but got nil")
-		}
-		if !strings.Contains(err.Error(), "HTTP call to tool 'weather' failed") {
+		if !strings.Contains(err.Error(), "http request failed") {
 			t.Errorf("Incorrect error message for failed API call. Got: %v", err)
 		}
 	})
@@ -854,7 +930,9 @@ func TestToolboxTool_Invoke(t *testing.T) {
 	t.Run("Negative Test - Fails when reading response body fails", func(t *testing.T) {
 		// The mock server for this test case is intentionally minimal,
 		// as the failure is injected via the custom http.Client.
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK) // Needed to pass status check in doRPC
+		}))
 		defer server.Close()
 
 		failingClient := &http.Client{Transport: &failingTransport{}}
@@ -864,7 +942,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		if err == nil {
 			t.Fatal("Expected an error from a failing response body read, but got nil")
 		}
-		if !strings.Contains(err.Error(), "failed to read response body") {
+		if !strings.Contains(err.Error(), "read body failed") {
 			t.Errorf("Incorrect error message for failed body read. Got: %v", err)
 		}
 	})
@@ -896,20 +974,18 @@ func TestToolboxTool_Invoke_HttpsWarning(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf.Reset()
+			tr, _ := mcp.New(tt.baseURL, http.DefaultClient, "test-client")
 
 			tool := &ToolboxTool{
 				name:      "test-tool",
-				transport: &dummyTransport{baseURL: tt.baseURL},
+				transport: tr,
 				authTokenSources: map[string]oauth2.TokenSource{
 					"service_a": mockTokenSource,
 				},
 				boundParams: make(map[string]any),
 			}
 
-			_, err := tool.Invoke(context.Background(), nil)
-			if err != nil {
-				t.Fatalf("Invoke failed: %v", err)
-			}
+			_, _ = tool.Invoke(context.Background(), nil)
 
 			logOutput := buf.String()
 			hasWarning := strings.Contains(logOutput, "WARNING: This connection is using HTTP. To prevent credential exposure, please ensure all communication is sent over HTTPS.")
