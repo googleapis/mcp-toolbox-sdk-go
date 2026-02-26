@@ -25,14 +25,24 @@ wget -nv --recursive --page-requisites --convert-links \
      -P "$OUTPUT_DIR/$VERSION" \
      http://localhost:8080/github.com/googleapis/mcp-toolbox-sdk-go || true
 
+kill $PKGSITE_PID
+
 VERSION_ROOT="$OUTPUT_DIR/$VERSION"
 TEMP_PATH="$VERSION_ROOT/github.com/googleapis/mcp-toolbox-sdk-go"
 
 if [ -d "$TEMP_PATH" ]; then
+    echo "Flattening directory structure..."
     cp -r "$TEMP_PATH/"* "$VERSION_ROOT/"
-    mv "$VERSION_ROOT/github.com/googleapis/mcp-toolbox-sdk-go.html" "$VERSION_ROOT/index.html"
+    if [ -f "$VERSION_ROOT/github.com/googleapis/mcp-toolbox-sdk-go.html" ]; then
+        mv "$VERSION_ROOT/github.com/googleapis/mcp-toolbox-sdk-go.html" "$VERSION_ROOT/index.html"
+    fi
+    
     rm -rf "$VERSION_ROOT/github.com"
+fi
 
-kill $PKGSITE_PID
-
-echo "Official Go documentation captured in $OUTPUT_DIR/$VERSION"
+if [ -f "$VERSION_ROOT/index.html" ]; then
+  echo "Documentation generated successfully in $OUTPUT_DIR/$VERSION"
+else
+  echo "Error: Documentation was not generated correctly. index.html is missing."
+  exit 1
+fi
