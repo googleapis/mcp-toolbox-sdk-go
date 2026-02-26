@@ -10,10 +10,9 @@
     </style>
     <script>
         // Redirect logic to latest version
-        fetch('/versions.json')
+        fetch('versions.json')
             .then(r => r.json())
             .then(versions => {
-                // Sort versions (semver-ish) and pick the latest
                 const latest = versions.sort().reverse()[0];
                 if (latest) {
                     window.location.replace('/' + latest + '/');

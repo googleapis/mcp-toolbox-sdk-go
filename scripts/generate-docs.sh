@@ -25,6 +25,14 @@ wget -nv --recursive --page-requisites --convert-links \
      -P "$OUTPUT_DIR/$VERSION" \
      http://localhost:8080/github.com/googleapis/mcp-toolbox-sdk-go || true
 
+VERSION_ROOT="$OUTPUT_DIR/$VERSION"
+TEMP_PATH="$VERSION_ROOT/github.com/googleapis/mcp-toolbox-sdk-go"
+
+if [ -d "$TEMP_PATH" ]; then
+    cp -r "$TEMP_PATH/"* "$VERSION_ROOT/"
+    mv "$VERSION_ROOT/github.com/googleapis/mcp-toolbox-sdk-go.html" "$VERSION_ROOT/index.html"
+    rm -rf "$VERSION_ROOT/github.com"
+
 kill $PKGSITE_PID
 
 echo "Official Go documentation captured in $OUTPUT_DIR/$VERSION"
