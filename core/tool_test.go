@@ -603,7 +603,7 @@ type mcpToolCallParams struct {
 func TestToolboxTool_Invoke(t *testing.T) {
 	// A base tool for successful invocations
 	createBaseTool := func(httpClient *http.Client, baseURL string) *ToolboxTool {
-		tr, _ := mcp.New(baseURL, httpClient, "test-client")
+		tr, _ := mcp.New(baseURL, httpClient, "test-client", "1.0.0")
 
 		return &ToolboxTool{
 			name:        "weather",
@@ -974,7 +974,7 @@ func TestToolboxTool_Invoke_HttpsWarning(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf.Reset()
-			tr, _ := mcp.New(tt.baseURL, http.DefaultClient, "test-client")
+			tr, _ := mcp.New(tt.baseURL, http.DefaultClient, "test-client", "1.0.0")
 
 			tool := &ToolboxTool{
 				name:      "test-tool",
