@@ -284,6 +284,42 @@ func TestSchemaToMap(t *testing.T) {
 				"default":     "active",
 			},
 		},
+		{
+			name: "Object with boolean additionalProperties",
+			input: &ParameterSchema{
+				Type:                 "object",
+				AdditionalProperties: true,
+			},
+			expected: map[string]any{
+				"type":                 "object",
+				"additionalProperties": true,
+			},
+		},
+		{
+			name: "Object with nested schema additionalProperties",
+			input: &ParameterSchema{
+				Type: "object",
+				AdditionalProperties: &ParameterSchema{
+					Type: "string",
+				},
+			},
+			expected: map[string]any{
+				"type": "object",
+				"additionalProperties": map[string]any{
+					"type": "string",
+				},
+			},
+		},
+		{
+			name: "Object with nil additionalProperties",
+			input: &ParameterSchema{
+				Type:                 "object",
+				AdditionalProperties: nil,
+			},
+			expected: map[string]any{
+				"type": "object",
+			},
+		},
 	}
 
 	// Run test cases
