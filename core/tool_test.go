@@ -1209,6 +1209,78 @@ func TestInputSchema(t *testing.T) {
             }`,
 		},
 		{
+			name: "Tool with valid flat array",
+			tool: &ToolboxTool{
+				parameters: []ParameterSchema{
+					{
+						Name:     "tags",
+						Type:     "array",
+						Items:    &ParameterSchema{Type: "string"},
+						Required: true,
+					},
+				},
+			},
+			expectedJSON: `{
+                "type": "object",
+                "properties": {
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": ["tags"]
+            }`,
+		},
+		{
+			name: "Tool with additionalProperties as boolean",
+			tool: &ToolboxTool{
+				parameters: []ParameterSchema{
+					{
+						Name:                 "metadata",
+						Type:                 "object",
+						AdditionalProperties: true,
+						Required:             true,
+					},
+				},
+			},
+			expectedJSON: `{
+                "type": "object",
+                "properties": {
+                    "metadata": {
+                        "type": "object",
+                        "additionalProperties": true
+                    }
+                },
+								"required": ["metadata"]
+            }`,
+		},
+		{
+			name: "Tool with valid flat map",
+			tool: &ToolboxTool{
+				parameters: []ParameterSchema{
+					{
+						Name:                 "config",
+						Type:                 "object",
+						AdditionalProperties: &ParameterSchema{Type: "string"},
+						Required:             false,
+					},
+				},
+			},
+			expectedJSON: `{
+                "type": "object",
+                "properties": {
+                    "config": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }`,
+		},
+		{
 			name: "Tool with no required parameters",
 			tool: &ToolboxTool{
 				parameters: []ParameterSchema{

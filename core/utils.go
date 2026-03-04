@@ -160,7 +160,6 @@ func resolveClientHeaders(clientHeaderSources map[string]oauth2.TokenSource) (ma
 }
 
 // schemaToMap recursively converts a ParameterSchema to a map with its type and description.
-// It returns an error if nested arrays or objects are detected.
 func schemaToMap(p *ParameterSchema) (map[string]any, error) {
 	var schema = make(map[string]any)
 
@@ -179,7 +178,7 @@ func schemaToMap(p *ParameterSchema) (map[string]any, error) {
 		schema["default"] = p.Default
 	}
 
-	// Handle array validation: Throw error if items are nested maps or arrays
+	// Handle array validation recursively
 	if p.Type == "array" && p.Items != nil {
 		itemSchema, err := schemaToMap(p.Items)
 		if err != nil {
@@ -188,13 +187,10 @@ func schemaToMap(p *ParameterSchema) (map[string]any, error) {
 		schema["items"] = itemSchema
 	}
 
-	// Handle object validation: Throw error if additionalProperties are nested arrays and maps.
+	// Handle object validation recursively
 	if p.Type == "object" && p.AdditionalProperties != nil {
 		switch ap := p.AdditionalProperties.(type) {
 		case *ParameterSchema:
-			if ap.Type == "array" || ap.Type == "object" {
-				return nil, fmt.Errorf("unsupported nested structure: objects containing %s are not allowed", ap.Type)
-			}
 			apSchema, err := schemaToMap(ap)
 			if err != nil {
 				return nil, err

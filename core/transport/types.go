@@ -86,38 +86,17 @@ func (p *ParameterSchema) ValidateType(value any) error {
 		}
 
 		switch ap := p.AdditionalProperties.(type) {
-		// Generic map: Iterate values to ensure no nested structures
-		case nil:
-			iter := v.MapRange()
-			for iter.Next() {
-				key := iter.Key().String()
-				// Extract the underlying value
-				rv := reflect.ValueOf(iter.Value().Interface())
-				if rv.Kind() == reflect.Map || rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
-					return fmt.Errorf("error in object '%s' for key '%s': values must be primitive types, nested maps/arrays are not supported", p.Name, key)
-				}
-			}
+		case nil, bool:
+			// Generic maps
+			return nil
 
-		// Allows types based on boolean flag, but still restricts nesting
-		case bool:
-			if ap {
-				iter := v.MapRange()
-				for iter.Next() {
-					key := iter.Key().String()
-					rv := reflect.ValueOf(iter.Value().Interface())
-					if rv.Kind() == reflect.Map || rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
-						return fmt.Errorf("error in object '%s' for key '%s': values must be primitive types, nested maps/arrays are not supported", p.Name, key)
-					}
-				}
-			}
-
-		// Validate type for each value in map
 		case *ParameterSchema:
 			// Raise error if the input is a nested map / array
 			if ap.Type == "object" || ap.Type == "array" {
 				return fmt.Errorf("invalid schema for object '%s': values cannot be of type '%s' (nested structures are not supported)", p.Name, ap.Type)
 			}
 
+			// Reflection loop to validate strongly-typed Go maps (like map[string]int)
 			iter := v.MapRange()
 			for iter.Next() {
 				key := iter.Key().String()
@@ -159,12 +138,10 @@ func (p *ParameterSchema) ValidateDefinition() error {
 
 	case "object":
 		switch ap := p.AdditionalProperties.(type) {
-		case nil:
+		case nil, bool:
 			// Valid generic map
-		case bool:
-			// Valid scenario
 		case *ParameterSchema:
-			// Prevent nested map/array definitions in the schema itself
+			// Enforce that typed maps cannot be nested
 			if ap.Type == "object" || ap.Type == "array" {
 				return fmt.Errorf("invalid schema definition for object '%s': nested maps or arrays are not supported", p.Name)
 			}

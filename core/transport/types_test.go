@@ -440,38 +440,6 @@ func TestValidateTypeObject(t *testing.T) {
 		}
 	})
 
-	t.Run("supports generic and strongly typed maps", func(t *testing.T) {
-		// Explicitly test the generic map[string]any
-		schemaAny := ParameterSchema{Name: "any_map", Type: "object", AdditionalProperties: true}
-		if err := schemaAny.ValidateType(map[string]any{"key1": "val", "key2": 123, "key3": true}); err != nil {
-			t.Errorf("Failed to validate generic map[string]any: %v", err)
-		}
-
-		// Test strongly typed map[string]string
-		schemaStr := ParameterSchema{Name: "str_map", Type: "object", AdditionalProperties: &ParameterSchema{Type: "string"}}
-		if err := schemaStr.ValidateType(map[string]string{"key": "val"}); err != nil {
-			t.Errorf("Failed to validate map[string]string: %v", err)
-		}
-
-		// Test strongly typed map[string]int
-		schemaInt := ParameterSchema{Name: "int_map", Type: "object", AdditionalProperties: &ParameterSchema{Type: "integer"}}
-		if err := schemaInt.ValidateType(map[string]int{"key": 1}); err != nil {
-			t.Errorf("Failed to validate map[string]int: %v", err)
-		}
-
-		// Test strongly typed map[string]float64
-		schemaFloat := ParameterSchema{Name: "float_map", Type: "object", AdditionalProperties: &ParameterSchema{Type: "float"}}
-		if err := schemaFloat.ValidateType(map[string]float64{"key": 1.1}); err != nil {
-			t.Errorf("Failed to validate map[string]float64: %v", err)
-		}
-
-		// Test strongly typed map[string]bool
-		schemaBool := ParameterSchema{Name: "bool_map", Type: "object", AdditionalProperties: &ParameterSchema{Type: "boolean"}}
-		if err := schemaBool.ValidateType(map[string]bool{"key": true}); err != nil {
-			t.Errorf("Failed to validate map[string]bool: %v", err)
-		}
-	})
-
 	t.Run("rejects maps with non-string keys", func(t *testing.T) {
 		schema := ParameterSchema{
 			Name:                 "bad_keys",
@@ -487,19 +455,67 @@ func TestValidateTypeObject(t *testing.T) {
 		}
 	})
 
-	t.Run("rejects nested structures inside strongly typed maps", func(t *testing.T) {
-		schema := ParameterSchema{
-			Name:                 "bad_typed_map",
-			Type:                 "object",
-			AdditionalProperties: true,
+	t.Run("typed and generic object validation", func(t *testing.T) {
+		testCases := []struct {
+			name                 string
+			additionalProperties any // Changed to 'any' to support both bools and schemas
+			validInput           map[string]any
+			invalidInput         map[string]any
+		}{
+			{
+				name:                 "generic map values (allows anything)",
+				additionalProperties: true,
+				validInput:           map[string]any{"string_val": "abc", "nested_map": map[string]int{"a": 1}},
+				invalidInput:         nil,
+			},
+			{
+				name:                 "string values",
+				additionalProperties: &ParameterSchema{Type: "string"},
+				validInput:           map[string]any{"header": "application/json"},
+				invalidInput:         map[string]any{"bad_header": 123},
+			},
+			{
+				name:                 "integer values",
+				additionalProperties: &ParameterSchema{Type: "integer"},
+				validInput:           map[string]any{"user_score": 100},
+				invalidInput:         map[string]any{"bad_score": "100"},
+			},
+			{
+				name:                 "float values",
+				additionalProperties: &ParameterSchema{Type: "float"},
+				validInput:           map[string]any{"item_price": 99.99},
+				invalidInput:         map[string]any{"bad_price": 99},
+			},
+			{
+				name:                 "boolean values",
+				additionalProperties: &ParameterSchema{Type: "boolean"},
+				validInput:           map[string]any{"feature_flag": true},
+				invalidInput:         map[string]any{"bad_flag": "true"},
+			},
 		}
-		// Even though it's strongly typed, it's an array, so it should fail the flat check
-		invalidInput := map[string][]string{"key": {"nested_value"}}
-		err := schema.ValidateType(invalidInput)
-		if err == nil {
-			t.Error("Expected error for nested array inside map, got nil")
-		} else if !strings.Contains(err.Error(), "nested maps/arrays are not supported") {
-			t.Errorf("Unexpected error message for nested array: %v", err)
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				schema := ParameterSchema{
+					Name:                 "test_map",
+					Type:                 "object",
+					AdditionalProperties: tc.additionalProperties,
+				}
+
+				// Test that valid input passes
+				if tc.validInput != nil {
+					if err := schema.ValidateType(tc.validInput); err != nil {
+						t.Errorf("Expected no error for valid input, got: %v", err)
+					}
+				}
+
+				// Test that invalid input fails
+				if tc.invalidInput != nil {
+					if err := schema.ValidateType(tc.invalidInput); err == nil {
+						t.Errorf("Expected an error for invalid input, but got nil")
+					}
+				}
+			})
 		}
 	})
 
@@ -659,8 +675,7 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 		}
 	})
 
-	t.Run("should fail for nested maps in object schema definition", func(t *testing.T) {
-		// Object containing another object definition
+	t.Run("should fail for nested maps or arrays in strongly typed object schema definition", func(t *testing.T) {
 		schemaNestedObj := &ParameterSchema{
 			Name: "p_nested_obj",
 			Type: "object",
@@ -669,7 +684,18 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 			},
 		}
 		if err := schemaNestedObj.ValidateDefinition(); err == nil {
-			t.Error("Expected error for nested object definition, but got nil")
+			t.Error("Expected error for typed object definition containing object, but got nil")
+		}
+
+		schemaNestedArr := &ParameterSchema{
+			Name: "p_nested_arr",
+			Type: "object",
+			AdditionalProperties: &ParameterSchema{
+				Type: "array",
+			},
+		}
+		if err := schemaNestedArr.ValidateDefinition(); err == nil {
+			t.Error("Expected error for typed object definition containing array, but got nil")
 		}
 	})
 
