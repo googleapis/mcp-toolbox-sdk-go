@@ -66,6 +66,7 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
+      go mod edit -replace github.com/googleapis/mcp-toolbox-sdk-go/core=../core
       go mod tidy
       go test -coverprofile=coverage-tbadk-unit.out -covermode=atomic ./... -v -race
       go test -tags=e2e -coverprofile=coverage-tbadk-e2e.out -covermode=atomic ./... -v -race
@@ -84,8 +85,8 @@ steps:
       - name: "go"
         path: "/gopath"
     script: |
+      go mod edit -replace github.com/googleapis/mcp-toolbox-sdk-go/core=../core
       go mod tidy
-
       go test -tags=e2e -coverprofile=coverage-tbgenkit-e2e.out -covermode=atomic ./... -v -race
 
   - id: "check-coverage"
