@@ -30,7 +30,6 @@ import (
 
 const (
 	ProtocolVersion = "2024-11-05"
-	ClientVersion   = mcp.SDKVersion
 )
 
 // Ensure that McpTransport implements the Transport interface.
@@ -41,19 +40,25 @@ type McpTransport struct {
 	*mcp.BaseMcpTransport
 	protocolVersion string
 	clientName      string
+	clientVersion   string
 }
 
 // New creates a new version-specific transport instance.
-func New(baseURL string, client *http.Client, clientName string) (*McpTransport, error) {
+func New(baseURL string, client *http.Client, clientName string, clientVersion string) (*McpTransport, error) {
 	baseTransport, err := mcp.NewBaseTransport(baseURL, client)
 	if err != nil {
 		return nil, err
+	}
+
+	if clientVersion == "" {
+		clientVersion = mcp.SDKVersion
 	}
 
 	t := &McpTransport{
 		BaseMcpTransport: baseTransport,
 		protocolVersion:  ProtocolVersion,
 		clientName:       clientName,
+		clientVersion:    clientVersion,
 	}
 	t.HandshakeHook = t.initializeSession
 
@@ -169,7 +174,7 @@ func (t *McpTransport) initializeSession(ctx context.Context, headers map[string
 		Capabilities:    clientCapabilities{},
 		ClientInfo: implementation{
 			Name:    t.clientName,
-			Version: ClientVersion,
+			Version: t.clientVersion,
 		},
 	}
 
