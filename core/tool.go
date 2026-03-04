@@ -396,6 +396,16 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 			resolvedValue, resolveErr = v()
 		case func() ([]bool, error):
 			resolvedValue, resolveErr = v()
+		case func() (map[string]string, error):
+			resolvedValue, resolveErr = v()
+		case func() (map[string]int, error):
+			resolvedValue, resolveErr = v()
+		case func() (map[string]float64, error):
+			resolvedValue, resolveErr = v()
+		case func() (map[string]bool, error):
+			resolvedValue, resolveErr = v()
+		case func() (map[string]any, error):
+			resolvedValue, resolveErr = v()
 		default:
 			resolvedValue = boundVal
 		}

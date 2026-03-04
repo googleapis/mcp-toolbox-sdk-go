@@ -400,6 +400,39 @@ func TestValidateAndBuildPayload(t *testing.T) {
 		}
 	})
 
+	t.Run("Happy Path - resolves map and map function bound parameters", func(t *testing.T) {
+		toolWithMaps := &ToolboxTool{
+			parameters: []ParameterSchema{
+				{Name: "query", Type: "string"},
+			},
+			boundParams: map[string]any{
+				"static_map": map[string]string{"key": "value"},
+				"func_map": func() (map[string]int, error) {
+					return map[string]int{"count": 42}, nil
+				},
+			},
+		}
+
+		input := map[string]any{
+			"query": "test query",
+		}
+
+		payload, err := toolWithMaps.validateAndBuildPayload(input)
+		if err != nil {
+			t.Fatalf("validateAndBuildPayload failed unexpectedly: %v", err)
+		}
+
+		expectedPayload := map[string]any{
+			"query":      "test query",
+			"static_map": map[string]string{"key": "value"},
+			"func_map":   map[string]int{"count": 42},
+		}
+
+		if !reflect.DeepEqual(payload, expectedPayload) {
+			t.Errorf("Payload mismatch.\nExpected: %v\nGot:      %v", expectedPayload, payload)
+		}
+	})
+
 	t.Run("Negative Test - fails on type validation error", func(t *testing.T) {
 		input := map[string]any{
 			"city": "Paris",
@@ -453,6 +486,24 @@ func TestValidateAndBuildPayload(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "nested maps/arrays are not supported") {
 			t.Errorf("Unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("Negative Test - bound map cannot contain nested structures", func(t *testing.T) {
+		toolWithNestedMap := &ToolboxTool{
+			boundParams: map[string]any{
+				"invalid_map": map[string]any{
+					"nested_key": map[string]string{"k": "v"},
+				},
+			},
+		}
+
+		_, err := toolWithNestedMap.validateAndBuildPayload(map[string]any{})
+		if err == nil {
+			t.Fatal("Expected error for nested map inside bound param, got nil")
+		}
+		if !strings.Contains(err.Error(), "nested maps/arrays are not supported") {
+			t.Errorf("Incorrect error message: %v", err)
 		}
 	})
 
@@ -1127,13 +1178,15 @@ func TestInputSchema(t *testing.T) {
 			tool: &ToolboxTool{
 				parameters: []ParameterSchema{
 					{
-						Name:        "items",
+						Name:        "matrix",
 						Type:        "array",
-						Description: "A list of items",
+						Description: "A 2D array of strings",
 						Required:    true,
 						Items: &ParameterSchema{
-							Type:        "string",
-							Description: "An item name",
+							Type: "array",
+							Items: &ParameterSchema{
+								Type: "string",
+							},
 						},
 					},
 				},
@@ -1141,16 +1194,18 @@ func TestInputSchema(t *testing.T) {
 			expectedJSON: `{
                 "type": "object",
                 "properties": {
-                    "items": {
+                    "matrix": {
                         "type": "array",
-                        "description": "A list of items",
+                        "description": "A 2D array of strings",
                         "items": {
-                            "type": "string",
-                            "description": "An item name"
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
                         }
                     }
                 },
-                "required": ["items"]
+                "required": ["matrix"]
             }`,
 		},
 		{
