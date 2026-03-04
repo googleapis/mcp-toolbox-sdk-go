@@ -17,10 +17,15 @@
 package tbadk_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core"
@@ -98,6 +103,36 @@ var protocolsToTest = []protocolTestCase{
 	{name: "MCP Alias (Latest)", protocol: core.MCP},
 }
 
+// BodyCapturingTransport wraps http.RoundTripper to capture the body of the initialize request.
+type BodyCapturingTransport struct {
+	base     http.RoundTripper
+	lastBody []byte
+	mu       sync.Mutex
+}
+
+func (c *BodyCapturingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Body != nil {
+		bodyBytes, _ := io.ReadAll(req.Body)
+		req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // restore body
+
+		// Check if this is the initialize request
+		var rpcReq struct {
+			Method string `json:"method"`
+		}
+		if err := json.Unmarshal(bodyBytes, &rpcReq); err == nil && rpcReq.Method == "initialize" {
+			c.mu.Lock()
+			c.lastBody = bodyBytes
+			c.mu.Unlock()
+		}
+	}
+
+	base := c.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	return base.RoundTrip(req)
+}
+
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	log.Println("Starting E2E test setup...")
@@ -169,6 +204,45 @@ func TestE2E_Basic(t *testing.T) {
 				return tool
 			}
 
+			t.Run("test_client_version_is_picked_up", func(t *testing.T) {
+				capturer := &BodyCapturingTransport{}
+				httpClient := &http.Client{Transport: capturer}
+
+				opts := []core.ClientOption{
+					core.WithHTTPClient(httpClient),
+				}
+				if !proto.isDefault {
+					opts = append(opts, core.WithProtocol(proto.protocol))
+				}
+
+				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				require.NoError(t, err)
+
+				// Trigger the handshake by loading a tool
+				_, err = client.LoadTool("get-n-rows", context.Background())
+				require.NoError(t, err)
+
+				capturer.mu.Lock()
+				defer capturer.mu.Unlock()
+
+				require.NotEmpty(t, capturer.lastBody, "Expected to capture an initialize request")
+
+				// Parse the JSON-RPC request to verify clientInfo
+				var req struct {
+					Params struct {
+						ClientInfo struct {
+							Name    string `json:"name"`
+							Version string `json:"version"`
+						} `json:"clientInfo"`
+					} `json:"params"`
+				}
+				err = json.Unmarshal(capturer.lastBody, &req)
+				require.NoError(t, err)
+
+				assert.Equal(t, "toolbox-adk-go", req.Params.ClientInfo.Name)
+				assert.Equal(t, tbadk.Version, req.Params.ClientInfo.Version, "Expected client version to match tbadk.Version")
+			})
+
 			t.Run("test_load_toolset_specific", func(t *testing.T) {
 				testCases := []struct {
 					name           string
@@ -198,7 +272,6 @@ func TestE2E_Basic(t *testing.T) {
 							expectedToolsSet[name] = struct{}{}
 						}
 						assert.Equal(t, expectedToolsSet, toolNames)
-						log.Println("Finished test")
 					})
 				}
 			})

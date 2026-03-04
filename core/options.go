@@ -43,6 +43,15 @@ func WithClientName(name string) ClientOption {
 	}
 }
 
+// WithClientVersion sets the client version used in the MCP protocol handshake.
+// Defaults to the core SDK version if not set.
+func WithClientVersion(version string) ClientOption {
+	return func(tc *ToolboxClient) error {
+		tc.clientVersion = version
+		return nil
+	}
+}
+
 // WithProtocol provides a the underlying transport protocol to the ToolboxClient..
 func WithProtocol(p Protocol) ClientOption {
 	return func(tc *ToolboxClient) error {

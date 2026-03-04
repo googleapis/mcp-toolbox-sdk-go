@@ -42,6 +42,7 @@ type ToolboxClient struct {
 	defaultToolOptions  []ToolOption
 	defaultOptionsSet   bool
 	clientName          string
+	clientVersion       string
 }
 
 // NewToolboxClient creates and configures a new, immutable client for interacting with a
@@ -89,13 +90,13 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 
 	switch tc.protocol {
 	case MCPv20251125:
-		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName)
+		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20250618:
-		tc.transport, transportErr = mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName)
+		tc.transport, transportErr = mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20250326:
-		tc.transport, transportErr = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName)
+		tc.transport, transportErr = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20241105:
-		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName)
+		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	default:
 		return nil, fmt.Errorf("unsupported protocol version: %s", tc.protocol)
 	}

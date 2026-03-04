@@ -70,6 +70,22 @@ func TestWithHTTPClient(t *testing.T) {
 	})
 }
 
+func TestWithClientVersion(t *testing.T) {
+	t.Run("Success case", func(t *testing.T) {
+		client := newTestClient()
+		version := "1.2.3"
+		opt := WithClientVersion(version)
+		err := opt(client)
+
+		if err != nil {
+			t.Errorf("Expected no error, but got: %v", err)
+		}
+		if client.clientVersion != version {
+			t.Errorf("Expected clientVersion to be %s, got %s", version, client.clientVersion)
+		}
+	})
+}
+
 func TestWithProtocol(t *testing.T) {
 	// Verify all protocols can be set individually
 	tests := []struct {
