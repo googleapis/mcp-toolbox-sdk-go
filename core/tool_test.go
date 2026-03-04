@@ -451,9 +451,9 @@ func TestValidateAndBuildPayload(t *testing.T) {
 		}
 	})
 
-	t.Run("Bound parameters overwrite user input for the same key", func(t *testing.T) {
-		// This test now uses a tool where "units" is bound, so the user's input
-		// for "units" will be ignored and then overwritten.
+	t.Run("Negative Test - fails when user input targets a bound parameter", func(t *testing.T) {
+		// This test ensures that if a parameter is bound, the user cannot
+		// attempt to provide a value for it.
 		toolWithBoundUnits := &ToolboxTool{
 			parameters: []ParameterSchema{{Name: "city", Type: "string"}},
 			boundParams: map[string]any{
@@ -466,17 +466,13 @@ func TestValidateAndBuildPayload(t *testing.T) {
 			"units": "imperial", // User tries to provide a value for a bound param
 		}
 
-		payload, err := toolWithBoundUnits.validateAndBuildPayload(input)
-		if err != nil {
-			t.Fatalf("validateAndBuildPayload failed unexpectedly: %v", err)
+		_, err := toolWithBoundUnits.validateAndBuildPayload(input)
+		
+		if err == nil {
+			t.Fatal("Expected an error when providing input for a bound parameter, but got nil")
 		}
-
-		// Assert that the bound value 'metric' won, not the user's 'imperial'.
-		if payload["units"] != "metric" {
-			t.Errorf("Expected bound parameter 'units' to overwrite user input. Got '%v', want 'metric'", payload["units"])
-		}
-		if payload["city"] != "UserCity" {
-			t.Error("User-provided parameter 'city' was not included in final payload")
+		if !strings.Contains(err.Error(), "unexpected parameter 'units' provided") {
+			t.Errorf("Incorrect error message for bound parameter override. Got: %v", err)
 		}
 	})
 

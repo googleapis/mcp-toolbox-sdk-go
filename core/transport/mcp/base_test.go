@@ -154,6 +154,15 @@ func TestConvertToolDefinition(t *testing.T) {
 						"type": "string",
 					},
 				},
+				"missing_type_param": map[string]any{
+					"description": "Should default to string",
+				},
+				"generic_array": map[string]any{
+					"type": "array",
+				},
+				"generic_object": map[string]any{
+					"type": "object",
+				},
 			},
 			"required": []any{"simple_str"},
 		},
@@ -181,8 +190,8 @@ func TestConvertToolDefinition(t *testing.T) {
 	}
 
 	// Check Parameters
-	if len(schema.Parameters) != 3 {
-		t.Fatalf("Expected 3 parameters, got %d", len(schema.Parameters))
+	if len(schema.Parameters) != 6 {
+		t.Fatalf("Expected 6 parameters, got %d", len(schema.Parameters))
 	}
 
 	// Helper map to find params by name easily
@@ -214,6 +223,27 @@ func TestConvertToolDefinition(t *testing.T) {
 			}
 			if p.Items == nil || p.Items.Type != "string" {
 				t.Error("Expected str_array items to be type string")
+			}
+		} else if p.Name == "missing_type_param" {
+			// Verifies the "type" defaults to "string"
+			if p.Type != "string" {
+				t.Errorf("Expected missing_type_param type string, got %s", p.Type)
+			}
+		} else if p.Name == "generic_array" {
+			// Verifies array parses correctly when Items are omitted
+			if p.Type != "array" {
+				t.Errorf("Expected generic_array type array, got %s", p.Type)
+			}
+			if p.Items != nil {
+				t.Error("Expected generic_array items to be nil")
+			}
+		} else if p.Name == "generic_object" {
+			// Verifies object parses correctly when additionalProperties are omitted
+			if p.Type != "object" {
+				t.Errorf("Expected generic_object type object, got %s", p.Type)
+			}
+			if p.AdditionalProperties != nil {
+				t.Error("Expected generic_object AdditionalProperties to be nil")
 			}
 		}
 	}

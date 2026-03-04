@@ -184,8 +184,13 @@ func schemaToMap(p *ParameterSchema) map[string]any {
 		schema["default"] = p.Default
 	}
 
-	if val, ok := p.AdditionalProperties.(*ParameterSchema); ok && p.Type == "object" {
-		schema["additionalProperties"] = schemaToMap(val)
+	if p.Type == "object" && p.AdditionalProperties != nil {
+		switch ap := p.AdditionalProperties.(type) {
+		case *ParameterSchema:
+			schema["additionalProperties"] = schemaToMap(ap)
+		case bool:
+			schema["additionalProperties"] = ap
+		}
 	}
 
 	return schema
