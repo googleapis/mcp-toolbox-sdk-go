@@ -465,7 +465,7 @@ func TestValidateAndBuildPayload(t *testing.T) {
 		}
 	})
 
-	t.Run("Negative Test - fails on nested object in payload", func(t *testing.T) {
+	t.Run("Success on nested object in payload", func(t *testing.T) {
 		// Create a tool with an object (map) parameter
 		toolWithMap := &ToolboxTool{
 			parameters: []ParameterSchema{
@@ -481,15 +481,12 @@ func TestValidateAndBuildPayload(t *testing.T) {
 		}
 
 		_, err := toolWithMap.validateAndBuildPayload(input)
-		if err == nil {
-			t.Fatal("Expected error for nested map input, but got nil")
-		}
-		if !strings.Contains(err.Error(), "nested maps/arrays are not supported") {
-			t.Errorf("Unexpected error message: %v", err)
+		if err != nil {
+			t.Fatalf("Expected nested maps to be accepted for object parameters, but got an error: %v", err)
 		}
 	})
 
-	t.Run("Negative Test - bound map cannot contain nested structures", func(t *testing.T) {
+	t.Run("Success - bound map can contain nested structures", func(t *testing.T) {
 		toolWithNestedMap := &ToolboxTool{
 			boundParams: map[string]any{
 				"invalid_map": map[string]any{
@@ -499,11 +496,8 @@ func TestValidateAndBuildPayload(t *testing.T) {
 		}
 
 		_, err := toolWithNestedMap.validateAndBuildPayload(map[string]any{})
-		if err == nil {
-			t.Fatal("Expected error for nested map inside bound param, got nil")
-		}
-		if !strings.Contains(err.Error(), "nested maps/arrays are not supported") {
-			t.Errorf("Incorrect error message: %v", err)
+		if err != nil {
+			t.Fatalf("Expected nested maps to be accepted for object parameters, but got an error: %v", err)
 		}
 	})
 

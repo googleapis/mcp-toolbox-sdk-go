@@ -348,20 +348,14 @@ func TestSchemaToMap(t *testing.T) {
 			},
 		},
 		{
-			name: "Object with nested object additionalProperties now passes",
+			name: "Negative Test - Object with nested object additionalProperties",
 			input: &ParameterSchema{
 				Type: "object",
 				AdditionalProperties: &ParameterSchema{
 					Type: "object",
 				},
 			},
-			expected: map[string]any{
-				"type": "object",
-				"additionalProperties": map[string]any{
-					"type": "object",
-				},
-			},
-			expectErr: false,
+			expectErr: true, // Should fail because strongly-typed maps cannot nest objects
 		},
 		{
 			name: "Object with nil additionalProperties",

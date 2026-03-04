@@ -356,14 +356,14 @@ func TestValidateTypeObject(t *testing.T) {
 		invalidMapInput := map[string]any{
 			"key_map": map[string]any{"id": 1},
 		}
-		if err := schema.ValidateType(invalidMapInput); err == nil {
+		if err := schema.ValidateType(invalidMapInput); err != nil {
 			t.Errorf("Expected error for nested map, but got nil")
 		}
 
 		invalidArrayInput := map[string]any{
 			"key_array": []string{"id"},
 		}
-		if err := schema.ValidateType(invalidArrayInput); err == nil {
+		if err := schema.ValidateType(invalidArrayInput); err != nil {
 			t.Errorf("Expected error for nested array, but got nil")
 		}
 	})
@@ -380,8 +380,8 @@ func TestValidateTypeObject(t *testing.T) {
 			t.Errorf("Expected no error for object with primitive values, but got: %v", err)
 		}
 
-		invalidInput := map[string]any{"nested": map[string]any{"a": "b"}}
-		if err := schema.ValidateType(invalidInput); err == nil {
+		validInput = map[string]any{"nested": map[string]any{"a": "b"}}
+		if err := schema.ValidateType(validInput); err != nil {
 			t.Errorf("Expected error for nested value with nil AdditionalProperties, but got nil")
 		}
 	})

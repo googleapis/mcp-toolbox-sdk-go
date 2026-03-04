@@ -191,6 +191,10 @@ func schemaToMap(p *ParameterSchema) (map[string]any, error) {
 	if p.Type == "object" && p.AdditionalProperties != nil {
 		switch ap := p.AdditionalProperties.(type) {
 		case *ParameterSchema:
+			// Enforce primitive-only rule for typed maps
+			if ap.Type == "array" || ap.Type == "object" {
+				return nil, fmt.Errorf("unsupported nested structure: typed maps containing '%s' are not allowed", ap.Type)
+			}
 			apSchema, err := schemaToMap(ap)
 			if err != nil {
 				return nil, err

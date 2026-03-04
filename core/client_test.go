@@ -127,7 +127,6 @@ func TestNewToolboxClient(t *testing.T) {
 		if client == nil {
 			t.Fatal("NewToolboxClient returned nil")
 		}
-		// This test will now correctly fail if you forget the timeout
 		if client.httpClient.Timeout != 0 {
 			t.Errorf("expected no timeout, got %v", client.httpClient.Timeout)
 		}
