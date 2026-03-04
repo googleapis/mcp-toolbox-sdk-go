@@ -93,7 +93,7 @@ func (p *ParameterSchema) ValidateType(value any) error {
 		case *ParameterSchema:
 			// Raise error if the input is a nested map / array
 			if ap.Type == "object" || ap.Type == "array" {
-				return fmt.Errorf("invalid schema for object '%s': values cannot be of type '%s' (nested structures are not supported)", p.Name, ap.Type)
+				return fmt.Errorf("invalid schema for object '%s': values cannot be of type '%s'", p.Name, ap.Type)
 			}
 
 			// Reflection loop to validate strongly-typed Go maps (like map[string]int)
