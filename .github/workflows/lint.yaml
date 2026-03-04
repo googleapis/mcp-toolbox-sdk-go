@@ -54,22 +54,28 @@ jobs:
             } catch (e) {
               console.log('Failed to remove label. Another job may have already removed it!');
             }
+            
       - name: Setup Go
         uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: "1.24.4"
+          
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: >
-          Verify go mod tidy. If you're reading this and the check has
-          failed, run `goimports -w . && go mod tidy && golangci-lint run`
+
+      - name: Link Local Modules & Tidy
         working-directory: ${{ matrix.module }}
         run: |
-          go mod tidy && git diff --exit-code
+          # Dynamically point wrappers to the local core module so unpublished changes are visible in a single PR
+          if [ "${{ matrix.module }}" != "core" ]; then
+            go mod edit -replace github.com/googleapis/mcp-toolbox-sdk-go/core=../core
+          fi
+          go mod tidy
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:

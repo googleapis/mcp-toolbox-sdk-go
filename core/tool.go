@@ -320,7 +320,7 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 
 		// An input key is invalid if it's neither an expected unbound parameter
 		// nor a parameter that has been pre-configured (bound).
-		if !isUnbound && !isBound {
+		if !isUnbound || isBound {
 			return nil, fmt.Errorf("unexpected parameter '%s' provided", key)
 		}
 

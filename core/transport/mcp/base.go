@@ -206,9 +206,14 @@ func (b *BaseMcpTransport) ConvertToolDefinition(toolData map[string]any) (trans
 
 // parseProperty is the recursive helper to create ParameterSchema
 func parseProperty(name string, definitionMap map[string]any, isRequired bool) transport.ParameterSchema {
+	paramType := getString(definitionMap, "type")
+	if paramType == "" {
+		paramType = "string"
+	}
+
 	param := transport.ParameterSchema{
 		Name:        name,
-		Type:        getString(definitionMap, "type"),
+		Type:        paramType,
 		Description: getString(definitionMap, "description"),
 		Required:    isRequired,
 	}

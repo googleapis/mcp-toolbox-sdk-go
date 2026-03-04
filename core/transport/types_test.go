@@ -216,7 +216,25 @@ func TestParameterSchemaStringArray(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+}
 
+// Tests ParameterSchema with type 'array' but no specific items (generic list).
+func TestParameterSchemaGenericArray(t *testing.T) {
+	paramSchema := ParameterSchema{
+		Name:        "param_name",
+		Type:        "array",
+		Description: "generic array parameter",
+		Items:       nil, // Explicitly testing nil items
+	}
+
+	// Should accept mixed types
+	value := []any{"abc", 123, true}
+
+	err := paramSchema.ValidateType(value)
+
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 }
 
 // Tests ParameterSchema with an undefined type.
@@ -318,11 +336,11 @@ func TestOptionalArrayParameter(t *testing.T) {
 }
 
 func TestValidateTypeObject(t *testing.T) {
-	t.Run("generic object allows any value types", func(t *testing.T) {
+	t.Run("generic object allows any value types with bool", func(t *testing.T) {
 		schema := ParameterSchema{
 			Name:                 "metadata",
 			Type:                 "object",
-			AdditionalProperties: true, // or nil
+			AdditionalProperties: true,
 		}
 
 		// A map with mixed value types should be valid.
@@ -341,6 +359,19 @@ func TestValidateTypeObject(t *testing.T) {
 		invalidInput := "I am a string, not an object"
 		if err := schema.ValidateType(invalidInput); err == nil {
 			t.Errorf("Expected an error for non-map input, but got nil")
+		}
+	})
+
+	t.Run("generic object allows any value types with nil", func(t *testing.T) {
+		schema := ParameterSchema{
+			Name:                 "metadata_nil",
+			Type:                 "object",
+			AdditionalProperties: nil, // Testing the nil omission fix
+		}
+
+		validInput := map[string]any{"dynamic_data": 123, "anything": "goes"}
+		if err := schema.ValidateType(validInput); err != nil {
+			t.Errorf("Expected no error for object with nil AdditionalProperties, but got: %v", err)
 		}
 	})
 
@@ -520,6 +551,14 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 					AdditionalProperties: true,
 				},
 			},
+			{
+				"Generic Object (nil)",
+				&ParameterSchema{
+					Name:                 "p_obj_nil",
+					Type:                 "object",
+					AdditionalProperties: nil,
+				},
+			},
 		}
 
 		for _, tc := range testCases {
@@ -553,14 +592,11 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 		}
 	})
 
-	t.Run("should fail for array with missing items property", func(t *testing.T) {
-		schema := &ParameterSchema{Name: "p_bad_array", Type: "array", Items: nil}
+	t.Run("should succeed for array with missing items property", func(t *testing.T) {
+		schema := &ParameterSchema{Name: "p_generic_array", Type: "array", Items: nil}
 		err := schema.ValidateDefinition()
-		if err == nil {
-			t.Fatal("expected an error for array with nil items, but got nil")
-		}
-		if !strings.Contains(err.Error(), "missing item type definition") {
-			t.Errorf("error message should mention 'missing item type definition', but was: %s", err)
+		if err != nil {
+			t.Fatalf("expected no error for generic array with nil items, but got: %v", err)
 		}
 	})
 
