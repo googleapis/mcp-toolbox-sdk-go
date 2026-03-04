@@ -38,6 +38,7 @@ type ToolboxTool struct {
 	requiredAuthnParams map[string][]string
 	requiredAuthzTokens []string
 	clientHeaderSources map[string]oauth2.TokenSource
+	boundParamSchemas   map[string]ParameterSchema
 }
 
 // Name returns the tool's name.
@@ -65,7 +66,11 @@ func (tt *ToolboxTool) InputSchema() ([]byte, error) {
 
 	for _, p := range tt.parameters {
 		// Convert each parameter to its map representation and add to properties.
-		properties[p.Name] = schemaToMap(&p)
+		pMap, err := schemaToMap(&p)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate schema for parameter '%s': %w", p.Name, err)
+		}
+		properties[p.Name] = pMap
 
 		// Collect the names of required parameters.
 		if p.Required {
@@ -147,14 +152,15 @@ func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 	}
 
 	// Validate and merge new BoundParams, preventing overrides.
-	paramNames := make(map[string]struct{})
+	paramNames := make(map[string]ParameterSchema)
 	for _, p := range tt.parameters {
-		paramNames[p.Name] = struct{}{}
+		paramNames[p.Name] = p
 	}
 
 	for name, val := range config.BoundParams {
 		// A parameter is valid to bind if it exists in the unbound parameters list.
-		if _, exists := paramNames[name]; !exists {
+		schema, exists := paramNames[name]
+		if !exists {
 			// If it's not in the unbound list, check if it was already bound on the parent.
 			// If it exists in neither, it's an unknown parameter.
 			if _, existsInParent := tt.boundParams[name]; !existsInParent {
@@ -163,6 +169,15 @@ func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 			// If it exists in the parent's bound params, it's an attempt to override.
 			return nil, fmt.Errorf("cannot override existing bound parameter: '%s'", name)
 		}
+
+		if newTt.boundParamSchemas == nil {
+			newTt.boundParamSchemas = make(map[string]ParameterSchema)
+		}
+		if newTt.boundParams == nil {
+			newTt.boundParams = make(map[string]any)
+		}
+
+		newTt.boundParamSchemas[name] = schema
 		newTt.boundParams[name] = val
 	}
 
@@ -191,6 +206,11 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 		requiredAuthnParams: make(map[string][]string, len(tt.requiredAuthnParams)),
 		requiredAuthzTokens: make([]string, len(tt.requiredAuthzTokens)),
 		clientHeaderSources: make(map[string]oauth2.TokenSource, len(tt.clientHeaderSources)),
+	}
+
+	if tt.boundParamSchemas != nil {
+		newTt.boundParamSchemas = make(map[string]ParameterSchema, len(tt.boundParamSchemas))
+		maps.Copy(newTt.boundParamSchemas, tt.boundParamSchemas)
 	}
 
 	// Perform deep copies for slices and maps to prevent shared state.
@@ -382,6 +402,26 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 		if resolveErr != nil {
 			return nil, fmt.Errorf("failed to resolve bound parameter function for '%s': %w", paramName, resolveErr)
 		}
+
+		// Validation: Verify the resolved value against the schema.
+		if schema, ok := tt.boundParamSchemas[paramName]; ok {
+			if err := schema.ValidateType(resolvedValue); err != nil {
+				return nil, fmt.Errorf("resolved bound parameter '%s' failed validation: %w", paramName, err)
+			}
+		}
+
+		// Structural checks to prevent nesting in maps.
+		rv := reflect.ValueOf(resolvedValue)
+		if rv.Kind() == reflect.Map {
+			iter := rv.MapRange()
+			for iter.Next() {
+				val := reflect.ValueOf(iter.Value().Interface())
+				if val.Kind() == reflect.Map || val.Kind() == reflect.Slice || val.Kind() == reflect.Array {
+					return nil, fmt.Errorf("error in bound parameter '%s': nested maps/arrays are not supported", paramName)
+				}
+			}
+		}
+
 		finalPayload[paramName] = resolvedValue
 	}
 

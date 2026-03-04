@@ -134,6 +134,8 @@ func (tc *ToolboxClient) newToolboxTool(
 	paramSchema := make(map[string]struct{})
 	// This map stores bound parameters that are applicable to this specific tool.
 	localBoundParams := make(map[string]any)
+	// This map stores the schemas of the bound parameters for validation during invocation.
+	localBoundSchemas := make(map[string]ParameterSchema)
 
 	// Iterate over the tool's parameters from the schema to categorize them.
 	for _, p := range schema.Parameters {
@@ -158,6 +160,7 @@ func (tc *ToolboxClient) newToolboxTool(
 		} else if val, isBound := finalConfig.BoundParams[p.Name]; isBound {
 			// The parameter is satisfied by a pre-configured bound value.
 			localBoundParams[p.Name] = val
+			localBoundSchemas[p.Name] = p
 		} else {
 			// The parameter is not satisfied by auth or bindings, so it must
 			// be provided by the user at invocation.
@@ -196,6 +199,7 @@ func (tc *ToolboxClient) newToolboxTool(
 		transport:           tr,
 		authTokenSources:    finalConfig.AuthTokenSources,
 		boundParams:         localBoundParams,
+		boundParamSchemas:   localBoundSchemas,
 		requiredAuthnParams: remainingAuthnParams,
 		requiredAuthzTokens: remainingAuthzTokens,
 		clientHeaderSources: tc.clientHeaderSources,

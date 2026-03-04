@@ -287,6 +287,7 @@ func TestCloneToolboxTool(t *testing.T) {
 		clientHeaderSources: map[string]oauth2.TokenSource{
 			"header1": &mockTokenSource{},
 		},
+		boundParamSchemas: make(map[string]ParameterSchema),
 	}
 
 	clone := originalTool.cloneToolboxTool()
@@ -362,7 +363,6 @@ func TestCloneToolboxTool(t *testing.T) {
 
 func TestValidateAndBuildPayload(t *testing.T) {
 	// A base tool where some parameters are unbound and others are bound.
-	// This setup is now logically consistent.
 	baseTool := &ToolboxTool{
 		parameters: []ParameterSchema{
 			{Name: "city", Type: "string"},
@@ -432,6 +432,30 @@ func TestValidateAndBuildPayload(t *testing.T) {
 		}
 	})
 
+	t.Run("Negative Test - fails on nested object in payload", func(t *testing.T) {
+		// Create a tool with an object (map) parameter
+		toolWithMap := &ToolboxTool{
+			parameters: []ParameterSchema{
+				{Name: "metadata", Type: "object"},
+			},
+		}
+
+		// Try to provide a nested map as the value for the object parameter
+		input := map[string]any{
+			"metadata": map[string]any{
+				"inner": map[string]any{"nested": "value"},
+			},
+		}
+
+		_, err := toolWithMap.validateAndBuildPayload(input)
+		if err == nil {
+			t.Fatal("Expected error for nested map input, but got nil")
+		}
+		if !strings.Contains(err.Error(), "nested maps/arrays are not supported") {
+			t.Errorf("Unexpected error message: %v", err)
+		}
+	})
+
 	t.Run("Negative Test - fails when bound function returns an error", func(t *testing.T) {
 		toolWithFailingFunc := &ToolboxTool{
 			boundParams: map[string]any{
@@ -467,7 +491,7 @@ func TestValidateAndBuildPayload(t *testing.T) {
 		}
 
 		_, err := toolWithBoundUnits.validateAndBuildPayload(input)
-		
+
 		if err == nil {
 			t.Fatal("Expected an error when providing input for a bound parameter, but got nil")
 		}
@@ -1024,6 +1048,78 @@ func TestInputSchema(t *testing.T) {
                     }
                 },
                 "required": ["location"]
+            }`,
+		},
+		{
+			name: "Tool with valid flat array",
+			tool: &ToolboxTool{
+				parameters: []ParameterSchema{
+					{
+						Name:     "tags",
+						Type:     "array",
+						Items:    &ParameterSchema{Type: "string"},
+						Required: true,
+					},
+				},
+			},
+			expectedJSON: `{
+                "type": "object",
+                "properties": {
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": ["tags"]
+            }`,
+		},
+		{
+			name: "Tool with additionalProperties as boolean",
+			tool: &ToolboxTool{
+				parameters: []ParameterSchema{
+					{
+						Name:                 "metadata",
+						Type:                 "object",
+						AdditionalProperties: true,
+						Required:             true,
+					},
+				},
+			},
+			expectedJSON: `{
+                "type": "object",
+                "properties": {
+                    "metadata": {
+                        "type": "object",
+                        "additionalProperties": true
+                    }
+                },
+								"required": ["metadata"]
+            }`,
+		},
+		{
+			name: "Tool with valid flat map",
+			tool: &ToolboxTool{
+				parameters: []ParameterSchema{
+					{
+						Name:                 "config",
+						Type:                 "object",
+						AdditionalProperties: &ParameterSchema{Type: "string"},
+						Required:             false,
+					},
+				},
+			},
+			expectedJSON: `{
+                "type": "object",
+                "properties": {
+                    "config": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "string"
+                        }
+                    }
+                }
             }`,
 		},
 		{

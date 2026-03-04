@@ -435,6 +435,73 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 		}
 	})
 
+	t.Run("LoadTool - Delayed Validation for Bound Parameters", func(t *testing.T) {
+		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+		// param1 expects a string, but we bind an int. LoadTool should not error.
+		tool, err := client.LoadTool("toolA",
+			context.Background(),
+			WithBindParamInt("param1", 123),
+			WithAuthTokenString("google", "token-google"),
+		)
+		require.NoError(t, err, "LoadTool should delay type validation")
+
+		// Confirm the schema was captured for Invoke
+		assert.NotNil(t, tool.boundParamSchemas["param1"])
+		assert.Equal(t, "string", tool.boundParamSchemas["param1"].Type)
+	})
+
+	t.Run("LoadTool - Allows Nested Arrays", func(t *testing.T) {
+		nestedServer := newMockMCPServer(t, []mcpTool{
+			{
+				Name: "nestedTool",
+				InputSchema: map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"bad_param": map[string]any{
+							"type": "array",
+							"items": map[string]any{
+								"type":  "array",
+								"items": map[string]any{"type": "string"},
+							},
+						},
+					},
+				},
+			},
+		})
+		defer nestedServer.Close()
+
+		client, _ := NewToolboxClient(nestedServer.URL, WithHTTPClient(nestedServer.Client()))
+		_, err := client.LoadTool("nestedTool", context.Background())
+
+		require.NoError(t, err, "LoadTool should allow nested arrays in the schema")
+	})
+
+	t.Run("LoadToolset - Fails if any tool has nested schema", func(t *testing.T) {
+		// Use a separate server to demonstrate failure across the toolset
+		nestedServer := newMockMCPServer(t, []mcpTool{
+			{Name: "flatTool", InputSchema: map[string]any{"type": "object", "properties": map[string]any{}}},
+			{
+				Name: "nestedTool",
+				InputSchema: map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"bad_param": map[string]any{
+							"type":                 "object",
+							"additionalProperties": map[string]any{"type": "object"},
+						},
+					},
+				},
+			},
+		})
+		defer nestedServer.Close()
+
+		client, _ := NewToolboxClient(nestedServer.URL, WithHTTPClient(nestedServer.Client()))
+		_, err := client.LoadToolset("", context.Background())
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "nested maps or arrays are not supported")
+	})
+
 	t.Run("LoadTool - Negative Test - Unused bound parameter", func(t *testing.T) {
 		client, _ := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
 		_, err := client.LoadTool("toolA",
