@@ -11,14 +11,7 @@
 
 * Add support for default parameters ([#185](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/185)) ([6c2bf7a](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/6c2bf7ac95ba4983794d40e70064217bb71fe015))
 * Enable package-specific client version identification for MCP Transport ([#194](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/194)) ([f8ba007](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/f8ba007f85efb0cd3e22852a1be1456ec397e1c1))
-* Remove support for Native Toolbox transport ([#189](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/189)) ([d596ef8](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/d596ef87f0dfbb361b11b85a71fb597414c5d904))
 
-
-### Miscellaneous Chores
-
-* **deps:** bump go.opentelemetry.io/otel/sdk in /tbadk ([#192](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/192)) ([f88194c](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/f88194c7e1fc49a1d5e974d6fc2767a1eac2162f))
-* Update CI workflows to use local core module in tests ([#195](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/195)) ([811c6f2](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/811c6f2b801186f9dc4161492d228bb7947b6c83))
-* Update new core version in tbadk and tbgenkit ([#200](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/200)) ([a25bec6](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/a25bec6d27fe1d20d9247e100cfafab4b7d30a0e))
 
 ## [0.6.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.5.1...tbadk/v0.6.0) (2026-02-16)
 
