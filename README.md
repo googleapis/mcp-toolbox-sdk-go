@@ -58,7 +58,14 @@ README for detailed installation and usage instructions:
 1.  **Set up the Toolbox Service**: Ensure you have a running MCP Toolbox server. Follow the [Toolbox Server Quickstart](https://googleapis.github.io/genai-toolbox/getting-started/introduction/).
 2.  **Install the Appropriate SDK**:
     ```bash
+    # For the core, framework-agnostic SDK
     go get github.com/googleapis/mcp-toolbox-sdk-go/core
+
+    # For ADK Go
+    go get github.com/googleapis/mcp-toolbox-sdk-go/tbadk
+
+    # For Genkit Go
+    go get github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit
     ```
 3.  **Explore Tutorials**: Check out the [Go Quickstart Tutorial](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/) for a full walkthrough.
 
