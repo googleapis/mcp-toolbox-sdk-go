@@ -8,9 +8,27 @@ Logo](https://raw.githubusercontent.com/googleapis/genai-toolbox/main/logo.png)
 [![Docs](https://img.shields.io/badge/Docs-MCP_Toolbox-blue)](https://googleapis.github.io/genai-toolbox/)
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=flat&logo=discord&logoColor=white)](https://discord.gg/Dmm69peqjh)
 [![Medium](https://img.shields.io/badge/Medium-12100E?style=flat&logo=medium&logoColor=white)](https://medium.com/@mcp_toolbox)
-[![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/mcp-toolbox-sdk-go)](https://goreportcard.com/report/github.com/googleapis/mcp-toolbox-sdk-go)
-[![Module Version](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go)](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go)](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go)
+
+**Core Module :**
+[![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/mcp-toolbox-sdk-go/core)](https://goreportcard.com/report/github.com/googleapis/mcp-toolbox-sdk-go/core)
+[![Module Version](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go?filter=core/v*)](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go?filter=core/v*)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=core/go.mod)]([https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=core/go.mod))
+
+**TBADK Module :**
+[![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/mcp-toolbox-sdk-go/tbadk)](https://goreportcard.com/report/github.com/googleapis/mcp-toolbox-sdk-go/tbadk)
+[![Module Version](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go?filter=tbadk/v*)](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go?filter=tbadk/v*)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=tbadk/go.mod)]([https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=tbadk/go.mod))
+
+**TBGenkit Module :**
+[![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit)](https://goreportcard.com/report/github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit)
+[![Module Version](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go?filter=tbgenkit/v*)](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go?filter=tbgenkit/v*)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=tbgenkit/go.mod)](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=tbgenkit/go.mod)
+
+ > [!IMPORTANT]
+> **Breaking Change Notice**: As of version `0.6.0`, this repository has transitioned to a multi-module structure.
+> *   **For new versions (`v0.6.0`+)**: You must import specific modules (e.g., `go get github.com/googleapis/mcp-toolbox-sdk-go/core`).
+> *   **For older versions (`v0.5.1` and below)**: The repository remains a single-module library (`go get github.com/googleapis/mcp-toolbox-sdk-go`).
+> *   Please update your imports and `go.mod` accordingly when upgrading.
 
 This repository contains the Go SDKs for [MCP Toolbox](https://github.com/googleapis/genai-toolbox). These SDKs allow you to load and use tools defined in your Toolbox server as standard Go structs within your GenAI applications.
 
