@@ -759,6 +759,7 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 						"execution_context": map[string]any{
 							"description": "A flexible set of key-value pairs for the execution environment.",
 							"type":        "object",
+							"additionalProperties": true,
 						},
 						"user_scores": map[string]any{
 							"description": "A map of user IDs to their scores.",

@@ -35,6 +35,7 @@ type ToolboxTool struct {
 	transport           transport.Transport
 	authTokenSources    map[string]oauth2.TokenSource
 	boundParams         map[string]any
+	boundParamSchemas   map[string]ParameterSchema
 	requiredAuthnParams map[string][]string
 	requiredAuthzTokens []string
 	clientHeaderSources map[string]oauth2.TokenSource
@@ -64,8 +65,12 @@ func (tt *ToolboxTool) InputSchema() ([]byte, error) {
 	required := make([]string, 0)
 
 	for _, p := range tt.parameters {
+		var err error
 		// Convert each parameter to its map representation and add to properties.
-		properties[p.Name] = schemaToMap(&p)
+		properties[p.Name], err = schemaToMap(&p)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert parameter '%s' to schema map: %w", p.Name, err)
+		}
 
 		// Collect the names of required parameters.
 		if p.Required {
@@ -147,22 +152,31 @@ func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 	}
 
 	// Validate and merge new BoundParams, preventing overrides.
-	paramNames := make(map[string]struct{})
+	paramNames := make(map[string]ParameterSchema)
 	for _, p := range tt.parameters {
-		paramNames[p.Name] = struct{}{}
+		paramNames[p.Name] = p
 	}
 
 	for name, val := range config.BoundParams {
 		// A parameter is valid to bind if it exists in the unbound parameters list.
-		if _, exists := paramNames[name]; !exists {
+		schema, exists := paramNames[name]
+		if !exists {
 			// If it's not in the unbound list, check if it was already bound on the parent.
-			// If it exists in neither, it's an unknown parameter.
 			if _, existsInParent := tt.boundParams[name]; !existsInParent {
 				return nil, fmt.Errorf("unable to bind parameter: no parameter named '%s' on the tool", name)
 			}
 			// If it exists in the parent's bound params, it's an attempt to override.
 			return nil, fmt.Errorf("cannot override existing bound parameter: '%s'", name)
 		}
+
+		if newTt.boundParamSchemas == nil {
+			newTt.boundParamSchemas = make(map[string]ParameterSchema)
+		}
+		if newTt.boundParams == nil {
+			newTt.boundParams = make(map[string]any)
+		}
+
+		newTt.boundParamSchemas[name] = schema
 		newTt.boundParams[name] = val
 	}
 
@@ -188,9 +202,15 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 		parameters:          make([]ParameterSchema, len(tt.parameters)),
 		authTokenSources:    make(map[string]oauth2.TokenSource, len(tt.authTokenSources)),
 		boundParams:         make(map[string]any, len(tt.boundParams)),
+		boundParamSchemas:   make(map[string]ParameterSchema, len(tt.boundParamSchemas)),
 		requiredAuthnParams: make(map[string][]string, len(tt.requiredAuthnParams)),
 		requiredAuthzTokens: make([]string, len(tt.requiredAuthzTokens)),
 		clientHeaderSources: make(map[string]oauth2.TokenSource, len(tt.clientHeaderSources)),
+	}
+
+	if tt.boundParamSchemas != nil {
+		newTt.boundParamSchemas = make(map[string]ParameterSchema, len(tt.boundParamSchemas))
+		maps.Copy(newTt.boundParamSchemas, tt.boundParamSchemas)
 	}
 
 	// Perform deep copies for slices and maps to prevent shared state.
@@ -199,6 +219,7 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 
 	maps.Copy(newTt.authTokenSources, tt.authTokenSources)
 	maps.Copy(newTt.clientHeaderSources, tt.clientHeaderSources)
+	maps.Copy(newTt.boundParamSchemas, tt.boundParamSchemas)
 
 	for k, v := range tt.boundParams {
 		val := reflect.ValueOf(v)
@@ -376,12 +397,30 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 			resolvedValue, resolveErr = v()
 		case func() ([]bool, error):
 			resolvedValue, resolveErr = v()
+		case func() (map[string]string, error):
+			resolvedValue, resolveErr = v()
+		case func() (map[string]int, error):
+			resolvedValue, resolveErr = v()
+		case func() (map[string]float64, error):
+			resolvedValue, resolveErr = v()
+		case func() (map[string]bool, error):
+			resolvedValue, resolveErr = v()
+		case func() (map[string]any, error):
+			resolvedValue, resolveErr = v()
 		default:
 			resolvedValue = boundVal
 		}
 		if resolveErr != nil {
 			return nil, fmt.Errorf("failed to resolve bound parameter function for '%s': %w", paramName, resolveErr)
 		}
+
+		// Apply delayed schema validation
+		if schema, ok := tt.boundParamSchemas[paramName]; ok {
+			if err := schema.ValidateType(resolvedValue); err != nil {
+				return nil, fmt.Errorf("resolved bound parameter '%s' failed validation: %w", paramName, err)
+			}
+		}
+
 		finalPayload[paramName] = resolvedValue
 	}
 

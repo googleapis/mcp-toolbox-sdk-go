@@ -76,26 +76,31 @@ func (p *ParameterSchema) ValidateType(value any) error {
 			}
 		}
 	case "object":
-		// First, check that the value is a map with string keys.
-		valMap, ok := value.(map[string]any)
-		if !ok {
+		v := reflect.ValueOf(value)
+		if v.Kind() != reflect.Map {
 			return fmt.Errorf("parameter '%s' expects a map, but got %T", p.Name, value)
+		}
+		// Ensure the map keys are strings
+		if v.Type().Key().Kind() != reflect.String {
+			return fmt.Errorf("parameter '%s' expects a map with string keys, but got map with %s keys", p.Name, v.Type().Key().Kind())
 		}
 
 		switch ap := p.AdditionalProperties.(type) {
-		// Missing additionalProperties is valid. It defaults to map[string]any.
-		case nil:
+		case nil, bool:
+			// Generic maps
+			return nil
 
-		// No validation required, allows any type
-		case bool:
-
-		// Validate type for each value in map
 		case *ParameterSchema:
 			// Raise error if the input is a nested map / array
 			if ap.Type == "object" || ap.Type == "array" {
 				return fmt.Errorf("invalid schema for object '%s': values cannot be of type '%s'", p.Name, ap.Type)
 			}
-			for key, val := range valMap {
+
+			// Reflection loop to validate strongly-typed Go maps (like map[string]int)
+			iter := v.MapRange()
+			for iter.Next() {
+				key := iter.Key().String()
+				val := iter.Value().Interface()
 				if err := ap.ValidateType(val); err != nil {
 					return fmt.Errorf("error in object '%s' for key '%s': %w", p.Name, key, err)
 				}
@@ -124,6 +129,7 @@ func (p *ParameterSchema) ValidateDefinition() error {
 	switch p.Type {
 	case "array":
 		if p.Items != nil {
+			// Arrays can now contain nested structures.
 			// Recursively validate the nested schema's definition.
 			if err := p.Items.ValidateDefinition(); err != nil {
 				return err
@@ -132,10 +138,13 @@ func (p *ParameterSchema) ValidateDefinition() error {
 
 	case "object":
 		switch ap := p.AdditionalProperties.(type) {
-		case nil:
-		case bool:
-			// Valid scenario
+		case nil, bool:
+			// Valid generic map
 		case *ParameterSchema:
+			// Enforce that typed maps cannot be nested
+			if ap.Type == "object" || ap.Type == "array" {
+				return fmt.Errorf("invalid schema definition for object '%s': nested maps or arrays are not supported", p.Name)
+			}
 			if err := ap.ValidateDefinition(); err != nil {
 				return err
 			}

@@ -23,6 +23,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -126,7 +127,7 @@ func TestHeaders_Presence(t *testing.T) {
 	server := newMockMCPServer(t)
 	defer server.Close()
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	err := client.EnsureInitialized(context.Background(), nil)
 	require.NoError(t, err)
 
@@ -165,7 +166,7 @@ func TestListTools(t *testing.T) {
 		}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -206,7 +207,7 @@ func TestListTools_ErrorOnEmptyName(t *testing.T) {
 		}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	_, err := client.ListTools(context.Background(), "", nil)
 
 	assert.Error(t, err)
@@ -226,7 +227,7 @@ func TestGetTool_Success(t *testing.T) {
 		}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	manifest, err := client.GetTool(context.Background(), "tool_a", nil)
 	require.NoError(t, err)
 	assert.Contains(t, manifest.Tools, "tool_a")
@@ -241,7 +242,7 @@ func TestGetTool_NotFound(t *testing.T) {
 		return listToolsResult{Tools: []mcpTool{}}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	_, err := client.GetTool(context.Background(), "missing_tool", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
@@ -268,7 +269,7 @@ func TestInvokeTool(t *testing.T) {
 		}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -301,7 +302,7 @@ func TestProtocolMismatch(t *testing.T) {
 		}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
@@ -320,7 +321,7 @@ func TestInitialize_MissingCapabilities(t *testing.T) {
 		}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "does not support the 'tools' capability")
@@ -328,7 +329,7 @@ func TestInitialize_MissingCapabilities(t *testing.T) {
 
 func TestConvertToolSchema(t *testing.T) {
 	// Use the transport's ConvertToolDefinition which delegates to the base/helper logic
-	tr, _ := New("http://example.com", nil, "test-client")
+	tr, _ := New("http://example.com", nil, "test-client", "1.0.0")
 
 	rawTool := map[string]any{
 		"name":        "complex_tool",
@@ -378,7 +379,7 @@ func TestListTools_WithToolset(t *testing.T) {
 		return listToolsResult{Tools: []mcpTool{}}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	toolsetName := "my-toolset"
 
 	_, err := client.ListTools(context.Background(), toolsetName, nil)
@@ -391,7 +392,7 @@ func TestRequest_NetworkError(t *testing.T) {
 	url := server.URL
 	server.Close()
 
-	client, _ := New(url, server.Client(), "test-client")
+	client, _ := New(url, server.Client(), "test-client", "1.0.0")
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "http request failed")
@@ -404,7 +405,7 @@ func TestRequest_ServerError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "API request failed with status 500")
@@ -417,7 +418,7 @@ func TestRequest_BadJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "response unmarshal failed")
@@ -425,7 +426,7 @@ func TestRequest_BadJSON(t *testing.T) {
 
 func TestRequest_NewRequestError(t *testing.T) {
 	// Bad URL triggers http.NewRequest error
-	_, err := New("http://bad\nurl.com", http.DefaultClient, "test-client")
+	_, err := New("http://bad\nurl.com", http.DefaultClient, "test-client", "1.0.0")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid control character in URL")
 }
@@ -433,7 +434,7 @@ func TestRequest_NewRequestError(t *testing.T) {
 func TestRequest_MarshalError(t *testing.T) {
 	server := newMockMCPServer(t)
 	defer server.Close()
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 
 	// Force initialization first
 	_ = client.EnsureInitialized(context.Background(), nil)
@@ -456,7 +457,7 @@ func TestInvokeTool_ErrorResult(t *testing.T) {
 		}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	_, err := client.InvokeTool(context.Background(), "tool", nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "tool execution resulted in error")
@@ -470,7 +471,7 @@ func TestInvokeTool_RPCError(t *testing.T) {
 		return nil, errors.New("internal server error")
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	_, err := client.InvokeTool(context.Background(), "tool", nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "internal server error")
@@ -490,7 +491,7 @@ func TestInvokeTool_ComplexContent(t *testing.T) {
 		}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "Part 1 Part 2", res)
@@ -506,7 +507,7 @@ func TestInvokeTool_EmptyResult(t *testing.T) {
 		}, nil
 	}
 
-	client, _ := New(server.URL, server.Client(), "test-client")
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "null", res)
@@ -527,7 +528,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 			}, nil
 		}
 
-		client, _ := New(server.URL, server.Client(), "test-client")
+		client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
 		require.NoError(t, err)
 
@@ -551,7 +552,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 			}, nil
 		}
 
-		client, _ := New(server.URL, server.Client(), "test-client")
+		client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
 		require.NoError(t, err)
 
@@ -574,7 +575,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 			}, nil
 		}
 
-		client, _ := New(server.URL, server.Client(), "test-client")
+		client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
 		require.NoError(t, err)
 
@@ -584,7 +585,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 }
 
 func TestEnsureInitialized_PassesHeaders(t *testing.T) {
-	tr, err := New("http://fake.com", nil, "test-client")
+	tr, err := New("http://fake.com", nil, "test-client", "1.0.0")
 	require.NoError(t, err)
 
 	capturedHeaders := make(map[string]string)
@@ -640,11 +641,38 @@ func TestInitializeSession_PassesHeadersToWire(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	tr, err := New(ts.URL, ts.Client(), "test-client")
+	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
 	require.NoError(t, err)
 
 	testHeaders := map[string]string{"Authorization": "Bearer token"}
 
 	err = tr.initializeSession(context.Background(), testHeaders)
 	require.NoError(t, err)
+}
+
+func TestNew_ClientVersion(t *testing.T) {
+	clientName := "test-client"
+
+	t.Run("Test with explicit version", func(t *testing.T) {
+		explicitVersion := "2.0.0"
+		tr1, err := New("http://example.com", nil, clientName, explicitVersion)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if tr1.clientVersion != explicitVersion {
+			t.Errorf("expected clientVersion %q, got %q", explicitVersion, tr1.clientVersion)
+		}
+	})
+
+	t.Run("Test with empty version uses SDKVersion", func(t *testing.T) {
+		tr2, err := New("http://example.com", nil, clientName, "")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if tr2.clientVersion != mcp.SDKVersion {
+			t.Errorf("expected clientVersion %q, got %q", mcp.SDKVersion, tr2.clientVersion)
+		}
+	})
 }

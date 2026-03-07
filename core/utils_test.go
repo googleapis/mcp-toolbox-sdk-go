@@ -215,9 +215,10 @@ func TestCustomTokenSource(t *testing.T) {
 func TestSchemaToMap(t *testing.T) {
 	// Define test cases
 	testCases := []struct {
-		name     string
-		input    *ParameterSchema
-		expected map[string]any
+		name      string
+		input     *ParameterSchema
+		expected  map[string]any
+		expectErr bool
 	}{
 		{
 			name: "Simple String Parameter",
@@ -246,6 +247,42 @@ func TestSchemaToMap(t *testing.T) {
 				"items": map[string]any{
 					"type":        "integer",
 					"description": "A single number.",
+				},
+			},
+		},
+		{
+			name: "Nested Array",
+			input: &ParameterSchema{
+				Type: "array",
+				Items: &ParameterSchema{
+					Type: "array",
+					Items: &ParameterSchema{
+						Type: "string",
+					},
+				},
+			},
+			expected: map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "array",
+					"items": map[string]any{
+						"type": "string",
+					},
+				},
+			},
+		},
+		{
+			name: "Array of Objects",
+			input: &ParameterSchema{
+				Type: "array",
+				Items: &ParameterSchema{
+					Type: "object",
+				},
+			},
+			expected: map[string]any{
+				"type": "array",
+				"items": map[string]any{
+					"type": "object",
 				},
 			},
 		},
@@ -311,6 +348,16 @@ func TestSchemaToMap(t *testing.T) {
 			},
 		},
 		{
+			name: "Negative Test - Object with nested object additionalProperties",
+			input: &ParameterSchema{
+				Type: "object",
+				AdditionalProperties: &ParameterSchema{
+					Type: "object",
+				},
+			},
+			expectErr: true, // Should fail because strongly-typed maps cannot nest objects
+		},
+		{
 			name: "Object with nil additionalProperties",
 			input: &ParameterSchema{
 				Type:                 "object",
@@ -325,9 +372,14 @@ func TestSchemaToMap(t *testing.T) {
 	// Run test cases
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := schemaToMap(tc.input)
-			if !reflect.DeepEqual(actual, tc.expected) {
-				t.Errorf("schemaToMap() = %v, want %v", actual, tc.expected)
+			actual, err := schemaToMap(tc.input)
+			if tc.expectErr {
+				assert.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				if !reflect.DeepEqual(actual, tc.expected) {
+					t.Errorf("schemaToMap() = %v, want %v", actual, tc.expected)
+				}
 			}
 		})
 	}

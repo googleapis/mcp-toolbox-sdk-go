@@ -43,6 +43,15 @@ func WithClientName(name string) ClientOption {
 	}
 }
 
+// WithClientVersion sets the client version used in the MCP protocol handshake.
+// Defaults to the core SDK version if not set.
+func WithClientVersion(version string) ClientOption {
+	return func(tc *ToolboxClient) error {
+		tc.clientVersion = version
+		return nil
+	}
+}
+
 // WithProtocol provides a the underlying transport protocol to the ToolboxClient..
 func WithProtocol(p Protocol) ClientOption {
 	return func(tc *ToolboxClient) error {
@@ -185,22 +194,28 @@ func WithBindParamStringFunc(name string, fn func() (string, error)) ToolOption 
 
 // WithBindParamInt binds a static integer value to a parameter.
 func WithBindParamInt[T Integer](name string, value T) ToolOption {
-	return createBoundParamToolOption(name, value)
+	return createBoundParamToolOption(name, int(value))
 }
 
 // WithBindParamIntFunc binds a function that returns an integer to a parameter.
 func WithBindParamIntFunc[T Integer](name string, fn func() (T, error)) ToolOption {
-	return createBoundParamToolOption(name, fn)
+	return createBoundParamToolOption(name, func() (int, error) {
+		v, err := fn()
+		return int(v), err
+	})
 }
 
 // WithBindParamFloat binds a static float value to a parameter.
 func WithBindParamFloat[T Float](name string, value T) ToolOption {
-	return createBoundParamToolOption(name, value)
+	return createBoundParamToolOption(name, float64(value))
 }
 
 // WithBindParamFloatFunc binds a function that returns a float to a parameter.
 func WithBindParamFloatFunc[T Float](name string, fn func() (T, error)) ToolOption {
-	return createBoundParamToolOption(name, fn)
+	return createBoundParamToolOption(name, func() (float64, error) {
+		v, err := fn()
+		return float64(v), err
+	})
 }
 
 // WithBindParamBool binds a static boolean value to a parameter.
@@ -212,6 +227,8 @@ func WithBindParamBool(name string, value bool) ToolOption {
 func WithBindParamBoolFunc(name string, fn func() (bool, error)) ToolOption {
 	return createBoundParamToolOption(name, fn)
 }
+
+// --- Array Bindings ---
 
 // WithBindParamStringArray binds a static slice of strings to a parameter.
 func WithBindParamStringArray(name string, value []string) ToolOption {
@@ -225,22 +242,50 @@ func WithBindParamStringArrayFunc(name string, fn func() ([]string, error)) Tool
 
 // WithBindParamIntArray binds a static slice of integers to a parameter.
 func WithBindParamIntArray[T Integer](name string, value []T) ToolOption {
-	return createBoundParamToolOption(name, value)
+	normalized := make([]int, len(value))
+	for i, v := range value {
+		normalized[i] = int(v)
+	}
+	return createBoundParamToolOption(name, normalized)
 }
 
 // WithBindParamIntArrayFunc binds a function that returns a slice of integers.
 func WithBindParamIntArrayFunc[T Integer](name string, fn func() ([]T, error)) ToolOption {
-	return createBoundParamToolOption(name, fn)
+	return createBoundParamToolOption(name, func() ([]int, error) {
+		val, err := fn()
+		if err != nil {
+			return nil, err
+		}
+		normalized := make([]int, len(val))
+		for i, v := range val {
+			normalized[i] = int(v)
+		}
+		return normalized, nil
+	})
 }
 
 // WithBindParamFloatArray binds a static slice of floats to a parameter.
 func WithBindParamFloatArray[T Float](name string, value []T) ToolOption {
-	return createBoundParamToolOption(name, value)
+	normalized := make([]float64, len(value))
+	for i, v := range value {
+		normalized[i] = float64(v)
+	}
+	return createBoundParamToolOption(name, normalized)
 }
 
 // WithBindParamFloatArrayFunc binds a function that returns a slice of floats.
 func WithBindParamFloatArrayFunc[T Float](name string, fn func() ([]T, error)) ToolOption {
-	return createBoundParamToolOption(name, fn)
+	return createBoundParamToolOption(name, func() ([]float64, error) {
+		val, err := fn()
+		if err != nil {
+			return nil, err
+		}
+		normalized := make([]float64, len(val))
+		for i, v := range val {
+			normalized[i] = float64(v)
+		}
+		return normalized, nil
+	})
 }
 
 // WithBindParamBoolArray binds a static slice of booleans to a parameter.
@@ -250,5 +295,85 @@ func WithBindParamBoolArray(name string, value []bool) ToolOption {
 
 // WithBindParamBoolArrayFunc binds a function that returns a slice of booleans.
 func WithBindParamBoolArrayFunc(name string, fn func() ([]bool, error)) ToolOption {
+	return createBoundParamToolOption(name, fn)
+}
+
+// --- Map Bindings ---
+
+// WithBindParamStringMap binds a static map of strings to a parameter.
+func WithBindParamStringMap(name string, value map[string]string) ToolOption {
+	return createBoundParamToolOption(name, value)
+}
+
+// WithBindParamStringMapFunc binds a function that returns a map of strings to a parameter.
+func WithBindParamStringMapFunc(name string, fn func() (map[string]string, error)) ToolOption {
+	return createBoundParamToolOption(name, fn)
+}
+
+// WithBindParamIntMap binds a static map of integers to a parameter.
+func WithBindParamIntMap[T Integer](name string, value map[string]T) ToolOption {
+	normalized := make(map[string]int, len(value))
+	for k, v := range value {
+		normalized[k] = int(v)
+	}
+	return createBoundParamToolOption(name, normalized)
+}
+
+// WithBindParamIntMapFunc binds a function that returns a map of integers to a parameter.
+func WithBindParamIntMapFunc[T Integer](name string, fn func() (map[string]T, error)) ToolOption {
+	return createBoundParamToolOption(name, func() (map[string]int, error) {
+		val, err := fn()
+		if err != nil {
+			return nil, err
+		}
+		normalized := make(map[string]int, len(val))
+		for k, v := range val {
+			normalized[k] = int(v)
+		}
+		return normalized, nil
+	})
+}
+
+// WithBindParamFloatMap binds a static map of floats to a parameter.
+func WithBindParamFloatMap[T Float](name string, value map[string]T) ToolOption {
+	normalized := make(map[string]float64, len(value))
+	for k, v := range value {
+		normalized[k] = float64(v)
+	}
+	return createBoundParamToolOption(name, normalized)
+}
+
+// WithBindParamFloatMapFunc binds a function that returns a map of floats to a parameter.
+func WithBindParamFloatMapFunc[T Float](name string, fn func() (map[string]T, error)) ToolOption {
+	return createBoundParamToolOption(name, func() (map[string]float64, error) {
+		val, err := fn()
+		if err != nil {
+			return nil, err
+		}
+		normalized := make(map[string]float64, len(val))
+		for k, v := range val {
+			normalized[k] = float64(v)
+		}
+		return normalized, nil
+	})
+}
+
+// WithBindParamBoolMap binds a static map of booleans to a parameter.
+func WithBindParamBoolMap(name string, value map[string]bool) ToolOption {
+	return createBoundParamToolOption(name, value)
+}
+
+// WithBindParamBoolMapFunc binds a function that returns a map of booleans to a parameter.
+func WithBindParamBoolMapFunc(name string, fn func() (map[string]bool, error)) ToolOption {
+	return createBoundParamToolOption(name, fn)
+}
+
+// WithBindParamAnyMap binds a generic map to a parameter.
+func WithBindParamAnyMap(name string, value map[string]any) ToolOption {
+	return createBoundParamToolOption(name, value)
+}
+
+// WithBindParamAnyMapFunc binds a function that returns a generic map to a parameter.
+func WithBindParamAnyMapFunc(name string, fn func() (map[string]any, error)) ToolOption {
 	return createBoundParamToolOption(name, fn)
 }

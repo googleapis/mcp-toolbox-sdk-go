@@ -70,6 +70,22 @@ func TestWithHTTPClient(t *testing.T) {
 	})
 }
 
+func TestWithClientVersion(t *testing.T) {
+	t.Run("Success case", func(t *testing.T) {
+		client := newTestClient()
+		version := "1.2.3"
+		opt := WithClientVersion(version)
+		err := opt(client)
+
+		if err != nil {
+			t.Errorf("Expected no error, but got: %v", err)
+		}
+		if client.clientVersion != version {
+			t.Errorf("Expected clientVersion to be %s, got %s", version, client.clientVersion)
+		}
+	})
+}
+
 func TestWithProtocol(t *testing.T) {
 	// Verify all protocols can be set individually
 	tests := []struct {
@@ -286,15 +302,15 @@ func TestToolOptions(t *testing.T) {
 		}
 	})
 
-	t.Run("Parameter Binding - Static Values", func(t *testing.T) {
+	t.Run("Parameter Binding - Static Values with Normalization", func(t *testing.T) {
 		config := newTestConfig()
 
-		// Setup and apply all static options
+		// Setup and apply all static options (using non-standard types to test normalization)
 		_ = WithBindParamString("username", "john_doe")(config)
 		_ = WithBindParamInt("age", 42)(config)
-		_ = WithBindParamInt("port", uint16(8080))(config)
+		_ = WithBindParamInt("port", uint16(8080))(config) // Should normalize to int
 		_ = WithBindParamFloat("price", 99.99)(config)
-		_ = WithBindParamFloat("tax", float32(0.08))(config)
+		_ = WithBindParamFloat("tax", float32(0.5))(config) // Should normalize to float64
 		_ = WithBindParamBool("isAdmin", true)(config)
 		_ = WithBindParamStringArray("tags", []string{"a", "b"})(config)
 		_ = WithBindParamIntArray("scores", []int{10, 20})(config)
@@ -306,22 +322,22 @@ func TestToolOptions(t *testing.T) {
 			t.Fatal("BoundParams map was not initialized (Negative Test)")
 		}
 		if val, ok := config.BoundParams["username"].(string); !ok || val != "john_doe" {
-			t.Errorf("String binding failed. Got: %v", config.BoundParams["username"])
+			t.Errorf("String binding failed. Got: %T %v", config.BoundParams["username"], config.BoundParams["username"])
 		}
 		if val, ok := config.BoundParams["age"].(int); !ok || val != 42 {
-			t.Errorf("Int binding failed. Got: %v", config.BoundParams["age"])
+			t.Errorf("Int binding failed. Got: %T %v", config.BoundParams["age"], config.BoundParams["age"])
 		}
-		if val, ok := config.BoundParams["port"].(uint16); !ok || val != 8080 {
-			t.Errorf("Generic int (uint16) binding failed. Got: %v", config.BoundParams["port"])
+		if val, ok := config.BoundParams["port"].(int); !ok || val != 8080 {
+			t.Errorf("Generic int normalization failed. Expected int, Got: %T %v", config.BoundParams["port"], config.BoundParams["port"])
 		}
 		if val, ok := config.BoundParams["price"].(float64); !ok || val != 99.99 {
-			t.Errorf("Float binding failed. Got: %v", config.BoundParams["price"])
+			t.Errorf("Float binding failed. Got: %T %v", config.BoundParams["price"], config.BoundParams["price"])
 		}
-		if val, ok := config.BoundParams["tax"].(float32); !ok || val != 0.08 {
-			t.Errorf("Generic float (float32) binding failed. Got: %v", config.BoundParams["tax"])
+		if val, ok := config.BoundParams["tax"].(float64); !ok || val != 0.5 {
+			t.Errorf("Generic float normalization failed. Expected float64, Got: %T %v", config.BoundParams["tax"], config.BoundParams["tax"])
 		}
 		if val, ok := config.BoundParams["isAdmin"].(bool); !ok || !val {
-			t.Errorf("Bool binding failed. Got: %v", config.BoundParams["isAdmin"])
+			t.Errorf("Bool binding failed. Got: %T %v", config.BoundParams["isAdmin"], config.BoundParams["isAdmin"])
 		}
 		if val, ok := config.BoundParams["tags"].([]string); !ok || !reflect.DeepEqual(val, []string{"a", "b"}) {
 			t.Errorf("StringArray binding failed. Got: %v", config.BoundParams["tags"])
@@ -335,14 +351,14 @@ func TestToolOptions(t *testing.T) {
 		if val, ok := config.BoundParams["flags"].([]bool); !ok || !reflect.DeepEqual(val, []bool{true, false}) {
 			t.Errorf("BoolArray binding failed. Got: %v", config.BoundParams["flags"])
 		}
-
 	})
 
-	t.Run("Parameter Binding - Function Values", func(t *testing.T) {
+	t.Run("Parameter Binding - Function Values with Normalization", func(t *testing.T) {
 		config := newTestConfig()
 
 		_ = WithBindParamStringFunc("requestID", func() (string, error) { return "req-123", nil })(config)
-		_ = WithBindParamIntFunc("userID", func() (int, error) { return 42, nil })(config)
+		// Return int32 to ensure it is wrapped and normalized to func() (int, error)
+		_ = WithBindParamIntFunc("userID", func() (int32, error) { return 42, nil })(config)
 		_ = WithBindParamBoolFunc("isLoggedIn", func() (bool, error) { return true, nil })(config)
 		_ = WithBindParamStringArrayFunc("roles", func() ([]string, error) { return []string{"admin", "user"}, nil })(config)
 
@@ -353,7 +369,7 @@ func TestToolOptions(t *testing.T) {
 		}
 
 		if fn, ok := config.BoundParams["userID"].(func() (int, error)); !ok {
-			t.Fatal("IntFunc was not stored correctly")
+			t.Fatal("IntFunc was not normalized correctly to func() (int, error)")
 		} else if val, err := fn(); err != nil || val != 42 {
 			t.Errorf("Executing stored IntFunc failed. Got val=%d, err=%v", val, err)
 		}
@@ -407,20 +423,20 @@ func TestArrayAndArrayFuncOptions(t *testing.T) {
 		return newToolConfig()
 	}
 
-	t.Run("Static Array Parameter Binding", func(t *testing.T) {
+	t.Run("Static Array Parameter Binding Normalization", func(t *testing.T) {
 		config := newTestConfig()
 
 		// Test happy path for different array types
 		_ = WithBindParamStringArray("tags", []string{"go", "test"})(config)
-		_ = WithBindParamIntArray("ids", []int64{101, 202})(config)
+		_ = WithBindParamIntArray("ids", []int64{101, 202})(config) // Should normalize to []int
 
 		// Assert string array
 		if val, ok := config.BoundParams["tags"].([]string); !ok || !reflect.DeepEqual(val, []string{"go", "test"}) {
-			t.Errorf("StringArray binding failed. Got: %v", config.BoundParams["tags"])
+			t.Errorf("StringArray binding failed. Got: %T %v", config.BoundParams["tags"], config.BoundParams["tags"])
 		}
 		// Assert generic int array
-		if val, ok := config.BoundParams["ids"].([]int64); !ok || !reflect.DeepEqual(val, []int64{101, 202}) {
-			t.Errorf("IntArray binding failed. Got: %v", config.BoundParams["ids"])
+		if val, ok := config.BoundParams["ids"].([]int); !ok || !reflect.DeepEqual(val, []int{101, 202}) {
+			t.Errorf("IntArray normalization failed. Expected []int, Got: %T %v", config.BoundParams["ids"], config.BoundParams["ids"])
 		}
 	})
 
@@ -480,7 +496,8 @@ func TestFunctionParameterBinding(t *testing.T) {
 
 	// Bind different function types
 	_ = WithBindParamFloatFunc("price", func() (float64, error) { return 99.50, nil })(config)
-	_ = WithBindParamFloatArrayFunc("vector", func() ([]float32, error) { return []float32{1.1, 2.2}, nil })(config)
+	// Return []float32 to test that WithBindParamFloatArrayFunc normalizes it to func() ([]float64, error)
+	_ = WithBindParamFloatArrayFunc("vector", func() ([]float32, error) { return []float32{1.5, 2.5}, nil })(config)
 	_ = WithBindParamBoolArrayFunc("flags", func() ([]bool, error) { return []bool{true, false, true}, nil })(config)
 
 	// Assert FloatFunc
@@ -490,10 +507,10 @@ func TestFunctionParameterBinding(t *testing.T) {
 		t.Errorf("Executing stored FloatFunc failed. Got val=%v, err=%v", val, err)
 	}
 
-	// Assert FloatArrayFunc
-	if fn, ok := config.BoundParams["vector"].(func() ([]float32, error)); !ok {
-		t.Fatal("FloatArrayFunc was not stored correctly")
-	} else if val, err := fn(); err != nil || !reflect.DeepEqual(val, []float32{1.1, 2.2}) {
+	// Assert FloatArrayFunc (must be normalized)
+	if fn, ok := config.BoundParams["vector"].(func() ([]float64, error)); !ok {
+		t.Fatal("FloatArrayFunc was not normalized correctly to func() ([]float64, error)")
+	} else if val, err := fn(); err != nil || !reflect.DeepEqual(val, []float64{1.5, 2.5}) {
 		t.Errorf("Executing stored FloatArrayFunc failed. Got val=%v, err=%v", val, err)
 	}
 
@@ -503,6 +520,97 @@ func TestFunctionParameterBinding(t *testing.T) {
 	} else if val, err := fn(); err != nil || !reflect.DeepEqual(val, []bool{true, false, true}) {
 		t.Errorf("Executing stored BoolArrayFunc failed. Got val=%v, err=%v", val, err)
 	}
+}
+
+func TestMapAndMapFuncOptions(t *testing.T) {
+	newTestConfig := func() *ToolConfig {
+		return newToolConfig()
+	}
+
+	t.Run("Static Map Parameter Bindings", func(t *testing.T) {
+		config := newTestConfig()
+
+		_ = WithBindParamStringMap("headers", map[string]string{"Content-Type": "application/json"})(config)
+		_ = WithBindParamIntMap("counts", map[string]int32{"a": 1, "b": 2})(config) // Normalizes to map[string]int
+		_ = WithBindParamFloatMap("weights", map[string]float32{"w1": 0.5})(config) // Normalizes to map[string]float64
+		_ = WithBindParamBoolMap("toggles", map[string]bool{"featureX": true})(config)
+		_ = WithBindParamAnyMap("generic", map[string]any{"key1": "val1", "key2": 123})(config)
+
+		if val, ok := config.BoundParams["headers"].(map[string]string); !ok || val["Content-Type"] != "application/json" {
+			t.Errorf("StringMap binding failed. Got: %T %v", config.BoundParams["headers"], config.BoundParams["headers"])
+		}
+		if val, ok := config.BoundParams["counts"].(map[string]int); !ok || val["a"] != 1 {
+			t.Errorf("IntMap normalization failed. Expected map[string]int, Got: %T %v", config.BoundParams["counts"], config.BoundParams["counts"])
+		}
+		if val, ok := config.BoundParams["weights"].(map[string]float64); !ok || val["w1"] != 0.5 {
+			t.Errorf("FloatMap normalization failed. Expected map[string]float64, Got: %T %v", config.BoundParams["weights"], config.BoundParams["weights"])
+		}
+		if val, ok := config.BoundParams["toggles"].(map[string]bool); !ok || !val["featureX"] {
+			t.Errorf("BoolMap binding failed. Got: %T %v", config.BoundParams["toggles"], config.BoundParams["toggles"])
+		}
+		if val, ok := config.BoundParams["generic"].(map[string]any); !ok || val["key1"] != "val1" {
+			t.Errorf("AnyMap binding failed. Got: %T %v", config.BoundParams["generic"], config.BoundParams["generic"])
+		}
+	})
+
+	t.Run("Function Map Parameter Bindings", func(t *testing.T) {
+		config := newTestConfig()
+
+		_ = WithBindParamStringMapFunc("headers", func() (map[string]string, error) {
+			return map[string]string{"Auth": "token"}, nil
+		})(config)
+		_ = WithBindParamIntMapFunc("counts", func() (map[string]int32, error) {
+			return map[string]int32{"a": 10}, nil
+		})(config)
+
+		if fn, ok := config.BoundParams["headers"].(func() (map[string]string, error)); !ok {
+			t.Fatal("StringMapFunc was not stored correctly")
+		} else if val, err := fn(); err != nil || val["Auth"] != "token" {
+			t.Errorf("Executing stored StringMapFunc failed. Got val=%v, err=%v", val, err)
+		}
+
+		if fn, ok := config.BoundParams["counts"].(func() (map[string]int, error)); !ok {
+			t.Fatal("IntMapFunc was not normalized correctly to func() (map[string]int, error)")
+		} else if val, err := fn(); err != nil || val["a"] != 10 {
+			t.Errorf("Executing stored IntMapFunc failed. Got val=%v, err=%v", val, err)
+		}
+	})
+
+	t.Run("Negative Test - Prevents Overwriting Map Parameters", func(t *testing.T) {
+		config := newTestConfig()
+
+		err1 := WithBindParamStringMap("metadata", map[string]string{"env": "prod"})(config)
+		if err1 != nil {
+			t.Fatalf("Setting initial map parameter failed: %v", err1)
+		}
+
+		err2 := WithBindParamStringMap("metadata", map[string]string{"env": "dev"})(config)
+
+		if err2 == nil {
+			t.Error("Expected an error when binding a map parameter twice, but got nil")
+		} else if !strings.Contains(err2.Error(), "duplicate parameter binding") {
+			t.Errorf("Error message for duplicate map parameter is incorrect, got: %v", err2)
+		}
+	})
+
+	t.Run("Negative Test - Prevents Overwriting Func Map Parameters", func(t *testing.T) {
+		config := newTestConfig()
+
+		fn1 := func() (map[string]int, error) { return map[string]int{"a": 1}, nil }
+		err1 := WithBindParamIntMapFunc("counts", fn1)(config)
+		if err1 != nil {
+			t.Fatalf("Setting initial func map parameter failed: %v", err1)
+		}
+
+		fn2 := func() (map[string]int, error) { return map[string]int{"b": 2}, nil }
+		err2 := WithBindParamIntMapFunc("counts", fn2)(config)
+
+		if err2 == nil {
+			t.Error("Expected an error when binding a func map parameter twice, but got nil")
+		} else if !strings.Contains(err2.Error(), "duplicate parameter binding") {
+			t.Errorf("Error message for duplicate func map parameter is incorrect, got: %v", err2)
+		}
+	})
 }
 
 func TestNewToolConfig(t *testing.T) {

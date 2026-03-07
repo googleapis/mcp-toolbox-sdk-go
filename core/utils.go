@@ -159,9 +159,8 @@ func resolveClientHeaders(clientHeaderSources map[string]oauth2.TokenSource) (ma
 	return resolved, nil
 }
 
-// schemaToMap recursively converts a ParameterSchema to a map with it's type and description.
-func schemaToMap(p *ParameterSchema) map[string]any {
-	// Basic schema with type and description
+// schemaToMap recursively converts a ParameterSchema to a map with its type and description.
+func schemaToMap(p *ParameterSchema) (map[string]any, error) {
 	var schema = make(map[string]any)
 
 	if p.Type == "float" {
@@ -175,28 +174,41 @@ func schemaToMap(p *ParameterSchema) map[string]any {
 		schema["description"] = p.Description
 	}
 
-	// If the type is "array", recursively define what's in the array.
-	if p.Type == "array" && p.Items != nil {
-		schema["items"] = schemaToMap(p.Items)
-	}
-
 	if p.Default != nil {
 		schema["default"] = p.Default
 	}
 
+	// Handle array validation recursively
+	if p.Type == "array" && p.Items != nil {
+		itemSchema, err := schemaToMap(p.Items)
+		if err != nil {
+			return nil, err
+		}
+		schema["items"] = itemSchema
+	}
+
+	// Handle object validation recursively
 	if p.Type == "object" && p.AdditionalProperties != nil {
 		switch ap := p.AdditionalProperties.(type) {
 		case *ParameterSchema:
-			schema["additionalProperties"] = schemaToMap(ap)
+			// Enforce primitive-only rule for typed maps
+			if ap.Type == "array" || ap.Type == "object" {
+				return nil, fmt.Errorf("unsupported nested structure: typed maps containing '%s' are not allowed", ap.Type)
+			}
+			apSchema, err := schemaToMap(ap)
+			if err != nil {
+				return nil, err
+			}
+			schema["additionalProperties"] = apSchema
 		case bool:
 			schema["additionalProperties"] = ap
 		}
 	}
 
-	return schema
+	return schema, nil
 }
 
-// schemaToMap converts a map to the type ParameterSchema
+// mapToSchema converts a map to the type ParameterSchema
 func mapToSchema(m map[string]any) (*ParameterSchema, error) {
 	jsonBytes, err := json.Marshal(m)
 	if err != nil {
