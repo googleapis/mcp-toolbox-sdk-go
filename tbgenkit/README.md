@@ -48,8 +48,6 @@ For more information on how to load a ToolboxTool, see [the core package](https:
 The tbgenkit package provides a framework-agnostic way to interact with your Toolbox server. For detailed guides and advanced configuration, please visit the following sections on our [Documentation Site](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbgenkit):
 
 - [Convert Toolbox Tool to a Genkit Tool](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbgenkit/#convert-toolbox-tool-to-a-genkit-tool)
-- [Using with Orchestration Frameworks](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbgenkit/#convert-toolbox-tool-to-a-genkit-tool)
-
 
 # Contributing
 

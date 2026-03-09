@@ -93,8 +93,6 @@ The tbadk package provides a framework-agnostic way to interact with your Toolbo
 - [Binding Parameter Values](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbadk/#binding-parameter-values)
 - [Default Parameters](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbadk/#default-parameters)
 - [Using with Adk Go](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbadk/#using-with-adk-go)
-- [Using with Orchestration Frameworks](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbadk/#using-with-adk-go)
-
 
 # Contributing
 
