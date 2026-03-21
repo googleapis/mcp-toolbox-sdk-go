@@ -1,0 +1,64 @@
+name: "API Reference Deployment (Docsy)"
+
+on:
+  push:
+    branches: [ 'ref-docs', 'main' ] 
+  workflow_dispatch: 
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+          submodules: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.4'
+
+      - name: Set up Hugo Extended
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: 'latest'
+          extended: true
+
+      - name: Set up Node.js (For Docsy CSS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install gomarkdoc
+        run: go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
+
+      - name: Generate Markdown from Go Code
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          gomarkdoc ./core/... ./tbadk/... ./tbgenkit/...
+
+      - name: Install Docsy Dependencies & Build Hugo
+        run: |
+          cd docs-site
+          # Install the PostCSS tools on the runner
+          npm install -D autoprefixer postcss-cli postcss
+          
+          if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
+            BASE_URL="https://go.mcp-toolbox.dev/"
+          else
+            BASE_URL="https://${{ github.repository_owner }}.github.io/$(basename ${{ github.repository }})/"
+          fi
+          
+          hugo --minify --baseURL "${BASE_URL}"
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs-site/public
+          keep_files: true 
+          cname: ${{ github.repository == 'googleapis/mcp-toolbox-sdk-go' && 'go.mcp-toolbox.dev' || '' }}

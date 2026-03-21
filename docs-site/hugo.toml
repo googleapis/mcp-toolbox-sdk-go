@@ -1,0 +1,15 @@
+title = "MCP Toolbox Go SDK"
+
+[module]
+  [[module.imports]]
+    path = "github.com/google/docsy"
+
+[markup]
+  [markup.highlight]
+    guessSyntax = true
+    style = "tango"
+
+[params.ui]
+  breadcrumb_disable = true
+  sidebar_menu_compact = true
+  toc_hide = true
