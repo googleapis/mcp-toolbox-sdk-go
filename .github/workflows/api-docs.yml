@@ -36,15 +36,32 @@ jobs:
       - name: Install gomarkdoc
         run: go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
 
-      - name: Generate Markdown from Go Code
+      - name: Generate Markdown & Scaffolding
         run: |
           export PATH=$PATH:$(go env GOPATH)/bin
           gomarkdoc ./core/... ./tbadk/... ./tbgenkit/...
 
+          mkdir -p docs-site/content/en/docs
+
+          cat << 'EOF' > docs-site/content/en/_index.md
+          ---
+          title: "MCP Toolbox Go SDK"
+          type: docs
+          ---
+          
+          Please select a Go package from the sidebar on the left to view its interfaces, structs, and methods.
+          EOF
+
+          cat << 'EOF' > docs-site/content/en/docs/_index.md
+          ---
+          title: "Packages"
+          weight: 1
+          ---
+          EOF
+
       - name: Install Docsy Dependencies & Build Hugo
         run: |
           cd docs-site
-          # Install the PostCSS tools on the runner
           npm install -D autoprefixer postcss-cli postcss
           
           if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
