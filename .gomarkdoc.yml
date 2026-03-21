@@ -1,11 +1,7 @@
-# .gomarkdoc.yml
 output: "docs-site/content/en/docs/{{.Dir}}/index.md"
 
-template:
-  header: |
-    ---
-    title: "{{.Package.Name}}"
-    weight: 10
-    ---
-    
-    # Package {{.Package.Name}}
+header: |
+  ---
+  title: "{{.Package.Name}}"
+  weight: 10
+  ---
