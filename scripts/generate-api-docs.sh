@@ -8,6 +8,15 @@ if ! command -v gomarkdoc &> /dev/null; then
 fi
 
 mkdir -p docs-site/content/en
+if [ ! -f docs-site/content/en/_index.md ]; then
+    cat <<EOF > docs-site/content/en/_index.md
+---
+title: "Go API Reference"
+type: docs
+---
+Welcome to the MCP Toolbox Go SDK Technical Reference. Use the sidebar to explore package definitions.
+EOF
+fi
 
 echo "Generating API Reference Markdown..."
 gomarkdoc -o docs-site/content/en/core.md ./core/...
