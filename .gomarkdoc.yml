@@ -1,7 +1,17 @@
-output: "docs-site/content/en/docs/{{.Dir}}/_index.md"
+format: github
 
-header: |
-  ---
-  title: "{{.Package.Name}}"
-  weight: 10
-  ---
+templates:
+  header: |
+    ---
+    title: "{{.Name}}"
+    linkTitle: "{{.Name}}"
+    type: docs
+    ---
+
+output:
+  - package: ./core/...
+    path: docs-site/content/en/core.md
+  - package: ./tbadk/...
+    path: docs-site/content/en/tbadk.md
+  - package: ./tbgenkit/...
+    path: docs-site/content/en/tbgenkit.md
