@@ -36,6 +36,11 @@ jobs:
       - name: Build API Reference
         run: |
           chmod +x scripts/generate-api-docs.sh
+          if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
+            export HUGO_BASEURL="https://go.mcp-toolbox.dev/"
+          else
+            export HUGO_BASEURL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          fi
           ./scripts/generate-api-docs.sh
 
       - name: Deploy to gh-pages

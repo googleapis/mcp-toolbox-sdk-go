@@ -7,9 +7,10 @@ if ! command -v gomarkdoc &> /dev/null; then
     go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
 fi
 
+rm -rf docs-site/content/en/*
 mkdir -p docs-site/content/en
-if [ ! -f docs-site/content/en/_index.md ]; then
-    cat <<EOF > docs-site/content/en/_index.md
+
+cat <<EOF > docs-site/content/en/_index.md
 ---
 title: "Go API Reference"
 type: docs
@@ -17,9 +18,8 @@ type: docs
 # MCP Toolbox Go API Reference
 
 Welcome to the automated technical reference for the MCP Toolbox Go SDK. 
-Use the sidebar to navigate through the package definitions.
+Use the sidebar to explore package-level code signatures and comments.
 EOF
-fi
 
 echo "Generating API Reference Markdown..."
 gomarkdoc -o docs-site/content/en/core.md ./core/...

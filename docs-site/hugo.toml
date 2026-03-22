@@ -8,13 +8,14 @@ canonifyURLs = false
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]
-      unsafe = true
-
-ignoreLogs = ["warning-goldmark-raw-html"]
-
+      unsafe = true 
 [params]
-copyright = "Google LLC"
-privacy_policy = "https://policies.google.com/privacy"
+  copyright = "Google LLC"
+  privacy_policy = "https://policies.google.com/privacy"
+  
+  [params.ui]
+    navbar_logo = true
+    sidebar_menu_foldable = true
 
 [module]
   proxy = "direct"
