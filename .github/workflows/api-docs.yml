@@ -1,7 +1,7 @@
 name: "API Reference Deployment"
 on:
   push:
-    branches: [ 'enable-api-docs' ]
+    branches: [ 'ref-docs' ]
     tags: [ 'v*' ]
 
 jobs:
