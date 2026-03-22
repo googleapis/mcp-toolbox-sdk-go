@@ -14,7 +14,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 0
 
       - name: Set up Go
@@ -34,18 +33,21 @@ jobs:
           npm install postcss postcss-cli autoprefixer
 
       - name: Build API Reference
+        id: vars
         run: |
           chmod +x scripts/generate-api-docs.sh
-          if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
-            export HUGO_BASEURL="https://go.mcp-toolbox.dev/"
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
           else
-            export HUGO_BASEURL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+            VERSION=dev-$(git rev-parse --short HEAD)
           fi
-          ./scripts/generate-api-docs.sh
+          ./scripts/generate-api-docs.sh "$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs-site/public
+          keep_files: true
           cname: ${{ github.repository == 'googleapis/mcp-toolbox-sdk-go' && 'go.mcp-toolbox.dev' || '' }}
