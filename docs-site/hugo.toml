@@ -15,6 +15,9 @@ defaultContentLanguageInSubdir = false
     path = "github.com/google/docsy"
 
 [markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
   [markup.highlight]
     guessSyntax = true
     style = "tango"
