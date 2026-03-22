@@ -3,6 +3,7 @@ on:
   push:
     branches: [ 'ref-docs' ]
     tags: [ 'v*' ]
+  workflow_dispatch: 
 
 jobs:
   deploy:
@@ -11,7 +12,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout Code
-      - uses: actions/checkout@v4
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
