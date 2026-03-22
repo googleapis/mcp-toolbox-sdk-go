@@ -1,10 +1,10 @@
-.navbar-brand svg, .navbar-brand img {
+.navbar-brand svg, .navbar-brand img, .navbar-brand__logo {
     height: 40px !important;
     width: auto !important;
 }
 
-.td-sidebar {
-    .td-sidebar__brand svg {
-        height: 30px !important;
-    }
+.td-content table {
+    display: table;
+    width: 100%;
+    margin-bottom: 1rem;
 }
