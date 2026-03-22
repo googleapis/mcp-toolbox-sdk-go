@@ -1,4 +1,4 @@
-output: "docs-site/content/en/docs/{{.Dir}}/index.md"
+output: "docs-site/content/en/docs/{{.Dir}}/_index.md"
 
 header: |
   ---
