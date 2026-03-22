@@ -2,6 +2,13 @@ baseURL = "https://go.mcp-toolbox.dev/"
 title = "MCP Toolbox Go API Reference"
 theme = ["docsy"]
 
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+ignoreLogs = ["warning-goldmark-raw-html"]
+
 [params]
 copyright = "Google LLC"
 privacy_policy = "https://policies.google.com/privacy"
