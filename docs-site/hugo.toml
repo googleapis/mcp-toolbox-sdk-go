@@ -2,6 +2,9 @@ baseURL = "https://go.mcp-toolbox.dev/"
 title = "MCP Toolbox Go API Reference"
 theme = ["docsy"]
 
+relativeURLs = true
+canonifyURLs = false
+
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]

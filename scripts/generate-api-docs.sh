@@ -14,7 +14,10 @@ if [ ! -f docs-site/content/en/_index.md ]; then
 title: "Go API Reference"
 type: docs
 ---
-Welcome to the MCP Toolbox Go SDK Technical Reference. Use the sidebar to explore package definitions.
+# MCP Toolbox Go API Reference
+
+Welcome to the automated technical reference for the MCP Toolbox Go SDK. 
+Use the sidebar to navigate through the package definitions.
 EOF
 fi
 
