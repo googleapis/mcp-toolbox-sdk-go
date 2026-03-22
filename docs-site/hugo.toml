@@ -1,4 +1,14 @@
+baseURL = "/"
 title = "MCP Toolbox Go SDK"
+
+defaultContentLanguage = "en"
+defaultContentLanguageInSubdir = false
+
+[languages]
+  [languages.en]
+    title = "MCP Toolbox Go SDK"
+    languageName = "English"
+    weight = 1
 
 [module]
   [[module.imports]]
