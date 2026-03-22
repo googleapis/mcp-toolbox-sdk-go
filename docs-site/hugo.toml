@@ -1,13 +1,13 @@
-baseURL = "https://go.mcp-toolbox.dev/"
+baseURL = "/"
 title = "MCP Toolbox Go API Reference"
 
-relativeURLs = true
-canonifyURLs = false
+relativeURLs = false
+canonifyURLs = true
 
 [markup]
   [markup.goldmark]
     [markup.goldmark.renderer]
-      unsafe = true 
+      unsafe = true
 
 [params]
   copyright = "Google LLC"
