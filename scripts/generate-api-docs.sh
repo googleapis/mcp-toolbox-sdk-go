@@ -38,7 +38,7 @@ Welcome to the Go SDK API Reference. Use the sidebar to explore package definiti
 EOF
 
 echo "Generating API Reference Markdown..."
-gomarkdoc -o "docs-site/content/en/docs/{{.Dir}}/index.md" ./...
+gomarkdoc -o "docs-site/content/en/docs/{{.Dir}}/_index.md" ./...
 
 cd docs-site
 hugo --minify --baseURL "${BASE_URL}${VERSION}/" --destination "public/${VERSION}"
