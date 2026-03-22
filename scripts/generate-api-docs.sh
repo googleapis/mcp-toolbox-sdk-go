@@ -15,7 +15,7 @@ if ! command -v gomarkdoc &> /dev/null; then
 fi
 
 rm -rf docs-site/content/en/*
-mkdir -p docs-site/content/en
+mkdir -p docs-site/content/en/docs
 
 cat <<EOF > docs-site/content/en/_index.md
 ---
@@ -23,14 +23,22 @@ title: "Go API Reference"
 type: docs
 ---
 # MCP Toolbox Go API Reference
-Welcome to the technical reference for the MCP Toolbox Go SDK. 
-Use the sidebar to explore package-level code signatures and comments.
+Welcome to the technical reference.
+<script>window.location.replace('docs/');</script>
+EOF
+
+cat <<EOF > docs-site/content/en/docs/_index.md
+---
+title: "Technical Reference"
+linkTitle: "Reference"
+type: docs
+weight: 1
+---
+Welcome to the Go SDK API Reference. Use the sidebar to explore package definitions.
 EOF
 
 echo "Generating API Reference Markdown..."
-gomarkdoc -o docs-site/content/en/core.md ./core/...
-gomarkdoc -o docs-site/content/en/tbadk.md ./tbadk/...
-gomarkdoc -o docs-site/content/en/tbgenkit.md ./tbgenkit/...
+gomarkdoc -o "docs-site/content/en/docs/{{.Dir}}/index.md" ./...
 
 cd docs-site
 hugo --minify --baseURL "${BASE_URL}${VERSION}/" --destination "public/${VERSION}"
