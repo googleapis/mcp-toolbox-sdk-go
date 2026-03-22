@@ -27,6 +27,9 @@ jobs:
         with:
           hugo-version: '0.152.2'
           extended: true   
+      
+      - name: Install PostCSS
+        run: npm install -g postcss-cli autoprefixer
 
       - name: Build API Reference
         run: |
