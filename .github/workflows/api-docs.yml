@@ -10,6 +10,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Checkout Code
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -19,6 +20,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.24.4'
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: '0.152.2'
+          extended: true   
 
       - name: Build API Reference
         run: |
