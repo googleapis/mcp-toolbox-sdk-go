@@ -83,7 +83,7 @@ func main() {
 
 ## Usage
 
-The tbadk package provides a framework-agnostic way to interact with your MCP Toolbox server. For detailed guides and advanced configuration, please visit the following sections on our [Documentation Site](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbadk):
+The `tbadk` package provides a framework-agnostic way to interact with your MCP Toolbox server. For detailed guides and advanced configuration, please visit the following sections on our [Documentation Site](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbadk):
 
 - [Transport Protocols](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbadk/#transport-protocols)
 - [Loading Tools](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbadk/#loading-tools)
