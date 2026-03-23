@@ -1,9 +1,8 @@
 format: github
 
-template:
-  header: |
-    ---
-    title: "{{.Dir}}"
-    linkTitle: "{{.Dir}}"
-    type: docs
-    ---
+header: |
+  ---
+  title: "{{.Dir}}"
+  linkTitle: "{{.Dir}}"
+  type: docs
+  ---
