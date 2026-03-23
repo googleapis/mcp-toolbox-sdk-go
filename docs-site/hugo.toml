@@ -1,8 +1,8 @@
 baseURL = "/"
 title = "MCP Toolbox Go API Reference"
 
-relativeURLs = false
-canonifyURLs = true
+relativeURLs = true
+canonifyURLs = false
 
 [markup]
   [markup.goldmark]
@@ -16,6 +16,7 @@ canonifyURLs = true
   [params.ui]
     navbar_logo = true
     sidebar_menu_foldable = true
+    sidebar_menu_compact = true
 
 [module]
   proxy = "direct"
