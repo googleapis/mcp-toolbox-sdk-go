@@ -17,20 +17,20 @@ mkdir -p docs-site/content/en/docs
 
 cat <<EOF > docs-site/content/en/_index.md
 ---
-title: "MCP Toolbox Go API"
+title: "Go API Reference"
+type: docs
 ---
-{{< blocks/cover title="MCP Toolbox Go SDK" height="full" >}}
-<div class="mx-auto mt-4">
-  <a class="btn btn-lg btn-primary" href="docs/">
-    View API Reference
-  </a>
-</div>
-{{< /blocks/cover >}}
+# MCP Toolbox Go API Reference
+
+Welcome to the automated technical reference for the MCP Toolbox Go SDK. 
+Use the sidebar to explore the technical definitions for each package.
 EOF
 
+# 2. FIX: Added 'type: docs' so the sidebar appears
 cat <<EOF > docs-site/content/en/docs/_index.md
 ---
-title: "Go API Reference"
+title: "Packages"
+type: docs
 weight: 1
 ---
 EOF
@@ -46,7 +46,11 @@ hugo --minify --baseURL "${BASE_URL}${VERSION}/" --destination "public/${VERSION
 cat <<EOF > public/index.html
 <!DOCTYPE html>
 <html>
-<head><script>window.location.replace('${VERSION}/');</script></head>
+<head>
+  <meta http-equiv="refresh" content="0; url=${BASE_URL}${VERSION}/" />
+  <script>window.location.replace('${BASE_URL}${VERSION}/');</script>
+</head>
+<body>Redirecting to latest version...</body>
 </html>
 EOF
 
