@@ -30,7 +30,7 @@ Logo](https://raw.githubusercontent.com/googleapis/genai-toolbox/main/logo.png)
 > *   **For older versions (`v0.5.1` and below)**: The repository remains a single-module library (`go get github.com/googleapis/mcp-toolbox-sdk-go`).
 > *   Please update your imports and `go.mod` accordingly when upgrading.
 
-This repository contains the Go SDKs for [MCP Toolbox](https://github.com/googleapis/genai-toolbox). These SDKs allow you to load and use tools defined in your Toolbox server as standard Go structs within your GenAI applications.
+This repository contains the Go SDKs for [MCP Toolbox](https://github.com/googleapis/genai-toolbox). These SDKs allow you to load and use tools defined in your MCP Toolbox server as standard Go structs within your Agentic applications.
 
 For comprehensive guides and advanced configuration, visit the [Main Documentation Site](https://googleapis.github.io/genai-toolbox/).
 
@@ -57,7 +57,7 @@ The Go SDK act as clients for that service. They handle the communication needed
 * Invoke the tools (calling the underlying APIs/services configured in Toolbox).
 * Handle authentication and parameter binding as needed.
 
-By using the SDK, you can easily leverage your Toolbox-managed tools directly
+By using the SDK, you can easily leverage your MCP Toolbox-managed tools directly
 within your Go applications or AI orchestration frameworks.
 
 ## Available Packages
@@ -73,7 +73,7 @@ README for detailed installation and usage instructions:
 
 ## Quick Start
 
-1.  **Set up the Toolbox Service**: Ensure you have a running MCP Toolbox server. Follow the [Toolbox Server Quickstart](https://googleapis.github.io/genai-toolbox/getting-started/introduction/).
+1.  **Set up the Toolbox Service**: Ensure you have a running MCP Toolbox server. Follow the [MCP Toolbox Server Quickstart](https://googleapis.github.io/genai-toolbox/getting-started/introduction/).
 2.  **Install the Appropriate SDK**:
     ```bash
     # For the core, framework-agnostic SDK
