@@ -1,6 +1,9 @@
 baseURL = "/"
 title = "MCP Toolbox Go API Reference"
 
+relativeURLs = false
+canonifyURLs = false
+
 defaultContentLanguage = "en"
 defaultContentLanguageInSubdir = false
 
@@ -20,10 +23,12 @@ defaultContentLanguageInSubdir = false
   privacy_policy = "https://policies.google.com/privacy"
   
   [params.ui]
-    navbar_logo = true
+    navbar_logo = false
     sidebar_menu_foldable = true
     sidebar_menu_compact = true
 
 [module]
   [[module.imports]]
     path = "github.com/google/docsy"
+  [[module.imports]]
+    path = "github.com/google/docsy/dependencies"
