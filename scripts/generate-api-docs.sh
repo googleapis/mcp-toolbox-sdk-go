@@ -13,23 +13,32 @@ fi
 go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
 
 rm -rf docs-site/content/en/*
-mkdir -p docs-site/content/en
+mkdir -p docs-site/content/en/docs
 
 cat <<EOF > docs-site/content/en/_index.md
 ---
-title: "Go API Reference"
-type: docs
+title: "MCP Toolbox Go API"
 ---
-# MCP Toolbox Go API Reference
+{{< blocks/cover title="MCP Toolbox Go SDK" height="full" >}}
+<div class="mx-auto mt-4">
+  <a class="btn btn-lg btn-primary" href="docs/">
+    View API Reference
+  </a>
+</div>
+{{< /blocks/cover >}}
+EOF
 
-Welcome to the automated technical reference for the MCP Toolbox Go SDK. 
-Use the sidebar to explore the technical definitions for each package.
+cat <<EOF > docs-site/content/en/docs/_index.md
+---
+title: "Go API Reference"
+weight: 1
+---
 EOF
 
 echo "Generating API Reference Markdown..."
-gomarkdoc -o docs-site/content/en/core.md ./core/...
-gomarkdoc -o docs-site/content/en/tbadk.md ./tbadk/...
-gomarkdoc -o docs-site/content/en/tbgenkit.md ./tbgenkit/...
+gomarkdoc -o docs-site/content/en/docs/core.md ./core/...
+gomarkdoc -o docs-site/content/en/docs/tbadk.md ./tbadk/...
+gomarkdoc -o docs-site/content/en/docs/tbgenkit.md ./tbgenkit/...
 
 cd docs-site
 hugo --minify --baseURL "${BASE_URL}${VERSION}/" --destination "public/${VERSION}"
@@ -41,4 +50,4 @@ cat <<EOF > public/index.html
 </html>
 EOF
 
-echo "['${VERSION}']" > public/versions.json
+echo "[\"${VERSION}\"]" > public/versions.json
