@@ -1,34 +1,20 @@
-baseURL = "/"
-title = "MCP Toolbox Go API Reference"
-
-relativeURLs = false
-canonifyURLs = false
+baseURL = "https://anmolshukla2002.github.io/mcp-toolbox-sdk-go/"
+title = "MCP Toolbox Go API"
 
 defaultContentLanguage = "en"
 defaultContentLanguageInSubdir = false
 
-[languages]
-  [languages.en]
-    title = "MCP Toolbox Go API Reference"
-    languageName = "English"
-    weight = 1
+[languages.en]
+  title = "MCP Toolbox Go API"
+  weight = 1
 
-[markup]
-  [markup.goldmark]
-    [markup.goldmark.renderer]
-      unsafe = true
+[markup.goldmark.renderer]
+  unsafe = true
 
-[params]
-  copyright = "Google LLC"
-  privacy_policy = "https://policies.google.com/privacy"
-  
-  [params.ui]
-    navbar_logo = false
-    sidebar_menu_foldable = true
-    sidebar_menu_compact = true
+[params.ui]
+  navbar_logo = false
+  sidebar_menu_foldable = true
 
 [module]
   [[module.imports]]
     path = "github.com/google/docsy"
-  [[module.imports]]
-    path = "github.com/google/docsy/dependencies"
