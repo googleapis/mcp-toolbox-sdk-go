@@ -17,16 +17,18 @@ mkdir -p docs-site/content/en/docs
 
 cat <<EOF > docs-site/content/en/_index.md
 ---
-title: "Go API Reference"
-type: docs
+title: "MCP Toolbox Go SDK"
 ---
-# MCP Toolbox Go API Reference
-
-Welcome to the automated technical reference for the MCP Toolbox Go SDK. 
-Use the sidebar to explore the technical definitions for each package.
+{{< blocks/cover title="MCP Toolbox Go API Reference" height="full" >}}
+<p class="lead mt-4">Automated technical reference for the MCP Toolbox Go SDK.</p>
+<div class="mx-auto mt-4">
+  <a class="btn btn-lg btn-primary" href="${BASE_URL}${VERSION}/docs/">
+    Explore Packages
+  </a>
+</div>
+{{< /blocks/cover >}}
 EOF
 
-# 2. FIX: Added 'type: docs' so the sidebar appears
 cat <<EOF > docs-site/content/en/docs/_index.md
 ---
 title: "Packages"
@@ -48,9 +50,11 @@ cat <<EOF > public/index.html
 <html>
 <head>
   <meta http-equiv="refresh" content="0; url=${BASE_URL}${VERSION}/" />
-  <script>window.location.replace('${BASE_URL}${VERSION}/');</script>
 </head>
-<body>Redirecting to latest version...</body>
+<body style="background-color: #f8f9fa; text-align: center; padding-top: 50px; font-family: sans-serif;">
+  <p>Redirecting to the latest API version...</p>
+  <script>window.location.replace('${BASE_URL}${VERSION}/');</script>
+</body>
 </html>
 EOF
 
