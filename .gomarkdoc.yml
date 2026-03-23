@@ -1,17 +1,9 @@
 format: github
 
-templates:
+template:
   header: |
     ---
-    title: "{{.Name}}"
-    linkTitle: "{{.Name}}"
+    title: "{{.Dir}}"
+    linkTitle: "{{.Dir}}"
     type: docs
     ---
-
-output:
-  - package: ./core/...
-    path: docs-site/content/en/core.md
-  - package: ./tbadk/...
-    path: docs-site/content/en/tbadk.md
-  - package: ./tbgenkit/...
-    path: docs-site/content/en/tbgenkit.md
