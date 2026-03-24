@@ -18,9 +18,9 @@ type: docs
 
 The documentation has successfully generated! Use the sidebar on the left, or the links below to navigate your packages:
 
-* [Core Package](/mcp-toolbox-sdk-go/docs/core/)
-* [Tbadk Package](/mcp-toolbox-sdk-go/docs/tbadk/)
-* [Tbgenkit Package](/mcp-toolbox-sdk-go/docs/tbgenkit/)
+* [Core Package](docs/core/)
+* [Tbadk Package](docs/tbadk/)
+* [Tbgenkit Package](docs/tbgenkit/)
 EOF
 
 cat <<EOF > docs-site/content/docs/_index.md
@@ -29,12 +29,20 @@ title: "Packages"
 type: docs
 weight: 1
 ---
+# Package Overview
+Select a framework from the left-hand sidebar to view its exported variables, functions, and structs.
 EOF
 
 echo "Generating API Reference Markdown..."
-gomarkdoc -o docs-site/content/docs/core.md ./core/...
-gomarkdoc -o docs-site/content/docs/tbadk.md ./tbadk/...
-gomarkdoc -o docs-site/content/docs/tbgenkit.md ./tbgenkit/...
+
+printf -- "---\ntitle: \"Core\"\ntype: docs\nweight: 10\n---\n\n" > docs-site/content/docs/core.md
+gomarkdoc ./core/... >> docs-site/content/docs/core.md
+
+printf -- "---\ntitle: \"Tbadk\"\ntype: docs\nweight: 20\n---\n\n" > docs-site/content/docs/tbadk.md
+gomarkdoc ./tbadk/... >> docs-site/content/docs/tbadk.md
+
+printf -- "---\ntitle: \"Tbgenkit\"\ntype: docs\nweight: 30\n---\n\n" > docs-site/content/docs/tbgenkit.md
+gomarkdoc ./tbgenkit/... >> docs-site/content/docs/tbgenkit.md
 
 cd docs-site
 hugo --minify --baseURL "${BASE_URL}" --destination "public"

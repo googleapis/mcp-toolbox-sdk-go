@@ -1,8 +1,0 @@
-format: github
-
-header: |
-  ---
-  title: "{{.Dir}}"
-  linkTitle: "{{.Dir}}"
-  type: docs
-  ---
