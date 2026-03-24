@@ -1,15 +1,22 @@
 baseURL = "https://anmolshukla2002.github.io/mcp-toolbox-sdk-go/"
 title = "MCP Toolbox Go API"
 
-[outputs]
-  home = ["HTML", "RSS", "JSON"]
+[params]
+  offlineSearch = true
 
 [markup.goldmark.renderer]
   unsafe = true
 
+[markup.highlight]
+  noClasses = false
+  style = "tango"
+
 [params.ui]
   navbar_logo = true
   sidebar_menu_foldable = true
+  ul_show = 2
+  breadcrumb_disable = true
+  sidebar_menu_compact = false
 
 [[menu.main]]
   name = "GenAI Toolbox Docsite"
@@ -21,6 +28,21 @@ title = "MCP Toolbox Go API"
   url = "https://github.com/googleapis/genai-toolbox"
   weight = 20
   pre = "<i class='fab fa-github'></i>"
+
+[outputFormats]
+  [outputFormats.LLMS]
+    mediaType = "text/plain"
+    baseName = "llms"
+    isPlainText = true
+    root = true
+  [outputFormats.LLMS-FULL]
+    mediaType = "text/plain"
+    baseName = "llms-full"
+    isPlainText = true
+    root = true
+
+[outputs]
+  home = ["HTML", "RSS", "LLMS", "LLMS-FULL", "JSON"]
 
 [module]
   [[module.imports]]

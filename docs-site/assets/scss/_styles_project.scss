@@ -1,15 +1,25 @@
 @import 'td/code-dark';
 
+.td-navbar {
+  background-color: #80a7e9 !important;
+}
+
+.navbar-brand__logo {
+  background-image: url('/mcp-toolbox-sdk-go/images/toolbox.png') !important;
+  background-size: contain;
+  background-repeat: no-repeat;
+  display: inline-block;
+  width: 40px !important;
+  height: 40px !important;
+  
+  svg { display: none !important; }
+}
+
 .nav-tabs {
   flex-wrap: nowrap;
   white-space: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
-}
-
-.navbar-brand svg, .navbar-brand img, .navbar-brand__logo {
-  height: 40px !important;
-  width: auto !important;
 }
 
 .td-content table {
