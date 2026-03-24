@@ -8,6 +8,7 @@ title = "MCP Toolbox Go API"
   navbar_logo = false
   sidebar_menu_foldable = true
   sidebar_search_disable = true
+  breadcrumb_disable = true
 
 [module]
   [[module.imports]]
