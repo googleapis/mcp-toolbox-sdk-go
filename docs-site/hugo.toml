@@ -5,6 +5,14 @@ title = "MCP Toolbox Go API"
   offlineSearch = true
   copyright = "2026 Google LLC"
 
+[[params.versions]]
+    version = "v0.0.1"
+    url = "https://anmolshukla2002.github.io/mcp-toolbox-sdk-go/v0.0.1/"
+
+  [[params.versions]]
+    version = "main"
+    url = "https://anmolshukla2002.github.io/mcp-toolbox-sdk-go/main/"
+
 [markup.goldmark.renderer]
   unsafe = true
 

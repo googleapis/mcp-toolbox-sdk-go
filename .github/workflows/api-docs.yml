@@ -36,18 +36,14 @@ jobs:
       - name: Build API Reference
         run: |
           chmod +x scripts/generate-api-docs.sh
-          # Calculate Base URL
-          if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
-            BASE_URL="https://go.mcp-toolbox.dev/"
-          else
-            BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
-          fi
+          
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/}
           else
-            VERSION=dev-$(git rev-parse --short HEAD)
+            VERSION="main"
           fi
-          ./scripts/generate-api-docs.sh "$VERSION" "$BASE_URL"
+          
+          ./scripts/generate-api-docs.sh "$VERSION"
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
