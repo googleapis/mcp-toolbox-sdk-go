@@ -16,7 +16,7 @@ type: docs
 ---
 # Welcome to the MCP Toolbox Go SDK
 
-This is the official Go SDK for the MCP Toolbox. Use the sidebar on the left to navigate the technical API reference for each package.
+This is the official Go SDK for the MCP Toolbox. Use the sidebar to navigate the technical API reference for each package.
 
 ## Installation
 
@@ -32,21 +32,22 @@ cat <<EOF > docs-site/content/docs/_index.md
 title: "Packages"
 type: docs
 weight: 1
+alwaysopen: true
 ---
 # Package Overview
-Select a framework from the left-hand sidebar to view its exported variables, functions, and structs.
+Select a framework to view its exported variables, functions, and structs.
 EOF
 
 echo "Generating API Reference Markdown..."
 
-printf -- "---\ntitle: \"Core\"\nhide_title: true\ntype: docs\nweight: 10\n---\n\n" > docs-site/content/docs/core.md
-gomarkdoc ./core/... >> docs-site/content/docs/core.md
+printf -- "---\ntitle: \"Core\"\ntype: docs\nweight: 10\n---\n\n" > docs-site/content/docs/core.md
+gomarkdoc ./core/... | sed '/^# /d' >> docs-site/content/docs/core.md
 
-printf -- "---\ntitle: \"Tbadk\"\nhide_title: true\ntype: docs\nweight: 20\n---\n\n" > docs-site/content/docs/tbadk.md
-gomarkdoc ./tbadk/... >> docs-site/content/docs/tbadk.md
+printf -- "---\ntitle: \"Tbadk\"\ntype: docs\nweight: 20\n---\n\n" > docs-site/content/docs/tbadk.md
+gomarkdoc ./tbadk/... | sed '/^# /d' >> docs-site/content/docs/tbadk.md
 
-printf -- "---\ntitle: \"Tbgenkit\"\nhide_title: true\ntype: docs\nweight: 30\n---\n\n" > docs-site/content/docs/tbgenkit.md
-gomarkdoc ./tbgenkit/... >> docs-site/content/docs/tbgenkit.md
+printf -- "---\ntitle: \"Tbgenkit\"\ntype: docs\nweight: 30\n---\n\n" > docs-site/content/docs/tbgenkit.md
+gomarkdoc ./tbgenkit/... | sed '/^# /d' >> docs-site/content/docs/tbgenkit.md
 
 cd docs-site
 hugo --minify --baseURL "${BASE_URL}" --destination "public"
