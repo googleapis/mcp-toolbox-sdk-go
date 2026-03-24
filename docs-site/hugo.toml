@@ -1,19 +1,13 @@
 baseURL = "https://anmolshukla2002.github.io/mcp-toolbox-sdk-go/"
 title = "MCP Toolbox Go API"
 
-defaultContentLanguage = "en"
-defaultContentLanguageInSubdir = false
-
-[languages.en]
-  title = "MCP Toolbox Go API"
-  weight = 1
-
 [markup.goldmark.renderer]
   unsafe = true
 
 [params.ui]
   navbar_logo = false
   sidebar_menu_foldable = true
+  sidebar_search_disable = true
 
 [module]
   [[module.imports]]
