@@ -17,6 +17,7 @@ title = "MCP Toolbox Go API"
   ul_show = 2
   breadcrumb_disable = true
   sidebar_menu_compact = false
+  showLightDarkModeMenu = true
 
 [[menu.main]]
   name = "GenAI Toolbox Docsite"
