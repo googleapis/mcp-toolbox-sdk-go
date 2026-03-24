@@ -3,6 +3,7 @@ title = "MCP Toolbox Go API"
 
 [params]
   offlineSearch = true
+  copyright = "2026 Google LLC"
 
 [markup.goldmark.renderer]
   unsafe = true
