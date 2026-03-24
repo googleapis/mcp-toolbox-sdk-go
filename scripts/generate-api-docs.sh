@@ -14,16 +14,29 @@ cat <<EOF > docs-site/content/_index.md
 title: "MCP Toolbox Go SDK"
 type: docs
 ---
-# Welcome to the MCP Toolbox Go SDK
 
 This is the official Go SDK for the MCP Toolbox. Use the sidebar to navigate the technical API reference for each package.
 
 ## Installation
 
-To install the SDK or explore more, please visit the official Go SDK Repository on Github:
+The SDK is distributed as individual Go modules for new versions (v0.6.0+). Depending on your use case, install the required packages using the commands below:
 
+### Core
+Provides the foundational types and interfaces for the MCP Toolbox.
 \`\`\`bash
-https://github.com/googleapis/mcp-toolbox-sdk-go/
+go get github.com/googleapis/mcp-toolbox-sdk-go/core
+\`\`\`
+
+### ADK
+Provides tools and frameworks for building and managing MCP agents.
+\`\`\`bash
+go get github.com/googleapis/mcp-toolbox-sdk-go/tbadk
+\`\`\`
+
+### Genkit
+Integrates the MCP Toolbox with the Genkit framework.
+\`\`\`bash
+go get github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit
 \`\`\`
 EOF
 
@@ -34,7 +47,6 @@ type: docs
 weight: 1
 alwaysopen: true
 ---
-# Package Overview
 Select a framework to view its exported variables, functions, and structs.
 EOF
 
