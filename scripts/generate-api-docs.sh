@@ -20,10 +20,10 @@ This is the official Go SDK for the MCP Toolbox. Use the sidebar to navigate the
 
 ## Installation
 
-To install the SDK, run the following command in your Go project:
+To install the SDK or explore more, please visit the official Go SDK Repository on Github:
 
 \`\`\`bash
-go get github.com/googleapis/mcp-toolbox-sdk-go
+https://github.com/googleapis/mcp-toolbox-sdk-go/
 \`\`\`
 EOF
 
