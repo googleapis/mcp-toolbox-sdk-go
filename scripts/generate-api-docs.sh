@@ -62,4 +62,17 @@ printf -- "---\ntitle: \"Tbgenkit\"\ntype: docs\nweight: 30\n---\n\n" > docs-sit
 gomarkdoc ./tbgenkit/... | sed '/^# /d' >> docs-site/content/docs/tbgenkit.md
 
 cd docs-site
-hugo --minify --baseURL "${BASE_URL}" --destination "public"
+VERSION=${1:-"main"}
+HUGO_PARAMS_VERSION="${VERSION}" hugo --minify --baseURL "${BASE_URL}${VERSION}/" --destination "public/${VERSION}"
+cat <<EOF > public/index.html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="refresh" content="0; url=${BASE_URL}${VERSION}/" />
+</head>
+<body style="background-color: rgb(64, 63, 76); color: white; text-align: center; padding-top: 50px; font-family: sans-serif;">
+  <p>Redirecting to the latest API version (${VERSION})...</p>
+  <script>window.location.replace('${BASE_URL}${VERSION}/');</script>
+</body>
+</html>
+EOF
