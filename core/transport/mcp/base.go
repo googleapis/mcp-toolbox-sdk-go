@@ -229,15 +229,14 @@ func parseProperty(name string, definitionMap map[string]any, isRequired bool) t
 			case bool:
 				param.AdditionalProperties = v
 			case map[string]any:
-				schema := parseProperty("", v, true)
+				schema := parseProperty("", v, false)
 				param.AdditionalProperties = &schema
 			}
 		}
 
 	case "array":
 		if itemsMap, ok := definitionMap["items"].(map[string]any); ok {
-			// Recursively parse the schema for array items
-			itemSchema := parseProperty("", itemsMap, true)
+			itemSchema := parseProperty("", itemsMap, false)
 			param.Items = &itemSchema
 		}
 	}
