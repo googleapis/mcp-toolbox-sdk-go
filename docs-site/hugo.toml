@@ -4,15 +4,6 @@ title = "MCP Toolbox Go API"
 [params]
   offlineSearch = true
   copyright = "2026 Google LLC"
-  version_menu = "Releases"
-
-  [[params.versions]]
-    version = "v0.0.1"
-    url = "PLACEHOLDER_BASE_URLv0.0.1/"
-
-  [[params.versions]]
-    version = "main"
-    url = "PLACEHOLDER_BASE_URLmain/"
 
 [markup.goldmark.renderer]
   unsafe = true

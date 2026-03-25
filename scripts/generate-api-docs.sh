@@ -2,9 +2,7 @@
 set -e
 
 export PATH=$PATH:$(go env GOPATH)/bin
-
-VERSION=${1:-"main"}
-BASE_URL=${2:-"/"}
+BASE_URL=${1:-"/"}
 
 go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
 
@@ -52,29 +50,42 @@ alwaysopen: true
 Select a framework to view its exported variables, functions, and structs.
 EOF
 
-echo "Generating API Reference Markdown..."
+echo "Generating API Reference Markdown with per-package dropdowns..."
 
 printf -- "---\ntitle: \"Core\"\ntype: docs\nweight: 10\n---\n\n" > docs-site/content/docs/core.md
+cat <<EOF >> docs-site/content/docs/core.md
+<div style="margin-bottom: 2rem; padding: 1rem; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; display: inline-block;">
+  <label for="core-version" style="font-weight: bold; margin-right: 10px; color: #4a4a4a;">Package Version:</label>
+  <select id="core-version" style="padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; background-color: white;">
+    <option value="">main (latest)</option>
+    </select>
+</div>
+EOF
 gomarkdoc ./core/... | sed '/^# /d' >> docs-site/content/docs/core.md
 
 printf -- "---\ntitle: \"Tbadk\"\ntype: docs\nweight: 20\n---\n\n" > docs-site/content/docs/tbadk.md
+cat <<EOF >> docs-site/content/docs/tbadk.md
+<div style="margin-bottom: 2rem; padding: 1rem; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; display: inline-block;">
+  <label for="tbadk-version" style="font-weight: bold; margin-right: 10px; color: #4a4a4a;">Package Version:</label>
+  <select id="tbadk-version" style="padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; background-color: white;">
+    <option value="">main (latest)</option>
+    </select>
+</div>
+EOF
 gomarkdoc ./tbadk/... | sed '/^# /d' >> docs-site/content/docs/tbadk.md
 
 printf -- "---\ntitle: \"Tbgenkit\"\ntype: docs\nweight: 30\n---\n\n" > docs-site/content/docs/tbgenkit.md
+cat <<EOF >> docs-site/content/docs/tbgenkit.md
+<div style="margin-bottom: 2rem; padding: 1rem; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; display: inline-block;">
+  <label for="tbgenkit-version" style="font-weight: bold; margin-right: 10px; color: #4a4a4a;">Package Version:</label>
+  <select id="tbgenkit-version" style="padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; background-color: white;">
+    <option value="">main (latest)</option>
+    </select>
+</div>
+EOF
 gomarkdoc ./tbgenkit/... | sed '/^# /d' >> docs-site/content/docs/tbgenkit.md
 
 cd docs-site
 sed -i "s|PLACEHOLDER_BASE_URL|${BASE_URL}|g" hugo.toml
-HUGO_PARAMS_VERSION="${VERSION}" hugo --minify --baseURL "${BASE_URL}${VERSION}/" --destination "public/${VERSION}"
-cat <<EOF > public/index.html
-<!DOCTYPE html>
-<html>
-<head>
-  <meta http-equiv="refresh" content="0; url=${BASE_URL}${VERSION}/" />
-</head>
-<body style="background-color: rgb(64, 63, 76); color: white; text-align: center; padding-top: 50px; font-family: sans-serif;">
-  <p>Redirecting to the latest API version (${VERSION})...</p>
-  <script>window.location.replace('${BASE_URL}${VERSION}/');</script>
-</body>
-</html>
-EOF
+
+hugo --minify --baseURL "${BASE_URL}" --destination "public"
