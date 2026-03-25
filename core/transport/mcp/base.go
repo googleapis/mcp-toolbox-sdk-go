@@ -218,6 +218,10 @@ func parseProperty(name string, definitionMap map[string]any, isRequired bool) t
 		Required:    isRequired,
 	}
 
+	if defaultValue, ok := definitionMap["default"]; ok {
+		param.Default = defaultValue
+	}
+
 	switch param.Type {
 	case "object":
 		if ap, ok := definitionMap["additionalProperties"]; ok {
@@ -225,14 +229,15 @@ func parseProperty(name string, definitionMap map[string]any, isRequired bool) t
 			case bool:
 				param.AdditionalProperties = v
 			case map[string]any:
-				schema := parseProperty("", v, false)
+				schema := parseProperty("", v, true)
 				param.AdditionalProperties = &schema
 			}
 		}
 
 	case "array":
 		if itemsMap, ok := definitionMap["items"].(map[string]any); ok {
-			itemSchema := parseProperty("", itemsMap, false)
+			// Recursively parse the schema for array items
+			itemSchema := parseProperty("", itemsMap, true)
 			param.Items = &itemSchema
 		}
 	}

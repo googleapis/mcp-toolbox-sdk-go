@@ -252,6 +252,63 @@ func TestConvertToolDefinition(t *testing.T) {
 		t.Error("Parameter 'simple_str' not found in converted schema")
 	}
 }
+
+func TestConvertToolDefinitionWithDefaults(t *testing.T) {
+	tr, _ := NewBaseTransport("http://example.com", nil)
+
+	rawTool := map[string]any{
+		"name": "default_tool",
+		"inputSchema": map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"count": map[string]any{
+					"type":    "integer",
+					"default": 10,
+				},
+				"text": map[string]any{
+					"type":    "string",
+					"default": "hello",
+				},
+			},
+		},
+	}
+
+	schema, err := tr.ConvertToolDefinition(rawTool)
+	if err != nil {
+		t.Fatalf("ConvertToolDefinition failed: %v", err)
+	}
+
+	if len(schema.Parameters) != 2 {
+		t.Fatalf("Expected 2 parameters, got %d", len(schema.Parameters))
+	}
+
+	foundCount := false
+	foundText := false
+
+	for _, p := range schema.Parameters {
+		switch p.Name {
+		case "count":
+			foundCount = true
+			if p.Default == nil {
+				t.Error("Expected count to have a default value, got nil")
+			} else if val, ok := p.Default.(int); !ok || val != 10 {
+				t.Errorf("Expected count default 10, got %v (%T)", p.Default, p.Default)
+			}
+		case "text":
+			foundText = true
+			if p.Default == nil {
+				t.Error("Expected text to have a default value, got nil")
+			} else if val, ok := p.Default.(string); !ok || val != "hello" {
+				t.Errorf("Expected text default 'hello', got %v (%T)", p.Default, p.Default)
+			}
+		}
+	}
+
+	if !foundCount || !foundText {
+		t.Errorf("Missing expected parameters: foundCount=%v, foundText=%v", foundCount, foundText)
+	}
+}
+
 func TestProcessToolResultContent(t *testing.T) {
 	// Setup a dummy transport (ProcessToolResultContent is a pure function, so state doesn't matter)
 	tr, _ := NewBaseTransport("http://example.com", nil)
