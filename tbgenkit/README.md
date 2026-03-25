@@ -25,7 +25,7 @@ involving Large Language Models (LLMs).
 
 - [Installation](#installation)
 - [Quickstart](#quickstart)
-- [Convert Toolbox Tool to a Genkit Tool](#convert-toolbox-tool-to-a-genkit-tool)
+- [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
 - [Support](#support)
@@ -43,23 +43,11 @@ This SDK is supported on Go version 1.24.4 and higher.
 
 For more information on how to load a ToolboxTool, see [the core package](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/core)
 
-## Convert Toolbox Tool to a Genkit Tool
+## Usage
 
-```go
-"github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit"
+The `tbgenkit` package provides a framework-agnostic way to interact with your MCP Toolbox server. For detailed guides and advanced configuration, please visit the following sections on our [Documentation Site](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbgenkit):
 
-func main() {
-  // Assuming the toolbox tool is loaded
-  // Make sure to add error checks for debugging
-  ctx := context.Background()
-  g, err := genkit.Init(ctx)
-
-  genkitTool, err := tbgenkit.ToGenkitTool(toolboxTool, g)
-
-}
-```
-
-For end-to-end example on how to use Toolbox with Genkit Go, check out the [/samples/](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/tbgenkit/samples) folder
+- [Convert Toolbox Tool to a Genkit Tool](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbgenkit/#convert-toolbox-tool-to-a-genkit-tool)
 
 # Contributing
 
