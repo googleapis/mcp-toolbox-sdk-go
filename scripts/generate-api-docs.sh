@@ -2,7 +2,9 @@
 set -e
 
 export PATH=$PATH:$(go env GOPATH)/bin
-BASE_URL="https://anmolshukla2002.github.io/mcp-toolbox-sdk-go/"
+
+VERSION=${1:-"main"}
+BASE_URL=${2:-"/"}
 
 go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
 
@@ -62,7 +64,7 @@ printf -- "---\ntitle: \"Tbgenkit\"\ntype: docs\nweight: 30\n---\n\n" > docs-sit
 gomarkdoc ./tbgenkit/... | sed '/^# /d' >> docs-site/content/docs/tbgenkit.md
 
 cd docs-site
-VERSION=${1:-"main"}
+sed -i "s|PLACEHOLDER_BASE_URL|${BASE_URL}|g" hugo.toml
 HUGO_PARAMS_VERSION="${VERSION}" hugo --minify --baseURL "${BASE_URL}${VERSION}/" --destination "public/${VERSION}"
 cat <<EOF > public/index.html
 <!DOCTYPE html>

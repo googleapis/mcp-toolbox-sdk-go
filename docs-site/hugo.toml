@@ -1,4 +1,4 @@
-baseURL = "https://anmolshukla2002.github.io/mcp-toolbox-sdk-go/"
+baseURL = "PLACEHOLDER_BASE_URL"
 title = "MCP Toolbox Go API"
 
 [params]
@@ -6,13 +6,13 @@ title = "MCP Toolbox Go API"
   copyright = "2026 Google LLC"
   version_menu = "Releases"
 
-[[params.versions]]
+  [[params.versions]]
     version = "v0.0.1"
-    url = "https://anmolshukla2002.github.io/mcp-toolbox-sdk-go/v0.0.1/"
+    url = "PLACEHOLDER_BASE_URLv0.0.1/"
 
   [[params.versions]]
     version = "main"
-    url = "https://anmolshukla2002.github.io/mcp-toolbox-sdk-go/main/"
+    url = "PLACEHOLDER_BASE_URLmain/"
 
 [markup.goldmark.renderer]
   unsafe = true

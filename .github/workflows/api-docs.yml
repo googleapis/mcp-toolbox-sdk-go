@@ -1,7 +1,7 @@
 name: "API Reference Deployment"
 on:
   push:
-    branches: [ 'ref-docs' ]
+    branches: [ 'main', 'ref-docs' ]
     tags: [ 'v*' ]
   workflow_dispatch: 
 
@@ -27,7 +27,7 @@ jobs:
         with:
           hugo-version: '0.152.2'
           extended: true   
-      
+          
       - name: Install PostCSS Dependencies
         run: |
           cd docs-site
@@ -37,13 +37,20 @@ jobs:
         run: |
           chmod +x scripts/generate-api-docs.sh
           
+          if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
+            # The upstream repo uses a custom domain
+            BASE_URL="https://go.mcp-toolbox.dev/"
+          else
+            BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          fi
+          
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/}
           else
             VERSION="main"
           fi
           
-          ./scripts/generate-api-docs.sh "$VERSION"
+          ./scripts/generate-api-docs.sh "$VERSION" "$BASE_URL"
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
