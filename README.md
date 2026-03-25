@@ -30,22 +30,15 @@ Logo](https://raw.githubusercontent.com/googleapis/genai-toolbox/main/logo.png)
 > *   **For older versions (`v0.5.1` and below)**: The repository remains a single-module library (`go get github.com/googleapis/mcp-toolbox-sdk-go`).
 > *   Please update your imports and `go.mod` accordingly when upgrading.
 
-This repository contains the Go SDK designed to seamlessly integrate the
-functionalities of the [MCP
-Toolbox](https://github.com/googleapis/genai-toolbox) into your Gen AI
-applications. The SDK allow you to load tools defined in Toolbox and use them
-as standard Go tools within popular orchestration frameworks
-or your custom code.
+This repository contains the Go SDKs for [MCP Toolbox](https://github.com/googleapis/genai-toolbox). These SDKs allow you to load and use tools defined in your MCP Toolbox server as standard Go structs within your Agentic applications.
 
-This simplifies the process of incorporating external functionalities (like
-Databases or APIs) managed by Toolbox into your GenAI applications.
+For comprehensive guides and advanced configuration, visit the [Main Documentation Site](https://googleapis.github.io/genai-toolbox/).
 
 <!-- TOC -->
 
 - [Overview](#overview)
-- [Which Package Should I Use?](#which-package-should-i-use)
 - [Available Packages](#available-packages)
-- [Getting Started](#getting-started)
+- [Quick Start](#quick-start)
 - [Contributing](#contributing)
 - [License](#license)
 - [Support](#support)
@@ -64,50 +57,24 @@ The Go SDK act as clients for that service. They handle the communication needed
 * Invoke the tools (calling the underlying APIs/services configured in Toolbox).
 * Handle authentication and parameter binding as needed.
 
-By using the SDK, you can easily leverage your Toolbox-managed tools directly
+By using the SDK, you can easily leverage your MCP Toolbox-managed tools directly
 within your Go applications or AI orchestration frameworks.
-
-## Which Package Should I Use?
-
-Choosing the right package depends on how you are building your application:
-
-- [`core`](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/core):
-  This is a framework agnostic way to connect the tools to popular frameworks
-  like Google GenAI, LangChain, etc.
-
-- [`tbadk`](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/tbadk):
-  This package provides a way to connect tools to ADK Go.
-
-- [`tbgenkit`](https://github.com/googleapis/mcp-toolbox-sdk-go/tree/main/tbgenkit):
-  This package provides a functionality to convert the Tool fetched using the core package
-  into a Genkit Go compatible tool.
 
 ## Available Packages
 
 This repository hosts the following Go packages. See the package-specific
 README for detailed installation and usage instructions:
 
-| Package | Target Use Case | Integration | Path | Details (README) |
-| :------ | :----------| :---------- | :---------------------- | :---------- |
-| `core` | Framework-agnostic / Custom applications | Use directly / Custom | `core/` | 📄 [View README](https://github.com/googleapis/mcp-toolbox-sdk-go/blob/main/core/README.md) |
-| `tbadk` | ADK Go | Use directly | `tbadk/` | 📄 [View README](https://github.com/googleapis/mcp-toolbox-sdk-go/blob/main/tbadk/README.md) |
-| `tbgenkit` | Genkit Go | Along with core | `tbgenkit/` | 📄 [View README](https://github.com/googleapis/mcp-toolbox-sdk-go/blob/main/tbgenkit/README.md) |
+| Package | Target Use Case | Path | Documentation |
+| :------ | :----------| :--- | :---------- |
+| `core` | Framework-agnostic / Custom apps | `core/` | [Go SDK Core Guide](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/) |
+| `tbadk` | ADK Go Integration | `tbadk/` | [ADK Package Guide](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbadk/) |
+| `tbgenkit` | Genkit Go Integration | `tbgenkit/` | [Genkit Package Guide](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbgenkit/) |
 
-## Getting Started
+## Quick Start
 
-To get started using Toolbox tools with an application, follow these general steps:
-
-1. **Set up and Run the Toolbox Service:**
-
-    Before using the SDKs, you need the MCP Toolbox server running. Follow
-    the instructions here: [**Toolbox Getting Started
-    Guide**](https://github.com/googleapis/genai-toolbox?tab=readme-ov-file#getting-started)
-
-2. **Install the Appropriate SDK:**
-
-    Choose the package based on your needs (see "[Which Package Should I Use?](#which-package-should-i-use)" above)
-    Use this command to install the SDK module
-
+1.  **Set up the Toolbox Service**: Ensure you have a running MCP Toolbox server. Follow the [MCP Toolbox Server Quickstart](https://googleapis.github.io/genai-toolbox/getting-started/introduction/).
+2.  **Install the Appropriate SDK**:
     ```bash
     # For the core, framework-agnostic SDK
     go get github.com/googleapis/mcp-toolbox-sdk-go/core
@@ -118,14 +85,7 @@ To get started using Toolbox tools with an application, follow these general ste
     # For Genkit Go
     go get github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit
     ```
-
-3. **Use the SDK:**
-
-    Consult the README for your chosen package (linked in the "[Available
-    Packages](#available-packages)" section above) for detailed instructions on
-    how to connect the client, load tool definitions, invoke tools, configure
-    authentication/binding, and integrate them into your application or
-    framework.
+3.  **Explore Tutorials**: Check out the [Go Quickstart Tutorial](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/) for a full walkthrough.
 
 ## Contributing
 
