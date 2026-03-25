@@ -30,7 +30,7 @@ title = "MCP Toolbox Go API"
   showLightDarkModeMenu = true
 
 [[menu.main]]
-  name = "GenAI Toolbox Docsite"
+  name = "Documentation"
   url = "https://googleapis.github.io/genai-toolbox/getting-started/introduction/"
   weight = 10
 
