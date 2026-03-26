@@ -43,6 +43,7 @@ type ToolboxClient struct {
 	defaultOptionsSet   bool
 	clientName          string
 	clientVersion       string
+	telemetryEnabled    bool
 }
 
 // NewToolboxClient creates and configures a new, immutable client for interacting with a
@@ -90,13 +91,13 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 
 	switch tc.protocol {
 	case MCPv20251125:
-		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion, tc.telemetryEnabled)
 	case MCPv20250618:
-		tc.transport, transportErr = mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+		tc.transport, transportErr = mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion, tc.telemetryEnabled)
 	case MCPv20250326:
-		tc.transport, transportErr = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+		tc.transport, transportErr = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion, tc.telemetryEnabled)
 	case MCPv20241105:
-		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion, tc.telemetryEnabled)
 	default:
 		return nil, fmt.Errorf("unsupported protocol version: %s", tc.protocol)
 	}
@@ -207,6 +208,12 @@ func (tc *ToolboxClient) newToolboxTool(
 	}
 
 	return tt, usedAuthKeys, usedBoundKeys, nil
+}
+
+// Close releases transport resources and records session duration telemetry
+// (if enabled). Call this when the client is no longer needed.
+func (tc *ToolboxClient) Close(ctx context.Context) error {
+	return tc.transport.Close(ctx)
 }
 
 // LoadTool fetches a manifest for a single tool

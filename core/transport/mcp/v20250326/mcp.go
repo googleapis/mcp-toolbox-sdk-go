@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
@@ -38,7 +39,6 @@ var _ transport.Transport = &McpTransport{}
 // McpTransport implements the MCP v2025-03-26 protocol.
 type McpTransport struct {
 	*mcp.BaseMcpTransport
-
 	protocolVersion string
 	sessionId       string // Unique session ID for v2025-03-26
 	clientName      string
@@ -46,8 +46,8 @@ type McpTransport struct {
 }
 
 // New creates a new version-specific transport instance.
-func New(baseURL string, client *http.Client, clientName string, clientVersion string) (*McpTransport, error) {
-	baseTransport, err := mcp.NewBaseTransport(baseURL, client)
+func New(baseURL string, client *http.Client, clientName string, clientVersion string, telemetryEnabled bool) (*McpTransport, error) {
+	baseTransport, err := mcp.NewBaseTransport(baseURL, client, telemetryEnabled)
 	if err != nil {
 		return nil, err
 	}
@@ -67,33 +67,51 @@ func New(baseURL string, client *http.Client, clientName string, clientVersion s
 }
 
 // ListTools fetches available tools
-func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]string) (*transport.ManifestSchema, error) {
-	if err := t.EnsureInitialized(ctx, headers); err != nil {
+func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]string) (manifest *transport.ManifestSchema, err error) {
+	if err = t.EnsureInitialized(ctx, headers); err != nil {
 		return nil, err
 	}
 
 	// Append toolset name to base URL if provided
 	requestURL := t.BaseURL()
 	if toolsetName != "" {
-		var err error
 		requestURL, err = url.JoinPath(requestURL, toolsetName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct toolset URL: %w", err)
 		}
 	}
 
+	// Start telemetry span before the operation. In the finally-equivalent defer,
+	// record the operation duration metric and end the span.
+	var traceparent, tracestate string
+	if t.TelemetryEnabled {
+		var span mcp.SpanRef
+		operationStart := time.Now()
+		span, traceparent, tracestate = mcp.StartSpan(ctx, t.Tracer, "tools/list", t.protocolVersion, requestURL, "")
+		defer func() {
+			mcp.RecordOperationDuration(ctx, t.OperationDurationHistogram, time.Since(operationStart).Seconds(), "tools/list", t.protocolVersion, requestURL, "", err)
+			mcp.EndSpan(span, err)
+		}()
+	}
+
+	var listParams listToolsRequestParams
+	if traceparent != "" || tracestate != "" {
+		listParams.Meta = &mcpMeta{Traceparent: traceparent, Tracestate: tracestate}
+	}
+
 	var result listToolsResult
-	if _, err := t.sendRequest(ctx, requestURL, "tools/list", map[string]any{}, headers, &result); err != nil {
+	if _, err = t.sendRequest(ctx, requestURL, "tools/list", listParams, headers, &result); err != nil {
 		return nil, fmt.Errorf("failed to list tools: %w", err)
 	}
 
-	manifest := &transport.ManifestSchema{
+	manifest = &transport.ManifestSchema{
 		ServerVersion: t.ServerVersion,
 		Tools:         make(map[string]transport.ToolSchema),
 	}
 	for i, tool := range result.Tools {
 		if tool.Name == "" {
-			return nil, fmt.Errorf("received invalid tool definition at index %d: missing 'name' field", i)
+			err = fmt.Errorf("received invalid tool definition at index %d: missing 'name' field", i)
+			return nil, err
 		}
 
 		rawTool := map[string]any{
@@ -105,7 +123,8 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 			rawTool["_meta"] = tool.Meta
 		}
 
-		toolSchema, err := t.ConvertToolDefinition(rawTool)
+		var toolSchema transport.ToolSchema
+		toolSchema, err = t.ConvertToolDefinition(rawTool)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert schema for tool %s: %w", tool.Name, err)
 		}
@@ -134,22 +153,42 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 }
 
 // InvokeTool executes a tool
-func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error) {
-	if err := t.EnsureInitialized(ctx, headers); err != nil {
+func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (output any, err error) {
+	if err = t.EnsureInitialized(ctx, headers); err != nil {
 		return "", err
+	}
+
+	// Start telemetry span before the operation. In the finally-equivalent defer,
+	// record the operation duration metric and end the span.
+	var traceparent, tracestate string
+	if t.TelemetryEnabled {
+		var span mcp.SpanRef
+		operationStart := time.Now()
+		span, traceparent, tracestate = mcp.StartSpan(ctx, t.Tracer, "tools/call", t.protocolVersion, t.BaseURL(), toolName)
+		defer func() {
+			mcp.RecordOperationDuration(ctx, t.OperationDurationHistogram, time.Since(operationStart).Seconds(), "tools/call", t.protocolVersion, t.BaseURL(), toolName, err)
+			mcp.EndSpan(span, err)
+		}()
+	}
+
+	var meta *mcpMeta
+	if traceparent != "" || tracestate != "" {
+		meta = &mcpMeta{Traceparent: traceparent, Tracestate: tracestate}
 	}
 
 	params := callToolRequestParams{
 		Name:      toolName,
 		Arguments: payload,
+		Meta:      meta,
 	}
 	var result callToolResult
-	if _, err := t.sendRequest(ctx, t.BaseURL(), "tools/call", params, headers, &result); err != nil {
+	if _, err = t.sendRequest(ctx, t.BaseURL(), "tools/call", params, headers, &result); err != nil {
 		return "", fmt.Errorf("failed to invoke tool '%s': %w", toolName, err)
 	}
 
 	if result.IsError {
-		return "", fmt.Errorf("tool execution resulted in error")
+		err = fmt.Errorf("tool execution resulted in error")
+		return "", err
 	}
 
 	baseContent := make([]mcp.ToolContent, len(result.Content))
@@ -160,13 +199,30 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 		}
 	}
 
-	output := t.ProcessToolResultContent(baseContent)
-
-	return output, nil
+	return t.ProcessToolResultContent(baseContent), nil
 }
 
 // initializeSession performs the initial handshake and extracts the Session ID.
-func (t *McpTransport) initializeSession(ctx context.Context, headers map[string]string) error {
+func (t *McpTransport) initializeSession(ctx context.Context, headers map[string]string) (err error) {
+	// Start telemetry span before the operation. In the finally-equivalent defer,
+	// record the operation duration metric and end the span.
+	var traceparent, tracestate string
+	if t.TelemetryEnabled {
+		t.StartSession(ProtocolVersion)
+		var span mcp.SpanRef
+		operationStart := time.Now()
+		span, traceparent, tracestate = mcp.StartSpan(ctx, t.Tracer, "initialize", t.protocolVersion, t.BaseURL(), "")
+		defer func() {
+			mcp.RecordOperationDuration(ctx, t.OperationDurationHistogram, time.Since(operationStart).Seconds(), "initialize", t.protocolVersion, t.BaseURL(), "", err)
+			mcp.EndSpan(span, err)
+		}()
+	}
+
+	var meta *mcpMeta
+	if traceparent != "" || tracestate != "" {
+		meta = &mcpMeta{Traceparent: traceparent, Tracestate: tracestate}
+	}
+
 	params := initializeRequestParams{
 		ProtocolVersion: t.protocolVersion,
 		Capabilities:    clientCapabilities{},
@@ -174,6 +230,7 @@ func (t *McpTransport) initializeSession(ctx context.Context, headers map[string
 			Name:    t.clientName,
 			Version: t.clientVersion,
 		},
+		Meta: meta,
 	}
 	var result initializeResult
 	req := jsonRPCRequest{
@@ -184,19 +241,22 @@ func (t *McpTransport) initializeSession(ctx context.Context, headers map[string
 	}
 
 	// Capture headers to check for Session ID
-	respHeaders, err := t.doRPC(ctx, t.BaseURL(), req, headers, &result)
+	var respHeaders http.Header
+	respHeaders, err = t.doRPC(ctx, t.BaseURL(), req, headers, &result)
 	if err != nil {
 		return err
 	}
 
 	// Protocol Version Check
 	if result.ProtocolVersion != t.protocolVersion {
-		return fmt.Errorf("MCP version mismatch: client (%s) != server (%s)", t.protocolVersion, result.ProtocolVersion)
+		err = fmt.Errorf("MCP version mismatch: client (%s) != server (%s)", t.protocolVersion, result.ProtocolVersion)
+		return err
 	}
 
 	// Capabilities Check
 	if result.Capabilities.Tools == nil {
-		return fmt.Errorf("server does not support the 'tools' capability")
+		err = fmt.Errorf("server does not support the 'tools' capability")
+		return err
 	}
 
 	t.ServerVersion = result.ServerInfo.Version
@@ -205,7 +265,8 @@ func (t *McpTransport) initializeSession(ctx context.Context, headers map[string
 	sessionId := respHeaders.Get("Mcp-Session-Id")
 
 	if sessionId == "" {
-		return fmt.Errorf("server did not return an Mcp-Session-Id")
+		err = fmt.Errorf("server did not return an Mcp-Session-Id")
+		return err
 	}
 	t.sessionId = sessionId
 
