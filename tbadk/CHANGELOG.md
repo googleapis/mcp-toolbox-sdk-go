@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.7.0...tbadk/v1.0.0) (2026-03-26)
+
+
+### Miscellaneous Chores
+
+* **core:** release 1.0.0 ([#214](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/214)) ([3f191b6](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/3f191b6b9cd1d3ca492165202852b672ec6a4c35))
+* **deps:** bump google.golang.org/grpc from 1.78.0 to 1.79.3 in /tbadk ([#205](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/205)) ([d7e600e](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/d7e600e2a9b00bf0639e0bc97cc28863f139936f))
+* Update dependencies for core SDK ([#213](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/213)) ([1ba7ad8](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/1ba7ad882cb1dbd6c4dc51cec2556b75ad64aa2c))
+
+
+### Documentation
+
+* cleanup root README ([#201](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/201)) ([7dac748](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/7dac74880ef0ed2055e34dc6deae09509a01fc5f))
+
 ## [0.7.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.6.0...tbadk/v0.7.0) (2026-03-05)
 
 ### ⚠ BREAKING CHANGES
