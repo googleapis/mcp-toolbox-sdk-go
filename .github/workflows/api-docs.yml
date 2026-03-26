@@ -51,8 +51,15 @@ jobs:
         run: |
           chmod +x scripts/generate-api-docs.sh
           
+          # If the Action is running in the official upstream repository, 
+          # strictly route all assets and links to the production custom domain.
           if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
             BASE_URL="https://go.mcp-toolbox.dev/"
+          
+          # If the Action is running in an external contributor's fork, 
+          # dynamically fallback to their personal GitHub Pages URL.
+          # This ensures external contributors can successfully build and preview 
+          # docsite changes on their own forks without encountering broken links.
           else
             BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
           fi
