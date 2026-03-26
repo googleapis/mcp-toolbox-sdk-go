@@ -57,7 +57,13 @@ jobs:
             BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
           fi
           
-          ./scripts/generate-api-docs.sh "$BASE_URL"
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION="main"
+          fi
+          
+          ./scripts/generate-api-docs.sh "$VERSION" "$BASE_URL"
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
