@@ -29,4 +29,7 @@ type Transport interface {
 
 	// InvokeTool executes a tool.
 	InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error)
+
+	// Close releases transport resources and records session duration telemetry.
+	Close(ctx context.Context) error
 }

@@ -40,7 +40,8 @@ type dummyTransport struct {
 	baseURL string
 }
 
-func (d *dummyTransport) BaseURL() string { return d.baseURL }
+func (d *dummyTransport) BaseURL() string                    { return d.baseURL }
+func (d *dummyTransport) Close(ctx context.Context) error   { return nil }
 func (d *dummyTransport) GetTool(ctx context.Context, name string, h map[string]string) (*transport.ManifestSchema, error) {
 	return nil, nil
 }
@@ -668,7 +669,7 @@ type mcpToolCallParams struct {
 func TestToolboxTool_Invoke(t *testing.T) {
 	// A base tool for successful invocations
 	createBaseTool := func(httpClient *http.Client, baseURL string) *ToolboxTool {
-		tr, _ := mcp.New(baseURL, httpClient, "test-client", "1.0.0")
+		tr, _ := mcp.New(baseURL, httpClient, "test-client", "1.0.0", false)
 
 		return &ToolboxTool{
 			name:        "weather",
@@ -1039,7 +1040,7 @@ func TestToolboxTool_Invoke_HttpsWarning(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf.Reset()
-			tr, _ := mcp.New(tt.baseURL, http.DefaultClient, "test-client", "1.0.0")
+			tr, _ := mcp.New(tt.baseURL, http.DefaultClient, "test-client", "1.0.0", false)
 
 			tool := &ToolboxTool{
 				name:      "test-tool",
