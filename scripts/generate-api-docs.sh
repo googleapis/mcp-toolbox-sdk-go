@@ -64,7 +64,8 @@ generate_package() {
   cat <<EOF >> "$MD_FILE"
 <div style="margin-bottom: 2rem; padding: 1rem; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; display: inline-block;">
   <label for="${PKG_DIR}-version" style="font-weight: bold; margin-right: 10px; color: #4a4a4a;">Package Version:</label>
-  <select id="${PKG_DIR}-version" onchange="if (this.value) window.location.href=this.value;" style="padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; background-color: white; cursor: pointer;">
+  
+  <select id="${PKG_DIR}-version" onchange="if (this.value) window.location.href=this.value;" style="padding: 5px 10px; border-radius: 4px; border: 1px solid #ccc; background-color: white; color: #333333; cursor: pointer;">
     <option value="${BASE_URL}main/docs/${PKG_DIR}/">main (latest)</option>
 EOF
 
