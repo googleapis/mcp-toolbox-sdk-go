@@ -1,0 +1,51 @@
+baseURL = "PLACEHOLDER_BASE_URL"
+title = "MCP Toolbox Go API"
+
+[params]
+  offlineSearch = true
+  copyright = "2026 Google LLC"
+
+[markup.goldmark.renderer]
+  unsafe = true
+
+[markup.highlight]
+  noClasses = false
+  style = "tango"
+
+[params.ui]
+  navbar_logo = true
+  sidebar_menu_foldable = true
+  ul_show = 2
+  breadcrumb_disable = true
+  sidebar_menu_compact = false
+  showLightDarkModeMenu = true
+
+[[menu.main]]
+  name = "Documentation"
+  url = "https://mcp-toolbox.dev"
+  weight = 10
+
+[[menu.main]]
+  name = "GitHub"
+  url = "https://github.com/googleapis/genai-toolbox"
+  weight = 20
+  pre = "<i class='fab fa-github'></i>"
+
+[outputFormats]
+  [outputFormats.LLMS]
+    mediaType = "text/plain"
+    baseName = "llms"
+    isPlainText = true
+    root = true
+  [outputFormats.LLMS-FULL]
+    mediaType = "text/plain"
+    baseName = "llms-full"
+    isPlainText = true
+    root = true
+
+[outputs]
+  home = ["HTML", "RSS", "LLMS", "LLMS-FULL", "JSON"]
+
+[module]
+  [[module.imports]]
+    path = "github.com/google/docsy"
