@@ -49,7 +49,7 @@ type: docs
 weight: 1
 alwaysopen: true
 ---
-Select a framework to view its exported variables, functions, and structs.
+Select a framework to view its public variables, functions, and structs.
 EOF
 
 generate_package() {
