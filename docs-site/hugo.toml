@@ -22,7 +22,7 @@ title = "MCP Toolbox Go API"
 
 [[menu.main]]
   name = "Documentation"
-  url = "https://googleapis.github.io/genai-toolbox/getting-started/introduction/"
+  url = "https://mcp-toolbox.dev"
   weight = 10
 
 [[menu.main]]
