@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v0.7.0...core/v1.0.0) (2026-03-31)
+
+
+### Bug Fixes
+
+* **core:** resolve dropped default parameter values in MCP transport parsing ([#215](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/215)) ([76e39ec](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/76e39ec88686a9684b5c8a1b1e2d9ed7d98dda51))
+
+
+### Miscellaneous Chores
+
+* **core:** release 1.0.0 ([#214](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/214)) ([3f191b6](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/3f191b6b9cd1d3ca492165202852b672ec6a4c35))
+* Update dependencies for core SDK ([#213](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/213)) ([1ba7ad8](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/1ba7ad882cb1dbd6c4dc51cec2556b75ad64aa2c))
+
+
+### Documentation
+
+* cleanup root README ([#201](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/201)) ([7dac748](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/7dac74880ef0ed2055e34dc6deae09509a01fc5f))
+
 ## [0.7.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v0.6.2...core/v0.7.0) (2026-03-05)
 
 
