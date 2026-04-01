@@ -1,19 +1,15 @@
 # Changelog
 
-## [1.0.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.7.0...tbadk/v1.0.0) (2026-04-01)
+## [0.8.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.7.0...tbadk/v0.8.0) (2026-04-01)
 
+### Bug Fixes
 
-### Miscellaneous Chores
-
-* **core:** release 1.0.0 ([#214](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/214)) ([3f191b6](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/3f191b6b9cd1d3ca492165202852b672ec6a4c35))
-* **deps:** bump google.golang.org/grpc from 1.78.0 to 1.79.3 in /tbadk ([#205](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/205)) ([d7e600e](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/d7e600e2a9b00bf0639e0bc97cc28863f139936f))
-* **deps:** update module github.com/googleapis/mcp-toolbox-sdk-go/core to v1 ([#221](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/221)) ([b4465e9](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/b4465e93415345447f5b3ed6d6d934bdecca452e))
-* Update dependencies for core SDK ([#213](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/213)) ([1ba7ad8](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/1ba7ad882cb1dbd6c4dc51cec2556b75ad64aa2c))
+* **core:** resolve dropped default parameter values in MCP transport parsing ([#215](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/215)) ([76e39ec](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/76e39ec88686a9684b5c8a1b1e2d9ed7d98dda51))
 
 
 ### Documentation
 
-* cleanup root README ([#201](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/201)) ([7dac748](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/7dac74880ef0ed2055e34dc6deae09509a01fc5f))
+* Documentation migrated to the MCP Toolbox official docsite ([#201](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/201)) ([7dac748](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/7dac74880ef0ed2055e34dc6deae09509a01fc5f))
 
 ## [0.7.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.6.0...tbadk/v0.7.0) (2026-03-05)
 
