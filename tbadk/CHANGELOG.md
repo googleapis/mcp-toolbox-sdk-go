@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.7.0...tbadk/v0.8.0) (2026-04-01)
+
+### Bug Fixes
+
+* **core:** resolve dropped default parameter values in MCP transport parsing ([#215](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/215)) ([76e39ec](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/76e39ec88686a9684b5c8a1b1e2d9ed7d98dda51))
+
+
+### Documentation
+
+* Documentation migrated to the MCP Toolbox official docsite ([#201](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/201)) ([7dac748](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/7dac74880ef0ed2055e34dc6deae09509a01fc5f))
+
 ## [0.7.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.6.0...tbadk/v0.7.0) (2026-03-05)
 
 ### ⚠ BREAKING CHANGES
