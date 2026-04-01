@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.0.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.7.0...tbgenkit/v1.0.0) (2026-04-01)
+
+
+### Bug Fixes
+
+* **core:** resolve dropped default parameter values in MCP transport parsing ([#215](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/215)) ([76e39ec](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/76e39ec88686a9684b5c8a1b1e2d9ed7d98dda51))
+
+
+### Miscellaneous Chores
+
+* **core:** release 1.0.0 ([#214](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/214)) ([3f191b6](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/3f191b6b9cd1d3ca492165202852b672ec6a4c35))
+* **deps:** bump github.com/buger/jsonparser in /tbgenkit ([#206](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/206)) ([04f6cca](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/04f6ccabc772b77e917fed9a2a4ecb36edb2d538))
+* **deps:** bump google.golang.org/grpc in /tbgenkit ([#204](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/204)) ([e171e46](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/e171e46cf62d21cd0b995360bc3a5c4f6ff246e8))
+* **deps:** update module github.com/googleapis/mcp-toolbox-sdk-go/core to v1 ([#221](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/221)) ([b4465e9](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/b4465e93415345447f5b3ed6d6d934bdecca452e))
+* Update dependencies for core SDK ([#213](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/213)) ([1ba7ad8](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/1ba7ad882cb1dbd6c4dc51cec2556b75ad64aa2c))
+
+
+### Documentation
+
+* cleanup root README ([#201](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/201)) ([7dac748](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/7dac74880ef0ed2055e34dc6deae09509a01fc5f))
+
 ## [0.7.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.6.0...tbgenkit/v0.7.0) (2026-03-06)
 
 
