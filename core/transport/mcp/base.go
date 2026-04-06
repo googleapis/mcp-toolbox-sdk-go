@@ -22,6 +22,10 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
+
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 )
@@ -32,6 +36,12 @@ type ToolContent struct {
 	Text string `json:"text"`
 }
 
+// sessionInfo holds state that is known only after the MCP handshake completes.
+type sessionInfo struct {
+	startTime       time.Time
+	protocolVersion string
+}
+
 // BaseMcpTransport holds the common state and logic for MCP HTTP transports.
 type BaseMcpTransport struct {
 	baseURL       string
@@ -39,10 +49,17 @@ type BaseMcpTransport struct {
 	ServerVersion string
 	initOnce      sync.Once
 	initErr       error
+	session       sessionInfo
 
 	// HandshakeHook is the abstract method _initialize_session.
 	// The specific version implementation will assign this function.
 	HandshakeHook func(ctx context.Context, headers map[string]string) error
+
+	// Telemetry instruments. Non-nil only when telemetry is enabled.
+	TelemetryEnabled           bool
+	Tracer                     trace.Tracer
+	OperationDurationHistogram metric.Float64Histogram
+	SessionDurationHistogram   metric.Float64Histogram
 }
 
 // BaseURL returns the base URL for the transport.
@@ -51,7 +68,7 @@ func (b *BaseMcpTransport) BaseURL() string {
 }
 
 // NewBaseTransport creates a new base transport.
-func NewBaseTransport(baseURL string, client *http.Client) (*BaseMcpTransport, error) {
+func NewBaseTransport(baseURL string, client *http.Client, telemetryEnabled bool) (*BaseMcpTransport, error) {
 	if client == nil {
 		client = &http.Client{}
 	}
@@ -76,10 +93,17 @@ func NewBaseTransport(baseURL string, client *http.Client) (*BaseMcpTransport, e
 	// Ensure trailing slash
 	fullURL += "/"
 
-	return &BaseMcpTransport{
-		baseURL:    fullURL,
-		HTTPClient: client,
-	}, nil
+	t := &BaseMcpTransport{
+		baseURL:          fullURL,
+		HTTPClient:       client,
+		TelemetryEnabled: telemetryEnabled,
+	}
+
+	if telemetryEnabled {
+		t.Tracer, t.OperationDurationHistogram, t.SessionDurationHistogram = InitTelemetry(SDKVersion)
+	}
+
+	return t, nil
 }
 
 // EnsureInitialized guarantees the session is ready before making requests.
@@ -92,6 +116,23 @@ func (b *BaseMcpTransport) EnsureInitialized(ctx context.Context, headers map[st
 		}
 	})
 	return b.initErr
+}
+
+// StartSession records the protocol version and session start time after the
+// MCP handshake completes. It should be called once per session from within
+// initializeSession when telemetry is enabled.
+func (b *BaseMcpTransport) StartSession(protocolVersion string) {
+	b.session = sessionInfo{startTime: time.Now(), protocolVersion: protocolVersion}
+}
+
+// Close records the session duration metric (if telemetry is enabled) and
+// releases any resources held by the transport.
+func (b *BaseMcpTransport) Close(ctx context.Context) error {
+	if b.TelemetryEnabled && !b.session.startTime.IsZero() {
+		duration := time.Since(b.session.startTime).Seconds()
+		RecordSessionDuration(ctx, b.SessionDurationHistogram, duration, b.session.protocolVersion, b.baseURL, nil)
+	}
+	return nil
 }
 
 // ProcessToolResultContent processes the tool result content, handling multiple JSON objects.

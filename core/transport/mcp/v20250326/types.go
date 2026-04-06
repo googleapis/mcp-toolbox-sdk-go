@@ -61,11 +61,24 @@ type serverCapabilities struct {
 	Tools   map[string]any `json:"tools,omitempty"`
 }
 
+// mcpMeta carries OpenTelemetry trace context for MCP context propagation.
+// See: https://opentelemetry.io/docs/specs/semconv/gen-ai/mcp/#context-propagation
+type mcpMeta struct {
+	Traceparent string `json:"traceparent,omitempty"`
+	Tracestate  string `json:"tracestate,omitempty"`
+}
+
 // initializeRequestParams holds the parameters for the 'initialize' handshake.
 type initializeRequestParams struct {
 	ProtocolVersion string             `json:"protocolVersion"`
 	Capabilities    clientCapabilities `json:"capabilities"`
 	ClientInfo      implementation     `json:"clientInfo"`
+	Meta            *mcpMeta           `json:"_meta,omitempty"`
+}
+
+// listToolsRequestParams holds the parameters for the 'tools/list' method.
+type listToolsRequestParams struct {
+	Meta *mcpMeta `json:"_meta,omitempty"`
 }
 
 // initializeResult holds the response from the 'initialize' handshake.
@@ -93,6 +106,7 @@ type listToolsResult struct {
 type callToolRequestParams struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
+	Meta      *mcpMeta       `json:"_meta,omitempty"`
 }
 
 // textContent represents a single text block in a tool's output.

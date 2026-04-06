@@ -101,6 +101,20 @@ func WithClientHeaderTokenSource(headerName string, value oauth2.TokenSource) Cl
 	}
 }
 
+// WithTelemetry enables OpenTelemetry tracing and metrics for MCP operations,
+// following the MCP Semantic Conventions:
+// https://opentelemetry.io/docs/specs/semconv/gen-ai/mcp
+//
+// Configure your application's global TracerProvider and MeterProvider before
+// creating the client. When no provider is configured, OTel's no-op
+// implementation is used — no data is exported and there is zero overhead.
+func WithTelemetry(enabled bool) ClientOption {
+	return func(tc *ToolboxClient) error {
+		tc.telemetryEnabled = enabled
+		return nil
+	}
+}
+
 // WithDefaultToolOptions provides default Options that will be applied to every tool
 // loaded by this client.
 func WithDefaultToolOptions(opts ...ToolOption) ClientOption {
