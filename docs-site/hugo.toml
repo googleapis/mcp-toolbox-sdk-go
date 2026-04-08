@@ -27,7 +27,7 @@ title = "MCP Toolbox Go API"
 
 [[menu.main]]
   name = "GitHub"
-  url = "https://github.com/googleapis/genai-toolbox"
+  url = "https://github.com/googleapis/mcp-toolbox"
   weight = 20
   pre = "<i class='fab fa-github'></i>"
 
