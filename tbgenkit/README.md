@@ -1,4 +1,4 @@
-![MCP Toolbox Logo](https://raw.githubusercontent.com/googleapis/genai-toolbox/main/logo.png)
+![MCP Toolbox Logo](https://raw.githubusercontent.com/googleapis/mcp-toolbox/main/logo.png)
 
 # MCP Toolbox TBGenkit Package
 
@@ -11,7 +11,7 @@
 > *   Please update your imports and `go.mod` accordingly when upgrading.
 
 This module allows you to seamlessly integrate the functionalities of
-[Toolbox](https://github.com/googleapis/genai-toolbox) allowing you to load and
+[Toolbox](https://github.com/googleapis/mcp-toolbox) allowing you to load and
 use tools defined in the service as standard Genkit Tools within your Genkit Go
 applications.
 
@@ -45,9 +45,9 @@ For more information on how to load a ToolboxTool, see [the core package](https:
 
 ## Usage
 
-The `tbgenkit` package provides a framework-agnostic way to interact with your MCP Toolbox server. For detailed guides and advanced configuration, please visit the following sections on our [Documentation Site](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbgenkit):
+The `tbgenkit` package provides a framework-agnostic way to interact with your MCP Toolbox server. For detailed guides and advanced configuration, please visit the following sections on our [Documentation Site](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/tbgenkit):
 
-- [Convert Toolbox Tool to a Genkit Tool](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/tbgenkit/#convert-toolbox-tool-to-a-genkit-tool)
+- [Convert Toolbox Tool to a Genkit Tool](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/tbgenkit/#convert-toolbox-tool-to-a-genkit-tool)
 
 # Contributing
 
@@ -61,4 +61,4 @@ This project is licensed under the Apache License 2.0. See the
 
 # Support
 
-If you encounter issues or have questions, check the existing [GitHub Issues](https://github.com/googleapis/genai-toolbox/issues) for the main Toolbox project.
+If you encounter issues or have questions, check the existing [GitHub Issues](https://github.com/googleapis/mcp-toolbox/issues) for the main Toolbox project.

@@ -1,4 +1,4 @@
-![MCP Toolbox Logo](https://raw.githubusercontent.com/googleapis/genai-toolbox/main/logo.png)
+![MCP Toolbox Logo](https://raw.githubusercontent.com/googleapis/mcp-toolbox/main/logo.png)
 
 # MCP Toolbox Core SDK
 
@@ -11,11 +11,11 @@
 > *   Please update your imports and `go.mod` accordingly when upgrading.
 
 This SDK allows you to seamlessly integrate the functionalities of
-[Toolbox](https://github.com/googleapis/genai-toolbox) allowing you to load and
+[Toolbox](https://github.com/googleapis/mcp-toolbox) allowing you to load and
 use tools defined in the service as standard Go structs within your GenAI
 applications.
 
-For comprehensive guides, authentication examples, and advanced configuration, visit the [Go SDK Core Documentation](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/).
+For comprehensive guides, authentication examples, and advanced configuration, visit the [Go SDK Core Documentation](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/).
 
 <!-- TOC ignore:true -->
 <!-- TOC -->
@@ -81,16 +81,16 @@ func main() {
 
 ## Usage
 
-The core package provides a framework-agnostic way to interact with your MCP Toolbox server. For detailed guides and advanced configuration, please visit the following sections on our [Documentation Site](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/):
+The core package provides a framework-agnostic way to interact with your MCP Toolbox server. For detailed guides and advanced configuration, please visit the following sections on our [Documentation Site](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/):
 
-- [Transport Protocols](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/#transport-protocols)
-- [Loading Tools](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/#loading-tools)
-- [Invoking Tools](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/#invoking-tools)
-- [Client to Server Authentication](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/#client-to-server-authentication)
-- [Authenticating Tools](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/#authenticating-tools)
-- [Binding Parameter Values](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/#binding-parameter-values)
-- [Default Parameters](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/#default-parameters)
-- [Using with Orchestration Frameworks](https://googleapis.github.io/genai-toolbox/sdks/go-sdk/core/#default-parameters)
+- [Transport Protocols](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#transport-protocols)
+- [Loading Tools](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#loading-tools)
+- [Invoking Tools](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#invoking-tools)
+- [Client to Server Authentication](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#client-to-server-authentication)
+- [Authenticating Tools](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#authenticating-tools)
+- [Binding Parameter Values](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#binding-parameter-values)
+- [Default Parameters](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#default-parameters)
+- [Using with Orchestration Frameworks](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#default-parameters)
 
 # Contributing
 
@@ -104,4 +104,4 @@ This project is licensed under the Apache License 2.0. See the
 
 # Support
 
-If you encounter issues or have questions, check the existing [GitHub Issues](https://github.com/googleapis/genai-toolbox/issues) for the main Toolbox project.
+If you encounter issues or have questions, check the existing [GitHub Issues](https://github.com/googleapis/mcp-toolbox/issues) for the main Toolbox project.
