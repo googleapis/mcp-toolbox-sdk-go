@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v1.0.0...core/v1.0.1) (2026-04-09)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump github.com/go-jose/go-jose/v4 in /core ([#223](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/223)) ([3ff7232](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/3ff7232cbd524905b52e55f32bf01737bb15bba7))
+* **deps:** bump go.opentelemetry.io/otel/sdk in /core ([#228](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/228)) ([3e5a1bb](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/3e5a1bbc620a24fa5831e5b5b7a0c265c49e5302))
+
+
+### Documentation
+
+* Update Links to repo and new docsite ([#229](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/229)) ([81718da](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/81718daa4b96fb719c68c7da4c3154ec4dc56b18))
+
 ## [1.0.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v0.7.0...core/v1.0.0) (2026-03-31)
 
 
