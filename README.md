@@ -36,13 +36,12 @@ For comprehensive guides and advanced configuration, visit the [Main Documentati
 
 <!-- TOC -->
 
-- [MCP Toolbox SDKs for Go](#mcp-toolbox-sdks-for-go)
-  - [Overview](#overview)
-  - [Available Packages](#available-packages)
-  - [Quick Start](#quick-start)
-  - [Contributing](#contributing)
-  - [License](#license)
-  - [Support](#support)
+- [Overview](#overview)
+- [Available Packages](#available-packages)
+- [Quick Start](#quick-start)
+- [Contributing](#contributing)
+- [License](#license)
+- [Support](#support)
 
 <!-- /TOC -->
 
