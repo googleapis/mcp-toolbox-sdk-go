@@ -108,7 +108,7 @@ func setupAndStartToolboxServer(ctx context.Context, version, toolsFilePath stri
 	log.Println("Downloading toolbox binary from GCS bucket...")
 	binaryURL := getToolboxBinaryURL(version)
 	binaryPath := "toolbox"
-	downloadBlob(ctx, "genai-toolbox", binaryURL, binaryPath)
+	downloadBlob(ctx, "mcp-toolbox-for-databases", binaryURL, binaryPath)
 	log.Println("Toolbox binary downloaded successfully.")
 
 	if err := os.Chmod(binaryPath, 0755); err != nil {
