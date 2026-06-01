@@ -20,6 +20,10 @@ on:
     tags: [ '**' ]
   workflow_dispatch:
 
+concurrency:
+  group: api-docs-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -48,32 +52,50 @@ jobs:
           cd docs-site
           npm install postcss postcss-cli autoprefixer
 
-      - name: Build API Reference
+      - name: Resolve build target
+        id: resolve
+        run: |
+          # Route the git ref to the package(s) and version to build.
+          # Per-package tags build one package; bare legacy tags build all three.
+          REF="${GITHUB_REF}"
+          case "$REF" in
+            refs/tags/core/v*)      echo "packages=core"                >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/core/}"     >> "$GITHUB_OUTPUT" ;;
+            refs/tags/tbadk/v*)     echo "packages=tbadk"               >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/tbadk/}"    >> "$GITHUB_OUTPUT" ;;
+            refs/tags/tbgenkit/v*)  echo "packages=tbgenkit"            >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/tbgenkit/}" >> "$GITHUB_OUTPUT" ;;
+            refs/tags/v[0-9]*)      echo "packages=core tbadk tbgenkit" >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/}"          >> "$GITHUB_OUTPUT" ;;
+            refs/tags/github.com/*) echo "packages="                    >> "$GITHUB_OUTPUT"; echo "version="                          >> "$GITHUB_OUTPUT" ;;
+            *)                      echo "packages=core tbadk tbgenkit" >> "$GITHUB_OUTPUT"; echo "version=dev"                        >> "$GITHUB_OUTPUT" ;;
+          esac
+
+          # Upstream serves from the custom domain; forks fall back to their
+          # GitHub Pages URL so external contributors can preview docsite changes.
+          if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
+            echo "BASE_URL=https://go.mcp-toolbox.dev/" >> "$GITHUB_ENV"
+          else
+            echo "BASE_URL=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build per-package docs
+        if: steps.resolve.outputs.packages != ''
         run: |
           chmod +x scripts/generate-api-docs.sh
-          
-          # If the Action is running in the official upstream repository, 
-          # strictly route all assets and links to the production custom domain.
-          if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
-            BASE_URL="https://go.mcp-toolbox.dev/"
-          
-          # If the Action is running in an external contributor's fork, 
-          # dynamically fallback to their personal GitHub Pages URL.
-          # This ensures external contributors can successfully build and preview 
-          # docsite changes on their own forks without encountering broken links.
-          else
-            BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
-          fi
-          
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-          else
-            VERSION="main"
-          fi
-          
-          ./scripts/generate-api-docs.sh "$VERSION" "$BASE_URL"
+          for PKG in ${{ steps.resolve.outputs.packages }}; do
+            # Legacy bare tags predate some packages; skip any absent at this ref.
+            if [[ "${{ steps.resolve.outputs.version }}" != "dev" ]] && [ ! -d "$PKG" ]; then
+              echo "Package $PKG absent at this ref; skipping." >&2
+              continue
+            fi
+            ./scripts/generate-api-docs.sh "$PKG" "${{ steps.resolve.outputs.version }}" "$BASE_URL"
+          done
+
+      - name: Build root page
+        if: steps.resolve.outputs.packages != '' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          chmod +x scripts/generate-root.sh
+          ./scripts/generate-root.sh "$BASE_URL"
 
       - name: Deploy to gh-pages
+        if: steps.resolve.outputs.packages != ''
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
