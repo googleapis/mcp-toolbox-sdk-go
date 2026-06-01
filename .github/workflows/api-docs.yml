@@ -58,15 +58,15 @@ jobs:
         id: resolve
         run: |
           # Route the git ref to the package(s) and version to build.
-          # Per-package tags build one package; bare legacy tags build all three.
+          # A per-package tag builds that one package; pushes to main (and manual
+          # dispatch) build all three as "dev". Any other tag is skipped.
           REF="${GITHUB_REF}"
           case "$REF" in
-            refs/tags/core/v*)      echo "packages=core"                >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/core/}"     >> "$GITHUB_OUTPUT" ;;
-            refs/tags/tbadk/v*)     echo "packages=tbadk"               >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/tbadk/}"    >> "$GITHUB_OUTPUT" ;;
-            refs/tags/tbgenkit/v*)  echo "packages=tbgenkit"            >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/tbgenkit/}" >> "$GITHUB_OUTPUT" ;;
-            refs/tags/v[0-9]*)      echo "packages=core tbadk tbgenkit" >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/}"          >> "$GITHUB_OUTPUT" ;;
-            refs/tags/github.com/*) echo "packages="                    >> "$GITHUB_OUTPUT"; echo "version="                          >> "$GITHUB_OUTPUT" ;;
-            *)                      echo "packages=core tbadk tbgenkit" >> "$GITHUB_OUTPUT"; echo "version=dev"                        >> "$GITHUB_OUTPUT" ;;
+            refs/tags/core/v*)     echo "packages=core"                >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/core/}"     >> "$GITHUB_OUTPUT" ;;
+            refs/tags/tbadk/v*)    echo "packages=tbadk"               >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/tbadk/}"    >> "$GITHUB_OUTPUT" ;;
+            refs/tags/tbgenkit/v*) echo "packages=tbgenkit"            >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/tbgenkit/}" >> "$GITHUB_OUTPUT" ;;
+            refs/tags/*)           echo "packages="                    >> "$GITHUB_OUTPUT"; echo "version="                          >> "$GITHUB_OUTPUT" ;;
+            *)                     echo "packages=core tbadk tbgenkit" >> "$GITHUB_OUTPUT"; echo "version=dev"                        >> "$GITHUB_OUTPUT" ;;
           esac
 
           # Deploys only run upstream (see job-level guard), so always use the
@@ -78,11 +78,6 @@ jobs:
         run: |
           chmod +x scripts/generate-api-docs.sh
           for PKG in ${{ steps.resolve.outputs.packages }}; do
-            # Legacy bare tags predate some packages; skip any absent at this ref.
-            if [[ "${{ steps.resolve.outputs.version }}" != "dev" ]] && [ ! -d "$PKG" ]; then
-              echo "Package $PKG absent at this ref; skipping." >&2
-              continue
-            fi
             ./scripts/generate-api-docs.sh "$PKG" "${{ steps.resolve.outputs.version }}" "$BASE_URL"
           done
 
