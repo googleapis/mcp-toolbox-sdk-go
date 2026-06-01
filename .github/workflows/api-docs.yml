@@ -16,7 +16,7 @@
 name: "API Reference Deployment"
 on:
   push:
-    branches: [ 'main', 'ref-docs' ]
+    branches: [ 'main' ]
     tags: [ '**' ]
   workflow_dispatch:
 
@@ -26,6 +26,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Never run on forks; docs deploy only from the upstream repository.
+    if: github.repository == 'googleapis/mcp-toolbox-sdk-go'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -67,13 +69,9 @@ jobs:
             *)                      echo "packages=core tbadk tbgenkit" >> "$GITHUB_OUTPUT"; echo "version=dev"                        >> "$GITHUB_OUTPUT" ;;
           esac
 
-          # Upstream serves from the custom domain; forks fall back to their
-          # GitHub Pages URL so external contributors can preview docsite changes.
-          if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
-            echo "BASE_URL=https://go.mcp-toolbox.dev/" >> "$GITHUB_ENV"
-          else
-            echo "BASE_URL=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" >> "$GITHUB_ENV"
-          fi
+          # Deploys only run upstream (see job-level guard), so always use the
+          # production domain.
+          echo "BASE_URL=https://go.mcp-toolbox.dev/" >> "$GITHUB_ENV"
 
       - name: Build per-package docs
         if: steps.resolve.outputs.packages != ''
