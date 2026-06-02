@@ -35,8 +35,16 @@ EOF
 gomarkdoc "./${PACKAGE}/..." | sed '/^# /d' >> "$CONTENT_DIR/_index.md"
 
 cd docs-site
-HUGO_PARAMS_VERSION="${VERSION}" hugo \
+HUGO_PARAMS_VERSION="${VERSION}" HUGO_PARAMS_PACKAGE="${PACKAGE}" hugo \
   --minify \
   --contentDir "${CONTENT_DIR}" \
   --baseURL "${BASE_URL}${PACKAGE}/${VERSION}/" \
   --destination "public/${PACKAGE}/${VERSION}"
+
+# Hoist the home-scoped outputs from this version's dir up to the package root,
+# where the navbar version selector fetches them. They list every version of the
+# package, so they must live once per package (not per version) and are shared
+# across all of this package's version pages. keep_files on deploy preserves them.
+mv "public/${PACKAGE}/${VERSION}/releases.releases" "public/${PACKAGE}/releases.releases"
+mkdir -p "public/${PACKAGE}/latest"
+mv "public/${PACKAGE}/${VERSION}/latest.html" "public/${PACKAGE}/latest/index.html"
