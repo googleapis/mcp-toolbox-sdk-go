@@ -21,12 +21,6 @@ title = "MCP Toolbox Go API"
   [[params.versions.core]]
     version = "v0.6.2"
     url = "https://go.mcp-toolbox.dev/core/v0.6.2/"
-  [[params.versions.core]]
-    version = "v0.6.1"
-    url = "https://go.mcp-toolbox.dev/core/v0.6.1/"
-  [[params.versions.core]]
-    version = "v0.6.0"
-    url = "https://go.mcp-toolbox.dev/core/v0.6.0/"
   [[params.versions.tbadk]]
     version = "dev"
     url = "https://go.mcp-toolbox.dev/tbadk/dev/"
