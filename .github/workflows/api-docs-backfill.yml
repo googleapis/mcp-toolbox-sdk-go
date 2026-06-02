@@ -1,0 +1,114 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+name: "API Reference Backfill"
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Package to backfill ('all' = every listed stable version)"
+        type: choice
+        options: [all, core, tbadk, tbgenkit]
+        default: all
+      version:
+        description: "Version tag suffix, e.g. v1.0.0 (required unless package is 'all')"
+        type: string
+        default: ""
+
+concurrency:
+  group: api-docs-deploy
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    # Never run on forks; docs deploy only from the upstream repository.
+    if: github.repository == 'googleapis/mcp-toolbox-sdk-go'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: '1.25.0'
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f # v3
+        with:
+          hugo-version: '0.152.2'
+          extended: true
+
+      - name: Install PostCSS Dependencies
+        run: |
+          cd docs-site
+          npm install postcss postcss-cli autoprefixer
+
+      - name: Resolve backfill targets
+        id: resolve
+        run: |
+          PKG="${{ inputs.package }}"
+          VER="${{ inputs.version }}"
+          if [ "$PKG" = "all" ]; then
+            # Default: every currently-listed stable version.
+            {
+              echo "targets<<EOF"
+              echo "core v1.0.0"
+              echo "tbadk v0.8.0"
+              echo "tbgenkit v0.7.0"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            # Single-version mode: version required, and the tag must exist.
+            if [ -z "$VER" ]; then
+              echo "::error::version is required when package is not 'all'" >&2
+              exit 1
+            fi
+            if ! git rev-parse -q --verify "refs/tags/$PKG/$VER" >/dev/null; then
+              echo "::error::tag $PKG/$VER not found" >&2
+              exit 1
+            fi
+            echo "targets=$PKG $VER" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Deploys only run upstream (see job-level guard), so always use the
+          # production domain.
+          echo "BASE_URL=https://go.mcp-toolbox.dev/" >> "$GITHUB_ENV"
+
+      - name: Build historical docs
+        run: |
+          # Build each target from main's layout (so old pages carry the current
+          # version picker), overlaying only the package's source from its tag so
+          # gomarkdoc documents that version's API.
+          chmod +x scripts/generate-api-docs.sh
+          echo "${{ steps.resolve.outputs.targets }}" | while read -r PKG VER; do
+            [ -z "$PKG" ] && continue
+            git checkout "$PKG/$VER" -- "$PKG"
+            ./scripts/generate-api-docs.sh "$PKG" "$VER" "$BASE_URL"
+            git checkout HEAD -- "$PKG"
+          done
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs-site/public
+          keep_files: true
+          cname: ${{ github.repository == 'googleapis/mcp-toolbox-sdk-go' && 'go.mcp-toolbox.dev' || '' }}
