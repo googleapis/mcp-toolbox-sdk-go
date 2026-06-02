@@ -3,8 +3,6 @@ title = "MCP Toolbox Go API"
 [params]
   offlineSearch = true
   copyright = "2026 Google LLC"
-  version_menu = "Versions"
-  version = "dev"            # overridden per build via HUGO_PARAMS_VERSION
 
 # Hand-edited version lists, one per package. Newest first — the order is
 # mirrored into the dropdown. Add a block before tagging a release, and only

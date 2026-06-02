@@ -35,7 +35,7 @@ EOF
 gomarkdoc "./${PACKAGE}/..." | sed '/^# /d' >> "$CONTENT_DIR/_index.md"
 
 cd docs-site
-HUGO_PARAMS_VERSION="${VERSION}" HUGO_PARAMS_PACKAGE="${PACKAGE}" hugo \
+HUGO_PARAMS_PACKAGE="${PACKAGE}" hugo \
   --minify \
   --contentDir "${CONTENT_DIR}" \
   --baseURL "${BASE_URL}${PACKAGE}/${VERSION}/" \

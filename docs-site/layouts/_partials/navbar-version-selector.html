@@ -5,7 +5,7 @@
      data-bs-toggle="dropdown" aria-expanded="false">
     {{ .Site.Params.version_menu | default "Versions" }}
   </a>
-  <div class="dropdown-menu" id="version-dropdown-menu"
+  <div class="dropdown-menu"
        w3-include-html="/{{ $pkg }}/releases.releases"
        w3-include-html-default='<a class="dropdown-item" href="/{{ $pkg }}/dev/">dev</a>'>
   </div>
