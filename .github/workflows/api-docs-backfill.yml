@@ -18,14 +18,14 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: "Package to backfill ('all' = every listed stable version)"
+        description: "Package to backfill"
         type: choice
-        options: [all, core, tbadk, tbgenkit]
-        default: all
+        options: [core, tbadk, tbgenkit]
+        required: true
       version:
-        description: "Version tag suffix, e.g. v1.0.0 (required unless package is 'all')"
+        description: "Version tag to build, e.g. v1.0.0"
         type: string
-        default: ""
+        required: true
 
 concurrency:
   group: api-docs-deploy
@@ -39,11 +39,28 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout Code
+      # Build from main so the archived page carries the current version picker;
+      # only the package's source comes from the tag (overlaid below) so
+      # gomarkdoc documents that version's API.
+      - name: Checkout main (current layout + scripts)
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: main
           submodules: recursive
-          fetch-depth: 0
+
+      - name: Checkout tagged package source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: refs/tags/${{ inputs.package }}/${{ inputs.version }}
+          path: tagged_src
+          sparse-checkout: ${{ inputs.package }}
+
+      - name: Overlay tagged source onto main
+        env:
+          PKG: ${{ inputs.package }}
+        run: |
+          rm -rf "$PKG"
+          mv "tagged_src/$PKG" "$PKG"
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
@@ -61,63 +78,16 @@ jobs:
           cd docs-site
           npm install postcss postcss-cli autoprefixer
 
-      - name: Resolve backfill targets
-        id: resolve
-        run: |
-          PKG="${{ inputs.package }}"
-          VER="${{ inputs.version }}"
-          if [ "$PKG" = "all" ]; then
-            # Default: every currently-listed stable version (mirror hugo.toml,
-            # excluding dev which the normal workflow rebuilds on every push).
-            {
-              echo "targets<<EOF"
-              echo "core v1.0.0"
-              echo "core v0.7.0"
-              echo "core v0.6.2"
-              echo "tbadk v0.8.0"
-              echo "tbadk v0.7.0"
-              echo "tbadk v0.6.0"
-              echo "tbgenkit v0.8.0"
-              echo "tbgenkit v0.7.0"
-              echo "tbgenkit v0.6.0"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-          else
-            # Single-version mode: version required, and the tag must exist.
-            if [ -z "$VER" ]; then
-              echo "::error::version is required when package is not 'all'" >&2
-              exit 1
-            fi
-            if ! git rev-parse -q --verify "refs/tags/$PKG/$VER" >/dev/null; then
-              echo "::error::tag $PKG/$VER not found" >&2
-              exit 1
-            fi
-            echo "targets=$PKG $VER" >> "$GITHUB_OUTPUT"
-          fi
-
+      - name: Build docs
+        env:
+          PKG: ${{ inputs.package }}
+          VER: ${{ inputs.version }}
           # Deploys only run upstream (see job-level guard), so always use the
           # production domain.
-          echo "BASE_URL=https://go.mcp-toolbox.dev/" >> "$GITHUB_ENV"
-
-      - name: Build historical docs
-        env:
-          TARGETS: ${{ steps.resolve.outputs.targets }}
+          BASE_URL: https://go.mcp-toolbox.dev/
         run: |
-          # Build each target from main's layout (so old pages carry the current
-          # version picker), overlaying only the package's source from its tag so
-          # gomarkdoc documents that version's API.
           chmod +x scripts/generate-api-docs.sh
-          while read -r PKG VER; do
-            [ -z "$PKG" ] && continue
-            git checkout "$PKG/$VER" -- "$PKG"
-            ./scripts/generate-api-docs.sh "$PKG" "$VER" "$BASE_URL"
-            # Restore the package tree to HEAD *exactly* before the next build:
-            # checkout alone re-adds HEAD's files but leaves files the tag had and
-            # HEAD lacks, so also unstage and clean them out.
-            git checkout HEAD -- "$PKG"
-            git reset -q -- "$PKG"
-            git clean -fdq -- "$PKG"
-          done <<< "$TARGETS"
+          ./scripts/generate-api-docs.sh "$PKG" "$VER" "$BASE_URL"
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
