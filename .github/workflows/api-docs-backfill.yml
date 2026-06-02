@@ -67,12 +67,19 @@ jobs:
           PKG="${{ inputs.package }}"
           VER="${{ inputs.version }}"
           if [ "$PKG" = "all" ]; then
-            # Default: every currently-listed stable version.
+            # Default: every currently-listed stable version (mirror hugo.toml,
+            # excluding dev which the normal workflow rebuilds on every push).
             {
               echo "targets<<EOF"
               echo "core v1.0.0"
+              echo "core v0.7.0"
+              echo "core v0.6.2"
               echo "tbadk v0.8.0"
+              echo "tbadk v0.7.0"
+              echo "tbadk v0.6.0"
+              echo "tbgenkit v0.8.0"
               echo "tbgenkit v0.7.0"
+              echo "tbgenkit v0.6.0"
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
           else
@@ -93,17 +100,24 @@ jobs:
           echo "BASE_URL=https://go.mcp-toolbox.dev/" >> "$GITHUB_ENV"
 
       - name: Build historical docs
+        env:
+          TARGETS: ${{ steps.resolve.outputs.targets }}
         run: |
           # Build each target from main's layout (so old pages carry the current
           # version picker), overlaying only the package's source from its tag so
           # gomarkdoc documents that version's API.
           chmod +x scripts/generate-api-docs.sh
-          echo "${{ steps.resolve.outputs.targets }}" | while read -r PKG VER; do
+          while read -r PKG VER; do
             [ -z "$PKG" ] && continue
             git checkout "$PKG/$VER" -- "$PKG"
             ./scripts/generate-api-docs.sh "$PKG" "$VER" "$BASE_URL"
+            # Restore the package tree to HEAD *exactly* before the next build:
+            # checkout alone re-adds HEAD's files but leaves files the tag had and
+            # HEAD lacks, so also unstage and clean them out.
             git checkout HEAD -- "$PKG"
-          done
+            git reset -q -- "$PKG"
+            git clean -fdq -- "$PKG"
+          done <<< "$TARGETS"
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
