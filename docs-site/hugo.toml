@@ -15,18 +15,42 @@ title = "MCP Toolbox Go API"
   [[params.versions.core]]
     version = "v1.0.0"
     url = "https://go.mcp-toolbox.dev/core/v1.0.0/"
+  [[params.versions.core]]
+    version = "v0.7.0"
+    url = "https://go.mcp-toolbox.dev/core/v0.7.0/"
+  [[params.versions.core]]
+    version = "v0.6.2"
+    url = "https://go.mcp-toolbox.dev/core/v0.6.2/"
+  [[params.versions.core]]
+    version = "v0.6.1"
+    url = "https://go.mcp-toolbox.dev/core/v0.6.1/"
+  [[params.versions.core]]
+    version = "v0.6.0"
+    url = "https://go.mcp-toolbox.dev/core/v0.6.0/"
   [[params.versions.tbadk]]
     version = "dev"
     url = "https://go.mcp-toolbox.dev/tbadk/dev/"
   [[params.versions.tbadk]]
     version = "v0.8.0"
     url = "https://go.mcp-toolbox.dev/tbadk/v0.8.0/"
+  [[params.versions.tbadk]]
+    version = "v0.7.0"
+    url = "https://go.mcp-toolbox.dev/tbadk/v0.7.0/"
+  [[params.versions.tbadk]]
+    version = "v0.6.0"
+    url = "https://go.mcp-toolbox.dev/tbadk/v0.6.0/"
   [[params.versions.tbgenkit]]
     version = "dev"
     url = "https://go.mcp-toolbox.dev/tbgenkit/dev/"
   [[params.versions.tbgenkit]]
+    version = "v0.8.0"
+    url = "https://go.mcp-toolbox.dev/tbgenkit/v0.8.0/"
+  [[params.versions.tbgenkit]]
     version = "v0.7.0"
     url = "https://go.mcp-toolbox.dev/tbgenkit/v0.7.0/"
+  [[params.versions.tbgenkit]]
+    version = "v0.6.0"
+    url = "https://go.mcp-toolbox.dev/tbgenkit/v0.6.0/"
 
 [markup.goldmark.renderer]
   unsafe = true
