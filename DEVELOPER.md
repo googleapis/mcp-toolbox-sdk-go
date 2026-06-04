@@ -154,6 +154,29 @@ Steps to backfill:
     version's directory) and **merge it into `gh-pages`** to publish. Re-running the
     workflow for the same version updates the existing PR's branch.
 
+#### Previewing a backfill PR
+
+GitHub won't render the built HTML in the PR diff. Because the PR branch *is* the
+rendered `gh-pages` tree, check it out and serve it statically — exactly what Pages
+will serve after merge:
+
+```bash
+git fetch origin backfill/<pkg>-<ver>
+# Check the branch out somewhere disposable (a detached worktree keeps your
+# current branch untouched).
+git worktree add --detach /tmp/preview-docs origin/backfill/<pkg>-<ver>
+python3 -m http.server 8099 --directory /tmp/preview-docs
+# → http://localhost:8099/<pkg>/<ver>/   e.g. http://localhost:8099/core/v0.7.0/
+```
+
+The version dropdown fetches `/<pkg>/releases.releases` at runtime, so links to
+versions not present in this branch (other backfills) will 404 locally — that's
+expected. When done, clean up:
+
+```bash
+git worktree remove /tmp/preview-docs
+```
+
 ### Building locally
 
 ```bash
