@@ -27,8 +27,12 @@ on:
         type: string
         required: true
 
+# Scope per version: each run produces an independent branch/PR, so runs for
+# different versions can proceed in parallel. A shared group with
+# cancel-in-progress: false would make GitHub cancel a pending run whenever a
+# newer one queues, silently dropping versions when several are dispatched.
 concurrency:
-  group: api-docs-deploy
+  group: api-docs-backfill-${{ github.event.inputs.package }}-${{ github.event.inputs.version }}
   cancel-in-progress: false
 
 jobs:
@@ -38,6 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       # Build from main so the archived page carries the current version picker;
       # only the package's source comes from the tag (overlaid below) so
@@ -89,10 +94,40 @@ jobs:
           chmod +x scripts/generate-api-docs.sh
           ./scripts/generate-api-docs.sh "$PKG" "$VER" "$BASE_URL"
 
-      - name: Deploy to gh-pages
-        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs-site/public
-          keep_files: true
-          cname: ${{ github.repository == 'googleapis/mcp-toolbox-sdk-go' && 'go.mcp-toolbox.dev' || '' }}
+      # Open a PR into gh-pages instead of deploying directly, so a human reviews
+      # before the page goes live. Overlaying the build onto a clone of the live
+      # gh-pages tree mirrors keep_files: true — existing files (other versions,
+      # CNAME, .nojekyll) are preserved and the PR diff is just this version.
+      - name: Open PR against gh-pages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PKG: ${{ inputs.package }}
+          VER: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          BRANCH="backfill/${PKG}-${VER}"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          WORK="$(mktemp -d)"
+          git clone --depth 1 --branch gh-pages --single-branch \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$WORK"
+          cp -R "${GITHUB_WORKSPACE}/docs-site/public/." "$WORK/"
+
+          cd "$WORK"
+          git checkout -B "$BRANCH"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No documentation changes for ${PKG} ${VER}; skipping PR."
+            exit 0
+          fi
+          git commit -m "docs(api): backfill ${PKG} ${VER}"
+          git push -f origin "$BRANCH"
+
+          if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+            echo "PR already open for ${BRANCH}; branch updated."
+          else
+            gh pr create --base gh-pages --head "$BRANCH" \
+              --title "docs(api): backfill ${PKG} ${VER}" \
+              --body "Automated API reference backfill for \`${PKG}/${VER}\`, built from main tooling with the tagged source overlaid. Merging publishes to gh-pages (additive)."
+          fi
