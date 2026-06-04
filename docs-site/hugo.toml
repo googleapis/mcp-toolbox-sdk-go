@@ -7,26 +7,45 @@ title = "MCP Toolbox Go API"
 # Hand-edited version lists, one per package. Newest first — the order is
 # mirrored into the dropdown. Add a block before tagging a release, and only
 # list versions whose /<pkg>/<version>/ docs already exist (or will after the
-# backfill run), or the dropdown link 404s.
+# backfill run), or the dropdown link 404s. URLs are root-relative so they
+# resolve against whatever host serves the page (production or staging).
 [params.versions]
   [[params.versions.core]]
     version = "dev"
-    url = "https://go.mcp-toolbox.dev/core/dev/"
+    url = "/core/dev/"
   [[params.versions.core]]
     version = "v1.0.0"
-    url = "https://go.mcp-toolbox.dev/core/v1.0.0/"
+    url = "/core/v1.0.0/"
+  [[params.versions.core]]
+    version = "v0.7.0"
+    url = "/core/v0.7.0/"
+  [[params.versions.core]]
+    version = "v0.6.2"
+    url = "/core/v0.6.2/"
   [[params.versions.tbadk]]
     version = "dev"
-    url = "https://go.mcp-toolbox.dev/tbadk/dev/"
+    url = "/tbadk/dev/"
   [[params.versions.tbadk]]
     version = "v0.8.0"
-    url = "https://go.mcp-toolbox.dev/tbadk/v0.8.0/"
+    url = "/tbadk/v0.8.0/"
+  [[params.versions.tbadk]]
+    version = "v0.7.0"
+    url = "/tbadk/v0.7.0/"
+  [[params.versions.tbadk]]
+    version = "v0.6.0"
+    url = "/tbadk/v0.6.0/"
   [[params.versions.tbgenkit]]
     version = "dev"
-    url = "https://go.mcp-toolbox.dev/tbgenkit/dev/"
+    url = "/tbgenkit/dev/"
+  [[params.versions.tbgenkit]]
+    version = "v0.8.0"
+    url = "/tbgenkit/v0.8.0/"
   [[params.versions.tbgenkit]]
     version = "v0.7.0"
-    url = "https://go.mcp-toolbox.dev/tbgenkit/v0.7.0/"
+    url = "/tbgenkit/v0.7.0/"
+  [[params.versions.tbgenkit]]
+    version = "v0.6.0"
+    url = "/tbgenkit/v0.6.0/"
 
 [markup.goldmark.renderer]
   unsafe = true
