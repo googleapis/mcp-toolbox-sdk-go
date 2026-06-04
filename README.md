@@ -65,11 +65,11 @@ within your Go applications or AI orchestration frameworks.
 This repository hosts the following Go packages. See the package-specific
 README for detailed installation and usage instructions:
 
-| Package | Target Use Case | Path | Documentation |
-| :------ | :----------| :--- | :---------- |
-| `core` | Framework-agnostic / Custom apps | `core/` | [Go SDK Core Guide](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/) |
-| `tbadk` | ADK Go Integration | `tbadk/` | [ADK Package Guide](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/tbadk/) |
-| `tbgenkit` | Genkit Go Integration | `tbgenkit/` | [Genkit Package Guide](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/tbgenkit/) |
+| Package | Target Use Case | Path | Documentation | API Reference |
+| :------ | :----------| :--- | :---------- | :---------- |
+| `core` | Framework-agnostic / Custom apps | `core/` | [Go SDK Core Guide](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/) | [API Reference](https://go.mcp-toolbox.dev/core/latest/) |
+| `tbadk` | ADK Go Integration | `tbadk/` | [ADK Package Guide](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/tbadk/) | [API Reference](https://go.mcp-toolbox.dev/tbadk/latest/) |
+| `tbgenkit` | Genkit Go Integration | `tbgenkit/` | [Genkit Package Guide](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/tbgenkit/) | [API Reference](https://go.mcp-toolbox.dev/tbgenkit/latest/) |
 
 ## Quick Start
 
