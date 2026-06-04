@@ -1,3 +1,9 @@
+{{/* Literal anchors, not [[menu.main]] entries: Docsy runs relURL on menu
+     URLs, which prepends the per-package subdirectory baseURL (e.g. /core/dev/)
+     and breaks cross-package links. Hand-written hrefs are emitted verbatim. */}}
+<a class="nav-link" href="/core/latest/">Core</a>
+<a class="nav-link" href="/tbadk/latest/">tbadk</a>
+<a class="nav-link" href="/tbgenkit/latest/">tbgenkit</a>
 {{ if and .Site.Params.versions .Site.Params.package -}}
 {{ $pkg := .Site.Params.package | default "" -}}
 <div class="dropdown">

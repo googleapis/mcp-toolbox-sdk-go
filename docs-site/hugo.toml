@@ -63,29 +63,14 @@ title = "MCP Toolbox Go API"
   showLightDarkModeMenu = true
 
 [[menu.main]]
-  name = "Core"
-  url = "/core/latest/"
-  weight = 10
-
-[[menu.main]]
-  name = "tbadk"
-  url = "/tbadk/latest/"
-  weight = 20
-
-[[menu.main]]
-  name = "tbgenkit"
-  url = "/tbgenkit/latest/"
-  weight = 30
-
-[[menu.main]]
   name = "Documentation"
   url = "https://mcp-toolbox.dev"
-  weight = 40
+  weight = 10
 
 [[menu.main]]
   name = "GitHub"
   url = "https://github.com/googleapis/mcp-toolbox"
-  weight = 50
+  weight = 20
   pre = "<i class='fab fa-github'></i>"
 
 [outputFormats]
