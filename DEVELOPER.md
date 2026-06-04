@@ -118,15 +118,41 @@ that version.
 
 ### Backfilling old docs
 
-The **`api-docs-backfill.yml`** (API Reference Backfill) workflow runs on demand and
-builds **one historical version per run**. Use it to build any version whose docs
-are missing or whose deployment failed.
+Use the **`api-docs-backfill.yml`** (API Reference Backfill) workflow to publish docs
+for a version whose pages are missing — typically releases that predate the docs
+tooling, or a deployment that failed. It builds **one historical version per run**.
 
-Trigger it from the Actions tab, or with:
+Unlike `api-docs.yml`, this workflow does **not** deploy to production directly. Each
+run opens a **pull request into the `gh-pages` branch**, so the docs are reviewed
+before they go live. The page is published only when you merge that PR.
 
-```bash
-gh workflow run api-docs-backfill.yml -f package=core -f version=v1.0.0
-```
+How a run works:
+
+1.  It checks out `main` for the current docs tooling (layouts, scripts, version
+    picker), then overlays the requested version's package source from its release
+    tag, so `gomarkdoc` documents that version's API.
+2.  It builds `/<package>/<version>/` (plus the package's `releases`/`latest` files).
+3.  It overlays the build onto a clone of the live `gh-pages` tree — existing
+    versions, `CNAME`, and `.nojekyll` are preserved — and opens a PR from branch
+    `backfill/<pkg>-<ver>` with `gh-pages` as the base.
+
+Steps to backfill:
+
+1.  Make sure the version is listed in `docs-site/hugo.toml` (see
+    [Adding a version to the picker](#adding-a-version-to-the-picker)), so the
+    dropdown links to it.
+2.  Trigger the workflow from the Actions tab, or with:
+
+    ```bash
+    gh workflow run api-docs-backfill.yml -f package=core -f version=v1.0.0
+    ```
+
+    To catch up several versions, dispatch it once per `package`/`version`. The
+    concurrency group is scoped per version, so the runs are independent and none
+    are cancelled — each opens its own PR.
+3.  Review the resulting `backfill/<pkg>-<ver>` PR (the diff should be just that
+    version's directory) and **merge it into `gh-pages`** to publish. Re-running the
+    workflow for the same version updates the existing PR's branch.
 
 ### Building locally
 
