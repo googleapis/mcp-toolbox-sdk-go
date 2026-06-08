@@ -50,7 +50,7 @@
         '/tbgenkit/integration.cloudbuild.yaml/',
       ],
       matchStrings: [
-        '_TOOLBOX_VERSION: [\'|"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)[\'|"]?',
+        "_TOOLBOX_VERSION: ['\"]?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)['\"]?",
       ],
       datasourceTemplate: 'github-releases',
       depNameTemplate: 'googleapis/mcp-toolbox',
