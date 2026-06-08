@@ -84,6 +84,109 @@ This project uses `golangci-lint`.
 Releases are managed by **Release Please**.
 *   Each module (`core`, `tbadk`, `tbgenkit`) is released independently.
 *   Tags will be in the format `module/vX.Y.Z` (e.g., `core/v0.6.0`).
+*   Before releasing, add a `[[params.versions.<pkg>]]` block for the new version to
+    `docs-site/hugo.toml` so it appears in the API reference version picker. See
+    [Adding a version to the picker](#adding-a-version-to-the-picker).
+
+## API Reference Documentation
+
+The API reference is published to [go.mcp-toolbox.dev](https://go.mcp-toolbox.dev).
+It is generated with [`gomarkdoc`](https://github.com/princjef/gomarkdoc) and
+rendered by [Hugo](https://gohugo.io/) + [Docsy](https://www.docsy.dev/) from the
+`docs-site/` directory. Docs are built **per package, per version** and served at
+`/<package>/<version>/` (e.g. `/core/v1.0.0/`), with a `/<package>/latest/`
+redirect to the newest release.
+
+### Workflows
+
+The `api-docs.yml` workflow deploys to the `gh-pages` branch. It runs only on
+the upstream repository and uses the `api-docs-deploy` concurrency group, so it
+never races another deploy.
+
+The automatic flow is as follows:
+*   Push to `main` (or manual dispatch) → builds all three packages as `dev`.
+*   Push of a per-package tag `<pkg>/vX.Y.Z` → builds that one version **and**
+    rebuilds the root README landing page.
+*   Other tags are skipped.
+
+### Adding a version to the picker
+
+Before each **new release**, add a `[[params.versions.<pkg>]]` block for the version
+to `docs-site/hugo.toml` (newest first). On a successful release, the tag is created
+automatically and triggers the `api-docs.yml` workflow, which builds and deploys
+that version.
+
+### Backfilling old docs
+
+Use the **`api-docs-backfill.yml`** (API Reference Backfill) workflow to publish docs
+for a version whose pages are missing — typically releases that predate the docs
+tooling, or a deployment that failed. It builds **one historical version per run**.
+
+Unlike `api-docs.yml`, this workflow does **not** deploy to production directly. Each
+run opens a **pull request into the `gh-pages` branch**, so the docs are reviewed
+before they go live. The page is published only when you merge that PR.
+
+How a run works:
+
+1.  It checks out `main` for the current docs tooling (layouts, scripts, version
+    picker), then overlays the requested version's package source from its release
+    tag, so `gomarkdoc` documents that version's API.
+2.  It builds `/<package>/<version>/` (plus the package's `releases`/`latest` files).
+3.  It overlays the build onto a clone of the live `gh-pages` tree — existing
+    versions, `CNAME`, and `.nojekyll` are preserved — and opens a PR from branch
+    `backfill/<pkg>-<ver>` with `gh-pages` as the base.
+
+Steps to backfill:
+
+1.  Make sure the version is listed in `docs-site/hugo.toml` (see
+    [Adding a version to the picker](#adding-a-version-to-the-picker)), so the
+    dropdown links to it.
+2.  Trigger the workflow from the Actions tab, or with:
+
+    ```bash
+    gh workflow run api-docs-backfill.yml -f package=core -f version=v1.0.0
+    ```
+
+    To catch up several versions, dispatch it once per `package`/`version`. The
+    concurrency group is scoped per version, so the runs are independent and none
+    are cancelled — each opens its own PR.
+3.  Review the resulting `backfill/<pkg>-<ver>` PR (the diff should be just that
+    version's directory) and **merge it into `gh-pages`** to publish. Re-running the
+    workflow for the same version updates the existing PR's branch.
+
+#### Previewing a backfill PR
+
+GitHub won't render the built HTML in the PR diff. Because the PR branch *is* the
+rendered `gh-pages` tree, check it out and serve it statically — exactly what Pages
+will serve after merge:
+
+```bash
+git fetch origin backfill/<pkg>-<ver>
+# Check the branch out somewhere disposable (a detached worktree keeps your
+# current branch untouched).
+git worktree add --detach /tmp/preview-docs origin/backfill/<pkg>-<ver>
+python3 -m http.server 8099 --directory /tmp/preview-docs
+# → http://localhost:8099/<pkg>/<ver>/   e.g. http://localhost:8099/core/v0.7.0/
+```
+
+The version dropdown fetches `/<pkg>/releases.releases` at runtime, so links to
+versions not present in this branch (other backfills) will 404 locally — that's
+expected. When done, clean up:
+
+```bash
+git worktree remove /tmp/preview-docs
+```
+
+### Building locally
+
+```bash
+# Build a single package/version (base URL must end in a slash).
+./scripts/generate-api-docs.sh core dev http://localhost:8080/
+
+# Serve the output.
+(cd docs-site/public && python3 -m http.server 8080)
+# → http://localhost:8080/core/dev/
+```
 
 ## Further Information
 

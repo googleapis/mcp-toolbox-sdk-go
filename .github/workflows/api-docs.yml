@@ -16,11 +16,18 @@
 name: "API Reference Deployment"
 on:
   push:
-    branches: [ 'main', 'ref-docs' ]
-  workflow_dispatch: 
+    branches: [ 'main' ]
+    tags: [ '**' ]
+  workflow_dispatch:
+
+concurrency:
+  group: api-docs-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    # Never run on forks; docs deploy only from the upstream repository.
+    if: github.repository == 'googleapis/mcp-toolbox-sdk-go'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -34,10 +41,10 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
-          go-version: '1.24.4'
+          go-version: '1.25.0'
 
       - name: Setup Hugo
-        uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f # v3
+        uses: peaceiris/actions-hugo@2752ce1d29631191ea3f27c23495fa06139a5b78 # v3
         with:
           hugo-version: '0.152.2'
           extended: true   
@@ -47,32 +54,41 @@ jobs:
           cd docs-site
           npm install postcss postcss-cli autoprefixer
 
-      - name: Build API Reference
+      - name: Resolve build target
+        id: resolve
+        run: |
+          # Route the git ref to the package(s) and version to build.
+          # A per-package tag builds that one package; pushes to main (and manual
+          # dispatch) build all three as "dev". Any other tag is skipped.
+          REF="${GITHUB_REF}"
+          case "$REF" in
+            refs/tags/core/v*)     echo "packages=core"                >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/core/}"     >> "$GITHUB_OUTPUT" ;;
+            refs/tags/tbadk/v*)    echo "packages=tbadk"               >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/tbadk/}"    >> "$GITHUB_OUTPUT" ;;
+            refs/tags/tbgenkit/v*) echo "packages=tbgenkit"            >> "$GITHUB_OUTPUT"; echo "version=${REF#refs/tags/tbgenkit/}" >> "$GITHUB_OUTPUT" ;;
+            refs/tags/*)           echo "packages="                    >> "$GITHUB_OUTPUT"; echo "version="                          >> "$GITHUB_OUTPUT" ;;
+            *)                     echo "packages=core tbadk tbgenkit" >> "$GITHUB_OUTPUT"; echo "version=dev"                        >> "$GITHUB_OUTPUT" ;;
+          esac
+
+          # Deploys only run upstream (see job-level guard), so always use the
+          # production domain.
+          echo "BASE_URL=https://go.mcp-toolbox.dev/" >> "$GITHUB_ENV"
+
+      - name: Build per-package docs
+        if: steps.resolve.outputs.packages != ''
         run: |
           chmod +x scripts/generate-api-docs.sh
-          
-          # If the Action is running in the official upstream repository, 
-          # strictly route all assets and links to the production custom domain.
-          if [[ "${{ github.repository }}" == "googleapis/mcp-toolbox-sdk-go" ]]; then
-            BASE_URL="https://go.mcp-toolbox.dev/"
-          
-          # If the Action is running in an external contributor's fork, 
-          # dynamically fallback to their personal GitHub Pages URL.
-          # This ensures external contributors can successfully build and preview 
-          # docsite changes on their own forks without encountering broken links.
-          else
-            BASE_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
-          fi
-          
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-          else
-            VERSION="main"
-          fi
-          
-          ./scripts/generate-api-docs.sh "$VERSION" "$BASE_URL"
+          for PKG in ${{ steps.resolve.outputs.packages }}; do
+            ./scripts/generate-api-docs.sh "$PKG" "${{ steps.resolve.outputs.version }}" "$BASE_URL"
+          done
+
+      - name: Build root page
+        if: steps.resolve.outputs.packages != '' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          chmod +x scripts/generate-root.sh
+          ./scripts/generate-root.sh "$BASE_URL"
 
       - name: Deploy to gh-pages
+        if: steps.resolve.outputs.packages != ''
         uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
