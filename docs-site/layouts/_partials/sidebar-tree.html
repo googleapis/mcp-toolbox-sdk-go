@@ -46,9 +46,20 @@
       {{ partial "navbar-lang-selector.html" . }}
     </div>
     {{ end -}}
+    {{ $navRoot := cond (and (ne .Params.toc_root true) (eq .Site.Home.Type "docs")) .Site.Home .FirstSection -}}
+    {{ if $sidebarRoot -}}
+      {{ $navRoot = $sidebarRoot -}}
+    {{ end -}}
+    {{ $ulNr := 0 -}}
+    {{ $ulShow := .Site.Params.ui.ul_show | default 1 -}}
+    {{ $sidebarMenuTruncate := .Site.Params.ui.sidebar_menu_truncate | default 100 -}}
+    <ul class="td-sidebar-nav__section pe-md-3 ul-{{ $ulNr }}">
+      {{ template "section-tree-nav-section" (dict "page" . "section" $navRoot "shouldDelayActive" $shouldDelayActive "sidebarMenuTruncate" $sidebarMenuTruncate "ulNr" $ulNr "ulShow" (add $ulShow 1)) }}
+    </ul>
     {{/* Cross-package links: literal hrefs (not menu/relref), so they resolve
          verbatim from any per-package subdirectory baseURL without relURL
-         rewriting them into broken /core/dev/core/latest/ style paths. */ -}}
+         rewriting them into broken /core/dev/core/latest/ style paths. Placed
+         after the page's own tree so the current page's heading comes first. */ -}}
     {{ $pkg := .Site.Params.package | default "" -}}
     <ul class="td-sidebar-nav__section pe-md-3 ul-0">
       <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child">
@@ -60,16 +71,6 @@
       <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child">
         <a class="align-left ps-0 td-sidebar-link td-sidebar-link__section{{ if eq $pkg "tbgenkit" }} active{{ end }}" href="/tbgenkit/latest/"><span{{ if eq $pkg "tbgenkit" }} class="td-sidebar-nav-active-item"{{ end }}>tbgenkit</span></a>
       </li>
-    </ul>
-    {{ $navRoot := cond (and (ne .Params.toc_root true) (eq .Site.Home.Type "docs")) .Site.Home .FirstSection -}}
-    {{ if $sidebarRoot -}}
-      {{ $navRoot = $sidebarRoot -}}
-    {{ end -}}
-    {{ $ulNr := 0 -}}
-    {{ $ulShow := .Site.Params.ui.ul_show | default 1 -}}
-    {{ $sidebarMenuTruncate := .Site.Params.ui.sidebar_menu_truncate | default 100 -}}
-    <ul class="td-sidebar-nav__section pe-md-3 ul-{{ $ulNr }}">
-      {{ template "section-tree-nav-section" (dict "page" . "section" $navRoot "shouldDelayActive" $shouldDelayActive "sidebarMenuTruncate" $sidebarMenuTruncate "ulNr" $ulNr "ulShow" (add $ulShow 1)) }}
     </ul>
   </nav>
 </div>
