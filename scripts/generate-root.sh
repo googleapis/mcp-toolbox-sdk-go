@@ -17,9 +17,7 @@ type: docs
 EOF
 # Strip the README's leading H1 and its hand-maintained TOC block before
 # appending: Docsy already renders the page title as an H1 and an "On this page"
-# TOC, so leaving them in would duplicate both on the landing page. awk (not
-# `sed -e '0,/re/'`, which is GNU-only and silently no-ops on BSD/macOS sed)
-# drops only the first `# ` heading, leaving `# ` comments in later code blocks.
+# TOC, so leaving them in would duplicate both on the landing page.
 awk '
   /<!-- TOC -->/ { intoc = 1 }
   intoc { if (/<!-- \/TOC -->/) intoc = 0; next }
