@@ -2,8 +2,6 @@ title = "MCP Toolbox Go API"
 
 [params]
   offlineSearch = true
-  # Author only — Docsy's footer prepends the current year, so including a year
-  # here would render a doubled "© 2026 2026 Google LLC".
   copyright = "Google LLC"
 
 # Hand-edited version lists, one per package. Newest first — the order is
