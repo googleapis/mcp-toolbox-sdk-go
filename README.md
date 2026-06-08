@@ -12,12 +12,12 @@ Logo](https://raw.githubusercontent.com/googleapis/mcp-toolbox/main/logo.png)
 **Core Module :**
 [![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/mcp-toolbox-sdk-go/core)](https://goreportcard.com/report/github.com/googleapis/mcp-toolbox-sdk-go/core)
 [![Module Version](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go?filter=core/v*)](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go?filter=core/v*)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=core/go.mod)]([https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=core/go.mod))
+[![Go Version](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=core/go.mod)](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=core/go.mod)
 
 **TBADK Module :**
 [![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/mcp-toolbox-sdk-go/tbadk)](https://goreportcard.com/report/github.com/googleapis/mcp-toolbox-sdk-go/tbadk)
 [![Module Version](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go?filter=tbadk/v*)](https://img.shields.io/github/v/release/googleapis/mcp-toolbox-sdk-go?filter=tbadk/v*)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=tbadk/go.mod)]([https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=tbadk/go.mod))
+[![Go Version](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=tbadk/go.mod)](https://img.shields.io/github/go-mod/go-version/googleapis/mcp-toolbox-sdk-go?filename=tbadk/go.mod)
 
 **TBGenkit Module :**
 [![Go Report Card](https://goreportcard.com/badge/github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit)](https://goreportcard.com/report/github.com/googleapis/mcp-toolbox-sdk-go/tbgenkit)
