@@ -87,11 +87,45 @@ jobs:
           chmod +x scripts/generate-root.sh
           ./scripts/generate-root.sh "$BASE_URL"
 
+      # Overlay the build onto a clone of the live gh-pages tree in a single
+      # commit. This mirrors the old keep_files: true deploy — existing version
+      # dirs, CNAME, and .nojekyll are preserved — but additionally prunes
+      # superseded offline-search-index files. Each rebuilt directory gets a new
+      # content-hashed index, and under a purely additive deploy the previous one
+      # would linger forever (the dev dirs and root rebuild repeatedly). Mirrors
+      # the manual-overlay approach already used by api-docs-backfill.yml.
       - name: Deploy to gh-pages
         if: steps.resolve.outputs.packages != ''
-        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs-site/public
-          keep_files: true 
-          cname: ${{ github.repository == 'googleapis/mcp-toolbox-sdk-go' && 'go.mcp-toolbox.dev' || '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          PUB="${GITHUB_WORKSPACE}/docs-site/public"
+          WORK="$(mktemp -d)"
+          git clone --depth 1 --branch gh-pages --single-branch \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$WORK"
+
+          # For every directory this build refreshes, drop the old search index so
+          # only the new content-hashed one survives the overlay below.
+          while IFS= read -r idx; do
+            dir="$(dirname "${idx#"$PUB"/}")"
+            rm -f "$WORK/$dir"/offline-search-index.*.json
+          done < <(find "$PUB" -name 'offline-search-index.*.json')
+
+          # Additive overlay (matches keep_files: true).
+          cp -R "$PUB/." "$WORK/"
+          # Preserve settings the peaceiris action used to manage.
+          echo "go.mcp-toolbox.dev" > "$WORK/CNAME"
+          touch "$WORK/.nojekyll"
+
+          cd "$WORK"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No documentation changes; nothing to deploy."
+            exit 0
+          fi
+          git commit -m "docs(api): deploy ${{ steps.resolve.outputs.packages }} @ ${{ steps.resolve.outputs.version }}"
+          git push origin gh-pages
