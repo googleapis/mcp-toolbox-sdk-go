@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.8.0...tbgenkit/v0.8.1) (2026-06-11)
+
+
+### Miscellaneous Chores
+
+* **ci:** Update GCS Bucket name after MCP Toolbox v1 ([#232](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/232)) ([1de836d](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/1de836d496750f602e16ad5af5dd3d4f788e199c))
+* **ci:** Update toolbox version to 1.4.0 in integration tests ([#267](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/267)) ([ed7f993](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/ed7f993037a587bf233dcc400ee6c42a1c040654))
+* **deps:** bump github.com/go-jose/go-jose/v4 in /tbgenkit ([#224](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/224)) ([b92b2f3](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/b92b2f3b96b60971bb15fd263045988a50be10d3))
+* **deps:** bump go.opentelemetry.io/otel/sdk in /tbgenkit ([#227](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/227)) ([77dcab9](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/77dcab90d2e97edb52e13fdfdc4e1cd64184cb31))
+
+
+### Documentation
+
+* Update Links to repo and new docsite ([#229](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/229)) ([81718da](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/81718daa4b96fb719c68c7da4c3154ec4dc56b18))
+
 ## [0.8.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.7.0...tbgenkit/v0.8.0) (2026-04-01)
 
 
