@@ -85,7 +85,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	var transportErr error
 
 	if slices.Contains(GetSupportedMcpVersions(), string(tc.protocol)) && tc.protocol != MCPLatest {
-		log.Printf("A newer version of MCP: %s is available. Please use MCPLatest to use the latest features.", MCPLatest)
+		log.Printf("A newer version of MCP: v%s is available. Please use MCPLatest to use the latest features.", MCPLatest)
 	}
 
 	switch tc.protocol {
