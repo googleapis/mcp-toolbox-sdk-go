@@ -28,6 +28,8 @@ const (
 
 	// MCP is the default alias pointing to the newest supported version.
 	MCP = MCPv20250618
+
+	MCPLatest = MCPv20251125
 )
 
 // GetSupportedMcpVersions returns a list of supported MCP protocol versions.
