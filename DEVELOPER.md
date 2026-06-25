@@ -97,6 +97,29 @@ rendered by [Hugo](https://gohugo.io/) + [Docsy](https://www.docsy.dev/) from th
 `/<package>/<version>/` (e.g. `/core/v1.0.0/`), with a `/<package>/latest/`
 redirect to the newest release.
 
+### What gets documented
+
+The `case` block in
+[`scripts/generate-api-docs.sh`](./scripts/generate-api-docs.sh) is the single
+source of truth for the valid package slugs (`core`, `tbadk`, `tbgenkit`) and the
+display title rendered for each. For a given slug, `gomarkdoc` documents the
+entire package tree (`./<package>/...`), so every exported symbol in that module
+is rendered automatically — there is no per-module allowlist to maintain.
+
+#### Adding a new package
+
+The package must already live as its own Go module in the repo root (e.g.
+`./<package>/`). Then:
+
+1. Add a `case` arm (slug → `TITLE`) in
+   [`scripts/generate-api-docs.sh`](./scripts/generate-api-docs.sh).
+2. In [`.github/workflows/api-docs.yml`](./.github/workflows/api-docs.yml), add a
+   `refs/tags/<package>/v*` arm to the tag router **and** append the slug to the
+   default `packages=` list (the `dev` build of all packages).
+3. Add a `[[params.versions.<package>]]` block in
+   [`docs-site/hugo.toml`](./docs-site/hugo.toml) so the version picker lists it
+   (see [Adding a version to the picker](#adding-a-version-to-the-picker)).
+
 ### Workflows
 
 The `api-docs.yml` workflow deploys to the `gh-pages` branch. It runs only on
