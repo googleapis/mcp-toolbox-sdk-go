@@ -13,6 +13,21 @@
 # limitations under the License.
 
 
+# Manual fallback for (re)building a release tag's API docs when the automatic
+# deploy (api-docs.yml, on tag push) didn't run or failed. Builds entirely from
+# the tag -- a release carries its own source plus the docs tooling (docs-site/,
+# scripts/) -- and opens a PR against gh-pages for review instead of deploying
+# directly.
+#
+# Only works for tags that already carry the docs tooling. Tags cut before the
+# docs tooling landed (no docs-site/ or scripts/generate-api-docs.sh) will fail.
+#
+# How to trigger:
+#   - UI: Actions tab -> "API Reference Backfill" -> "Run workflow", pick the
+#     package and enter the version tag (e.g. v1.0.0).
+#   - CLI: gh workflow run api-docs-backfill.yml -f package=core -f version=v1.0.0
+#   The package + version must match an existing release tag (<package>/<version>,
+#   e.g. core/v1.0.0). Review and merge the resulting gh-pages PR to publish.
 name: "API Reference Backfill"
 on:
   workflow_dispatch:
@@ -44,28 +59,14 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      # Build from main so the archived page carries the current version picker;
-      # only the package's source comes from the tag (overlaid below) so
-      # gomarkdoc documents that version's API.
-      - name: Checkout main (current layout + scripts)
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-        with:
-          ref: main
-          submodules: recursive
-
-      - name: Checkout tagged package source
+      # Build entirely from the tag: its source and the docs tooling (docs-site/,
+      # scripts/) all ship in the release, so no overlay from main is needed.
+      - name: Checkout tagged source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
         with:
           ref: refs/tags/${{ inputs.package }}/${{ inputs.version }}
-          path: tagged_src
-          sparse-checkout: ${{ inputs.package }}
-
-      - name: Overlay tagged source onto main
-        env:
-          PKG: ${{ inputs.package }}
-        run: |
-          rm -rf "$PKG"
-          mv "tagged_src/$PKG" "$PKG"
+          submodules: recursive
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
@@ -129,5 +130,5 @@ jobs:
           else
             gh pr create --base gh-pages --head "$BRANCH" \
               --title "docs(api): backfill ${PKG} ${VER}" \
-              --body "Automated API reference backfill for \`${PKG}/${VER}\`, built from main tooling with the tagged source overlaid. Merging publishes to gh-pages (additive)."
+              --body "Automated API reference backfill for \`${PKG}/${VER}\`, built from the release tag. Merging publishes to gh-pages (additive)."
           fi
