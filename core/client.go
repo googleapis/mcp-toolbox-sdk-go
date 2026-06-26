@@ -16,6 +16,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -88,20 +89,24 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 		log.Printf("A newer version of MCP: v%s is available. Please use MCPLatest to use the latest features.", MCPLatest)
 	}
 
-	switch tc.protocol {
-	case MCPv20251125:
-		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
-	case MCPv20250618:
-		tc.transport, transportErr = mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
-	case MCPv20250326:
-		tc.transport, transportErr = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
-	case MCPv20241105:
-		tc.transport, transportErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
-	default:
-		return nil, fmt.Errorf("unsupported protocol version: %s", tc.protocol)
-	}
+	tc.transport, transportErr = tc.createTransport(tc.protocol)
 
 	return tc, transportErr
+}
+
+func (tc *ToolboxClient) createTransport(version Protocol) (transport.Transport, error) {
+	switch version {
+	case MCPv20251125:
+		return mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+	case MCPv20250618:
+		return mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+	case MCPv20250326:
+		return mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+	case MCPv20241105:
+		return mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+	default:
+		return nil, fmt.Errorf("unsupported protocol version: %s", version)
+	}
 }
 
 // newToolboxTool is an internal factory method that constructs a
@@ -251,6 +256,17 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 	// Fetch the manifest for the specified tool.
 	manifest, err := tc.transport.GetTool(ctx, name, resolvedHeaders)
 
+	var negErr *ProtocolNegotiationError
+	if err != nil && errors.As(err, &negErr) {
+		newTransport, transErr := tc.createTransport(Protocol(negErr.FallbackVersion))
+		if transErr != nil {
+			return nil, fmt.Errorf("failed to fallback to protocol %s: %w", negErr.FallbackVersion, transErr)
+		}
+		tc.transport = newTransport
+		tc.protocol = Protocol(negErr.FallbackVersion)
+		manifest, err = tc.transport.GetTool(ctx, name, resolvedHeaders)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tool manifest for '%s': %w", name, err)
 	}
@@ -345,6 +361,18 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 
 	// Fetch Manifest via Transport
 	manifest, err := tc.transport.ListTools(ctx, name, resolvedHeaders)
+
+	var negErr *ProtocolNegotiationError
+	if err != nil && errors.As(err, &negErr) {
+		newTransport, transErr := tc.createTransport(Protocol(negErr.FallbackVersion))
+		if transErr != nil {
+			return nil, fmt.Errorf("failed to fallback to protocol %s: %w", negErr.FallbackVersion, transErr)
+		}
+		tc.transport = newTransport
+		tc.protocol = Protocol(negErr.FallbackVersion)
+		manifest, err = tc.transport.ListTools(ctx, name, resolvedHeaders)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to load toolset manifest for '%s': %w", name, err)
 	}

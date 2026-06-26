@@ -29,7 +29,7 @@ const (
 	// MCP is the default alias pointing to the newest supported version.
 	MCP = MCPv20250618
 
-	MCPLatest = MCPv20251125
+	MCPLatest = MCPv20250618
 )
 
 // GetSupportedMcpVersions returns a list of supported MCP protocol versions.
@@ -41,6 +41,9 @@ func GetSupportedMcpVersions() []string {
 		string(MCPv20241105),
 	}
 }
+
+// ProtocolNegotiationError is returned when a server demands a protocol fallback.
+type ProtocolNegotiationError = transport.ProtocolNegotiationError
 
 type ManifestSchema = transport.ManifestSchema
 

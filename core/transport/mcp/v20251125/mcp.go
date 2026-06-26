@@ -252,6 +252,23 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 		// Continue to body parsing
 	} else if (resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusNoContent) && dest == nil {
 		return nil // Valid notification success
+	} else if resp.StatusCode == http.StatusBadRequest {
+		body, _ := io.ReadAll(resp.Body)
+		var rpcResp jsonRPCResponse
+		if err := json.Unmarshal(body, &rpcResp); err == nil && rpcResp.Error != nil {
+			if rpcResp.Error.Code == -32004 {
+				data, ok := rpcResp.Error.Data.(map[string]any)
+				if ok {
+					if supported, ok := data["supported"].([]any); ok && len(supported) > 0 {
+						if fallbackStr, ok := supported[0].(string); ok {
+							return &transport.ProtocolNegotiationError{FallbackVersion: fallbackStr}
+						}
+					}
+				}
+			}
+			return fmt.Errorf("MCP request failed with code %d: %s", rpcResp.Error.Code, rpcResp.Error.Message)
+		}
+		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	} else {
 		// Any other code, OR a 202/204 when we expected a result, is a failure.
 		body, _ := io.ReadAll(resp.Body)
@@ -275,6 +292,16 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 
 	// Check RPC Error
 	if rpcResp.Error != nil {
+		if rpcResp.Error.Code == -32004 {
+			data, ok := rpcResp.Error.Data.(map[string]any)
+			if ok {
+				if supported, ok := data["supported"].([]any); ok && len(supported) > 0 {
+					if fallbackStr, ok := supported[0].(string); ok {
+						return &transport.ProtocolNegotiationError{FallbackVersion: fallbackStr}
+					}
+				}
+			}
+		}
 		return fmt.Errorf("MCP request failed with code %d: %s", rpcResp.Error.Code, rpcResp.Error.Message)
 	}
 
