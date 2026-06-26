@@ -86,10 +86,6 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	// Initialize the Transport based on the selected Protocol.
 	var transportErr error
 
-	if slices.Contains(GetSupportedMcpVersions(), string(tc.protocol)) && tc.protocol != MCPLatest {
-		log.Printf("A newer version of MCP: v%s is available. Please use MCPLatest to use the latest features.", MCPLatest)
-	}
-
 	tc.transport, transportErr = tc.createTransport(tc.protocol)
 
 	return tc, transportErr
@@ -97,7 +93,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 
 func (tc *ToolboxClient) createTransport(version Protocol) (transport.Transport, error) {
 	switch version {
-	case MCPDRAFT2026v1:
+	case MCPLatest:
 		return mcp20260618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20251125:
 		return mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
