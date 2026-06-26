@@ -93,7 +93,7 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 
 func (tc *ToolboxClient) createTransport(version Protocol) (transport.Transport, error) {
 	switch version {
-	case MCPLatest:
+	case MCPDraft:
 		return mcp20260618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20251125:
 		return mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)

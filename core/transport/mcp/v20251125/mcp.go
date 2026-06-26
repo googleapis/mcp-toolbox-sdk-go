@@ -182,7 +182,7 @@ func (t *McpTransport) initializeSession(ctx context.Context, headers map[string
 
 	// Protocol Version Check
 	if result.ProtocolVersion != t.protocolVersion {
-		return fmt.Errorf("MCP version mismatch: client (%s) != server (%s)", t.protocolVersion, result.ProtocolVersion)
+		return &transport.ProtocolNegotiationError{FallbackVersion: result.ProtocolVersion}
 	}
 
 	// Capabilities Check

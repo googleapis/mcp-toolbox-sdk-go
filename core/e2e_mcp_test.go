@@ -856,3 +856,35 @@ func TestMCP_ContextHandling(t *testing.T) {
 		})
 	}
 }
+
+func TestMCP_ProtocolFallbackE2E(t *testing.T) {
+	// The E2E server currently does not support DRAFT 2026, so this will trigger a fallback.
+	capturer := &CapturingTransport{}
+	httpClient := &http.Client{
+		Transport: capturer,
+		Timeout:   30 * time.Second,
+	}
+
+	opts := []core.ClientOption{
+		core.WithHTTPClient(httpClient),
+		core.WithProtocol(core.MCPDraft),
+	}
+
+	client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+	require.NoError(t, err)
+
+	tool, err := client.LoadTool("get-n-rows", context.Background())
+	require.NoError(t, err)
+
+	response, err := tool.Invoke(context.Background(), map[string]any{"num_rows": "1"})
+	require.NoError(t, err)
+
+	respStr, ok := response.(string)
+	require.True(t, ok)
+	assert.Contains(t, respStr, "row1")
+
+	// Verify that fallback occurred by checking the transport's final protocol version header
+	headers := capturer.CapturedHeaders()
+	// Depending on the fallback version, MCP-Protocol-Version header should not be the draft version.
+	assert.NotEqual(t, string(core.MCPDraft), headers.Get("MCP-Protocol-Version"))
+}
