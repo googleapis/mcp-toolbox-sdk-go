@@ -195,9 +195,20 @@ func prepareHeaders(method string, params any, headers map[string]string) map[st
 		newHeaders[k] = v
 	}
 	newHeaders["Mcp-Method"] = method
-	if method == "tools/call" {
-		if callParams, ok := params.(callToolRequestParams); ok {
-			newHeaders["Mcp-Name"] = callParams.Name
+	switch p := params.(type) {
+	case callToolRequestParams:
+		if method == "tools/call" || method == "prompts/get" {
+			newHeaders["Mcp-Name"] = p.Name
+		}
+	case map[string]any:
+		if method == "tools/call" || method == "prompts/get" {
+			if name, ok := p["name"].(string); ok {
+				newHeaders["Mcp-Name"] = name
+			}
+		} else if method == "resources/read" {
+			if uri, ok := p["uri"].(string); ok {
+				newHeaders["Mcp-Name"] = uri
+			}
 		}
 	}
 	return newHeaders

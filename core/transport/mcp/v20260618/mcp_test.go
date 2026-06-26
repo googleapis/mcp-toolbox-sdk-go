@@ -205,3 +205,21 @@ func TestProtocolFallback(t *testing.T) {
 	require.True(t, errors.As(err, &negErr))
 	assert.Equal(t, "2025-11-25", negErr.FallbackVersion)
 }
+
+func TestPrepareHeadersMcpName(t *testing.T) {
+	// Test tools/call with struct
+	headers1 := prepareHeaders("tools/call", callToolRequestParams{Name: "struct_tool"}, nil)
+	assert.Equal(t, "struct_tool", headers1["Mcp-Name"])
+
+	// Test tools/call with map
+	headers2 := prepareHeaders("tools/call", map[string]any{"name": "map_tool"}, nil)
+	assert.Equal(t, "map_tool", headers2["Mcp-Name"])
+
+	// Test prompts/get with map
+	headers3 := prepareHeaders("prompts/get", map[string]any{"name": "test_prompt"}, nil)
+	assert.Equal(t, "test_prompt", headers3["Mcp-Name"])
+
+	// Test resources/read with map
+	headers4 := prepareHeaders("resources/read", map[string]any{"uri": "file:///test"}, nil)
+	assert.Equal(t, "file:///test", headers4["Mcp-Name"])
+}
