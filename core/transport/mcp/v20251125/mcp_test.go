@@ -306,7 +306,7 @@ func TestProtocolMismatch(t *testing.T) {
 
 	_, err := client.ListTools(context.Background(), "", nil)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "protocol fallback required")
+	assert.Contains(t, err.Error(), "Server requires protocol fallback to")
 }
 
 func TestInitialize_MissingCapabilities(t *testing.T) {

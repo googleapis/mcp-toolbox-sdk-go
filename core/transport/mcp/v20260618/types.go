@@ -24,13 +24,6 @@ type jsonRPCRequest struct {
 	Params  any    `json:"params,omitempty"` // map or struct
 }
 
-// jsonRPCNotification represents a standard JSON-RPC 2.0 notification (no ID).
-type jsonRPCNotification struct {
-	JSONRPC string `json:"jsonrpc"`
-	Method  string `json:"method"`
-	Params  any    `json:"params,omitempty"`
-}
-
 // jsonRPCResponse represents a standard JSON-RPC 2.0 response.
 type jsonRPCResponse struct {
 	JSONRPC string          `json:"jsonrpc"`
@@ -44,36 +37,6 @@ type jsonRPCError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    any    `json:"data,omitempty"`
-}
-
-// implementation describes the name and version of the client.
-type implementation struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
-// clientCapabilities describes the features supported by the client.
-type clientCapabilities map[string]any
-
-// serverCapabilities describes the features supported by the server.
-type serverCapabilities struct {
-	Prompts map[string]any `json:"prompts,omitempty"`
-	Tools   map[string]any `json:"tools,omitempty"`
-}
-
-// initializeRequestParams holds the parameters for the 'initialize' handshake.
-type initializeRequestParams struct {
-	ProtocolVersion string             `json:"protocolVersion"`
-	Capabilities    clientCapabilities `json:"capabilities"`
-	ClientInfo      implementation     `json:"clientInfo"`
-}
-
-// initializeResult holds the response from the 'initialize' handshake.
-type initializeResult struct {
-	ProtocolVersion string             `json:"protocolVersion"`
-	Capabilities    serverCapabilities `json:"capabilities"`
-	ServerInfo      implementation     `json:"serverInfo"`
-	Instructions    string             `json:"instructions,omitempty"`
 }
 
 // mcpTool represents a single tool definition from the server.
@@ -93,6 +56,7 @@ type listToolsResult struct {
 type callToolRequestParams struct {
 	Name      string         `json:"name"`
 	Arguments map[string]any `json:"arguments"`
+	Meta      map[string]any `json:"_meta,omitempty"`
 }
 
 // textContent represents a single text block in a tool's output.

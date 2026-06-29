@@ -201,11 +201,12 @@ func prepareHeaders(method string, params any, headers map[string]string) map[st
 			newHeaders["Mcp-Name"] = p.Name
 		}
 	case map[string]any:
-		if method == "tools/call" || method == "prompts/get" {
+		switch method {
+		case "tools/call", "prompts/get":
 			if name, ok := p["name"].(string); ok {
 				newHeaders["Mcp-Name"] = name
 			}
-		} else if method == "resources/read" {
+		case "resources/read":
 			if uri, ok := p["uri"].(string); ok {
 				newHeaders["Mcp-Name"] = uri
 			}
@@ -224,17 +225,6 @@ func (t *McpTransport) sendRequest(ctx context.Context, url string, method strin
 		Params:  params,
 	}
 	return t.doRPC(ctx, url, req, headers, dest)
-}
-
-// sendNotification sends a standard JSON-RPC notification (no response expected).
-func (t *McpTransport) sendNotification(ctx context.Context, method string, params any, headers map[string]string) error {
-	headers = prepareHeaders(method, params, headers)
-	req := jsonRPCNotification{
-		JSONRPC: "2.0",
-		Method:  method,
-		Params:  params,
-	}
-	return t.doRPC(ctx, t.BaseURL(), req, headers, nil)
 }
 
 // doRPC performs the low-level HTTP POST and handles JSON-RPC wrapping/unwrapping.

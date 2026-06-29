@@ -25,7 +25,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/googleapis/mcp-toolbox-sdk-go/core"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -201,7 +201,7 @@ func TestProtocolFallback(t *testing.T) {
 	_, err := client.ListTools(ctx, "", nil)
 	require.Error(t, err)
 
-	var negErr *core.ProtocolNegotiationError
+	var negErr *transport.ProtocolNegotiationError
 	require.True(t, errors.As(err, &negErr))
 	assert.Equal(t, "2025-11-25", negErr.FallbackVersion)
 }

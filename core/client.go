@@ -18,11 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
-
-	"slices"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	mcp20241105 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20241105"
