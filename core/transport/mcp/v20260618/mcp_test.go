@@ -26,7 +26,6 @@ import (
 	"testing"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
