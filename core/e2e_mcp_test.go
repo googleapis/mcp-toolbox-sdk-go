@@ -888,3 +888,19 @@ func TestMCP_ProtocolFallbackE2E(t *testing.T) {
 	// Depending on the fallback version, MCP-Protocol-Version header should not be the draft version.
 	assert.NotEqual(t, string(core.MCPDraft), headers.Get("MCP-Protocol-Version"))
 }
+
+func TestMCP_DefaultProtocolE2E(t *testing.T) {
+	// Verify that omitting the protocol option defaults correctly and works.
+	client, err := core.NewToolboxClient("http://localhost:5000")
+	require.NoError(t, err)
+
+	tool, err := client.LoadTool("get-n-rows", context.Background())
+	require.NoError(t, err)
+
+	response, err := tool.Invoke(context.Background(), map[string]any{"num_rows": "1"})
+	require.NoError(t, err)
+
+	respStr, ok := response.(string)
+	require.True(t, ok)
+	assert.Contains(t, respStr, "row1")
+}
