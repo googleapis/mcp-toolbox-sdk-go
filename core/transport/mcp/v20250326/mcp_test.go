@@ -339,7 +339,7 @@ func TestProtocolVersionMismatch(t *testing.T) {
 	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	err := client.EnsureInitialized(context.Background(), nil)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "MCP version mismatch")
+	assert.Contains(t, err.Error(), "protocol fallback required")
 }
 
 func TestInitialization_MissingCapabilities(t *testing.T) {
