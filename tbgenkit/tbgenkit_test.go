@@ -62,6 +62,14 @@ var protocolsToTest = []protocolTestCase{
 	{name: "MCP Alias (Latest)", protocol: core.MCP},
 }
 
+func runAgainstBothServers(t *testing.T, fn func(t *testing.T, testBaseUrl string)) {
+	for _, url := range []string{"http://localhost:5000", "http://localhost:5001"} {
+		t.Run(url, func(t *testing.T) {
+			fn(t, url)
+		})
+	}
+}
+
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	log.Println("Starting E2E test setup...")
@@ -87,23 +95,28 @@ func TestMain(m *testing.M) {
 	defer os.Remove(toolsFilePath) // Ensure cleanup
 
 	// Download and start the toolbox server
-	cmd := setupAndStartToolboxServer(ctx, toolboxVersion, toolsFilePath)
+	cmd1, cmd2 := setupAndStartToolboxServers(ctx, toolboxVersion, toolsFilePath)
 
 	// --- 2. Run Tests ---
 	log.Println("Setup complete. Running tests...")
 	exitCode := m.Run()
 
 	// --- 3. Teardown Phase ---
-	log.Println("Tearing down toolbox server...")
-	if err := cmd.Process.Kill(); err != nil {
-		log.Printf("Failed to kill toolbox server process: %v", err)
+	log.Println("Tearing down toolbox servers...")
+	if err := cmd1.Process.Kill(); err != nil {
+		log.Printf("Failed to kill toolbox server 1 process: %v", err)
 	}
-	_ = cmd.Wait() // Clean up the process resources
+	if err := cmd2.Process.Kill(); err != nil {
+		log.Printf("Failed to kill toolbox server 2 process: %v", err)
+	}
+	_ = cmd1.Wait() // Clean up the process resources
+	_ = cmd2.Wait()
 
 	os.Exit(exitCode)
 }
 
 func TestToGenkitTool(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
@@ -112,7 +125,7 @@ func TestToGenkitTool(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := core.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err, "Failed to create ToolboxClient")
 				return client
 			}
@@ -198,9 +211,11 @@ func TestToGenkitTool(t *testing.T) {
 
 		})
 	}
+	})
 }
 
 func TestToGenkitTool_BoundParams(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
@@ -209,7 +224,7 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := core.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err, "Failed to create ToolboxClient")
 				return client
 			}
@@ -303,9 +318,11 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestToGenkitTool_Auth(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
@@ -314,7 +331,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := core.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err, "Failed to create ToolboxClient")
 				return client
 			}
@@ -466,9 +483,11 @@ func TestToGenkitTool_Auth(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestToGenkitTool_OptionalParams(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
@@ -477,7 +496,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := core.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err, "Failed to create ToolboxClient")
 				return client
 			}
@@ -717,9 +736,11 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestToGenkitTool_MapParams(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
@@ -728,7 +749,7 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := core.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err, "Failed to create ToolboxClient")
 				return client
 			}
@@ -882,4 +903,5 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 			})
 		})
 	}
+	})
 }

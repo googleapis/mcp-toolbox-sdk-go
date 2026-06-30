@@ -65,7 +65,7 @@ func newMockMCPServer(t *testing.T) *mockMCPServer {
 			return
 		}
 
-		result, err := handler(req.Params.(json.RawMessage))
+		result, err := handler(asRawMessage(req.Params))
 		if err != nil {
 			// Mock protocol fallback error code
 			if err.Error() == "fallback" {
@@ -144,7 +144,7 @@ func TestListToolsAndHeaders(t *testing.T) {
 
 	// Verify _meta
 	var params map[string]any
-	json.Unmarshal(req.Body.Params.(json.RawMessage), &params)
+	json.Unmarshal(asRawMessage(req.Body.Params), &params)
 	meta, ok := params["_meta"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "DRAFT-2026-v1", meta["protocolVersion"])
@@ -180,7 +180,7 @@ func TestInvokeToolAndHeaders(t *testing.T) {
 
 	// Verify _meta
 	var params map[string]any
-	json.Unmarshal(req.Body.Params.(json.RawMessage), &params)
+	json.Unmarshal(asRawMessage(req.Body.Params), &params)
 	meta, ok := params["_meta"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "DRAFT-2026-v1", meta["protocolVersion"])
