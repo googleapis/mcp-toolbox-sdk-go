@@ -89,7 +89,7 @@ func downloadBlob(ctx context.Context, bucketName, sourceBlobName, destinationFi
 func getToolboxBinaryURL(toolboxVersion string) string {
 	osSystem := runtime.GOOS
 	arch := runtime.GOARCH
-	return fmt.Sprintf("v%s/%s/%s/toolbox", toolboxVersion, osSystem, arch)
+	return fmt.Sprintf("%s/%s/%s/toolbox", toolboxVersion, osSystem, arch)
 }
 
 func getAuthToken(ctx context.Context, clientID string) string {
@@ -104,11 +104,15 @@ func getAuthToken(ctx context.Context, clientID string) string {
 	return token.AccessToken
 }
 
-func setupAndStartToolboxServer(ctx context.Context, version, toolsFilePath string) *exec.Cmd {
+func setupAndStartToolboxServers(ctx context.Context, version, toolsFilePath string) (*exec.Cmd, *exec.Cmd) {
 	log.Println("Downloading toolbox binary from GCS bucket...")
 	binaryURL := getToolboxBinaryURL(version)
 	binaryPath := "toolbox"
-	downloadBlob(ctx, "mcp-toolbox-for-databases", binaryURL, binaryPath)
+	bucketName := "mcp-toolbox-for-databases"
+	if version == "main" || version == "mcp-v202606" {
+		bucketName = "mcp-toolbox-for-databases-dev"
+	}
+	downloadBlob(ctx, bucketName, binaryURL, binaryPath)
 	log.Println("Toolbox binary downloaded successfully.")
 
 	if err := os.Chmod(binaryPath, 0755); err != nil {
@@ -120,24 +124,34 @@ func setupAndStartToolboxServer(ctx context.Context, version, toolsFilePath stri
 		log.Fatalf("Failed to get absolute path for toolbox binary: %v", err)
 	}
 
-	log.Println("Starting toolbox server process...")
-	cmd := exec.Command(absBinaryPath, "--tools-file", toolsFilePath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	log.Println("Starting toolbox server 1 process on port 5000...")
+	cmd1 := exec.Command(absBinaryPath, "--port", "5000", "--tools-file", toolsFilePath)
+	cmd1.Stdout = os.Stdout
+	cmd1.Stderr = os.Stderr
 
-	if err := cmd.Start(); err != nil {
-		log.Fatalf("Failed to start toolbox server: %v", err)
+	if err := cmd1.Start(); err != nil {
+		log.Fatalf("Failed to start toolbox server 1: %v", err)
 	}
 
-	log.Println("Waiting for server to initialize...")
-	// A more robust way to check for server readiness is to poll the health endpoint.
-	// For now, Sleep is a simple way to wait.
+	log.Println("Starting toolbox server 2 process on port 5001...")
+	cmd2 := exec.Command(absBinaryPath, "--port", "5001", "--tools-file", toolsFilePath, "--enable-draft-specs")
+	cmd2.Stdout = os.Stdout
+	cmd2.Stderr = os.Stderr
+
+	if err := cmd2.Start(); err != nil {
+		log.Fatalf("Failed to start toolbox server 2: %v", err)
+	}
+
+	log.Println("Waiting for servers to initialize...")
 	time.Sleep(5 * time.Second)
 
-	if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-		log.Fatalf("Toolbox server failed to start and exited with code: %d", cmd.ProcessState.ExitCode())
+	if cmd1.ProcessState != nil && cmd1.ProcessState.Exited() {
+		log.Fatalf("Toolbox server 1 failed to start and exited with code: %d", cmd1.ProcessState.ExitCode())
+	}
+	if cmd2.ProcessState != nil && cmd2.ProcessState.Exited() {
+		log.Fatalf("Toolbox server 2 failed to start and exited with code: %d", cmd2.ProcessState.ExitCode())
 	}
 
-	log.Println("Toolbox server started successfully.")
-	return cmd
+	log.Println("Toolbox servers started successfully.")
+	return cmd1, cmd2
 }
