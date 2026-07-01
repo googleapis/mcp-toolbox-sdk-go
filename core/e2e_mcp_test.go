@@ -114,17 +114,6 @@ var protocolsToTest = []protocolTestCase{
 	{name: "MCP Alias (Latest)", protocol: core.MCP},
 }
 
-func getProtocolsToTest(url string) []protocolTestCase {
-	var filtered []protocolTestCase
-	for _, p := range protocolsToTest {
-		if p.protocol == core.MCPDraft && url == "http://localhost:5000" {
-			continue // Legacy server hard-crashes on MCP_DRAFT
-		}
-		filtered = append(filtered, p)
-	}
-	return filtered
-}
-
 // CapturingTransport wraps http.RoundTripper to capture headers from the latest request.
 type CapturingTransport struct {
 	base        http.RoundTripper
@@ -175,7 +164,7 @@ func getNewMCPToolboxClient(t *testing.T, testBaseUrl string, tc protocolTestCas
 
 func TestMCP_Basic(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test
 			newClient := func(t *testing.T) *core.ToolboxClient {
@@ -342,7 +331,7 @@ func TestMCP_Basic(t *testing.T) {
 
 func TestMCP_LoadErrors(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
 				return getNewMCPToolboxClient(t, testBaseUrl, proto)
@@ -380,7 +369,7 @@ func TestMCP_LoadErrors(t *testing.T) {
 
 func TestMCP_BindParams(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
 				return getNewMCPToolboxClient(t, testBaseUrl, proto)
@@ -437,7 +426,7 @@ func TestMCP_BindParams(t *testing.T) {
 
 func TestMCP_BindParamErrors(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			client := getNewMCPToolboxClient(t, testBaseUrl, proto)
 			tool, err := client.LoadTool("get-n-rows", context.Background())
@@ -469,7 +458,7 @@ func TestMCP_Auth(t *testing.T) {
 		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	}
 
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
 				return getNewMCPToolboxClient(t, testBaseUrl, proto)
@@ -582,7 +571,7 @@ func TestMCP_Auth(t *testing.T) {
 
 func TestMCP_OptionalParams(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
 				return getNewMCPToolboxClient(t, testBaseUrl, proto)
@@ -762,7 +751,7 @@ func TestMCP_OptionalParams(t *testing.T) {
 
 func TestMCP_MapParams(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
 				return getNewMCPToolboxClient(t, testBaseUrl, proto)
@@ -864,7 +853,7 @@ func TestMCP_MapParams(t *testing.T) {
 
 func TestMCP_ContextHandling(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
 				return getNewMCPToolboxClient(t, testBaseUrl, proto)

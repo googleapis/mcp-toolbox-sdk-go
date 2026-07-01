@@ -63,17 +63,6 @@ var protocolsToTest = []protocolTestCase{
 	{name: "MCP Alias (Latest)", protocol: core.MCP},
 }
 
-func getProtocolsToTest(url string) []protocolTestCase {
-	var filtered []protocolTestCase
-	for _, p := range protocolsToTest {
-		if p.protocol == core.MCPDraft && url == "http://localhost:5000" {
-			continue
-		}
-		filtered = append(filtered, p)
-	}
-	return filtered
-}
-
 func runAgainstBothServers(t *testing.T, fn func(t *testing.T, testBaseUrl string)) {
 	for _, url := range []string{"http://localhost:5000", "http://localhost:5001"} {
 		t.Run(url, func(t *testing.T) {
@@ -129,7 +118,7 @@ func TestMain(m *testing.M) {
 
 func TestToGenkitTool(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
 			newClient := func(t *testing.T) *core.ToolboxClient {
@@ -228,7 +217,7 @@ func TestToGenkitTool(t *testing.T) {
 
 func TestToGenkitTool_BoundParams(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
 			newClient := func(t *testing.T) *core.ToolboxClient {
@@ -335,7 +324,7 @@ func TestToGenkitTool_BoundParams(t *testing.T) {
 
 func TestToGenkitTool_Auth(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
 			newClient := func(t *testing.T) *core.ToolboxClient {
@@ -500,7 +489,7 @@ func TestToGenkitTool_Auth(t *testing.T) {
 
 func TestToGenkitTool_OptionalParams(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
 			newClient := func(t *testing.T) *core.ToolboxClient {
@@ -753,7 +742,7 @@ func TestToGenkitTool_OptionalParams(t *testing.T) {
 
 func TestToGenkitTool_MapParams(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
 			newClient := func(t *testing.T) *core.ToolboxClient {

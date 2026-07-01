@@ -104,17 +104,6 @@ var protocolsToTest = []protocolTestCase{
 	{name: "MCP Alias (Latest)", protocol: core.MCP},
 }
 
-func getProtocolsToTest(url string) []protocolTestCase {
-	var filtered []protocolTestCase
-	for _, p := range protocolsToTest {
-		if p.protocol == core.MCPDraft && url == "http://localhost:5000" {
-			continue
-		}
-		filtered = append(filtered, p)
-	}
-	return filtered
-}
-
 // BodyCapturingTransport wraps http.RoundTripper to capture the body of the initialize request.
 type BodyCapturingTransport struct {
 	base     http.RoundTripper
@@ -200,7 +189,7 @@ func TestMain(m *testing.M) {
 
 func TestE2E_Basic(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
 			newClient := func(t *testing.T) tbadk.ToolboxClient {
@@ -362,7 +351,7 @@ func TestE2E_Basic(t *testing.T) {
 
 func TestE2E_LoadErrors(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) tbadk.ToolboxClient {
 				opts := []core.ClientOption{}
@@ -407,7 +396,7 @@ func TestE2E_LoadErrors(t *testing.T) {
 
 func TestE2E_BindParams(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) tbadk.ToolboxClient {
 				opts := []core.ClientOption{}
@@ -478,7 +467,7 @@ func TestE2E_BindParams(t *testing.T) {
 
 func TestE2E_BindParamErrors(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			opts := []core.ClientOption{}
 			if !proto.isDefault {
@@ -510,7 +499,7 @@ func TestE2E_BindParamErrors(t *testing.T) {
 
 func TestE2E_Auth(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) tbadk.ToolboxClient {
 				opts := []core.ClientOption{}
@@ -643,7 +632,7 @@ func TestE2E_Auth(t *testing.T) {
 
 func TestE2E_OptionalParams(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client
 			newClient := func(t *testing.T) tbadk.ToolboxClient {
@@ -847,7 +836,7 @@ func TestE2E_OptionalParams(t *testing.T) {
 
 func TestE2E_MapParams(t *testing.T) {
 	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
-	for _, proto := range getProtocolsToTest(testBaseUrl) {
+	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client
 			newClient := func(t *testing.T) tbadk.ToolboxClient {
