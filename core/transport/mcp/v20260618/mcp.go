@@ -66,12 +66,12 @@ func New(baseURL string, client *http.Client, clientName string, clientVersion s
 
 func (t *McpTransport) getMeta() map[string]any {
 	return map[string]any{
-		"protocolVersion": t.protocolVersion,
-		"clientInfo": map[string]any{
+		"io.modelcontextprotocol/protocolVersion": t.protocolVersion,
+		"io.modelcontextprotocol/clientInfo": map[string]any{
 			"name":    t.clientName,
 			"version": t.clientVersion,
 		},
-		"clientCapabilities": map[string]any{},
+		"io.modelcontextprotocol/clientCapabilities": map[string]any{},
 	}
 }
 
