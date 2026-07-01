@@ -147,7 +147,7 @@ func TestListToolsAndHeaders(t *testing.T) {
 	json.Unmarshal(asRawMessage(req.Body.Params), &params)
 	meta, ok := params["_meta"].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, "DRAFT-2026-v1", meta["protocolVersion"])
+	assert.Equal(t, "DRAFT-2026-v1", meta["io.modelcontextprotocol/protocolVersion"])
 }
 
 func TestInvokeToolAndHeaders(t *testing.T) {
@@ -183,7 +183,7 @@ func TestInvokeToolAndHeaders(t *testing.T) {
 	json.Unmarshal(asRawMessage(req.Body.Params), &params)
 	meta, ok := params["_meta"].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, "DRAFT-2026-v1", meta["protocolVersion"])
+	assert.Equal(t, "DRAFT-2026-v1", meta["io.modelcontextprotocol/protocolVersion"])
 }
 
 func TestProtocolFallback(t *testing.T) {
