@@ -106,6 +106,7 @@ var protocolsToTest = []protocolTestCase{
 	{name: "Default (Latest)", isDefault: true},
 
 	// Explicit Versions
+	{name: "MCP Draft", protocol: core.MCPDraft},
 	{name: "v20241105", protocol: core.MCPv20241105},
 	{name: "v20250326", protocol: core.MCPv20250326},
 	{name: "v20250618", protocol: core.MCPv20250618},
