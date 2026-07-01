@@ -70,6 +70,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           persist-credentials: false
+          # Checking out fork code is gated behind the 'tests: run' label,
+          # which requires maintainer review before this workflow runs.
+          allow-unsafe-pr-checkout: true
 
       - name: Link Local Modules & Tidy
         working-directory: ${{ matrix.module }}
