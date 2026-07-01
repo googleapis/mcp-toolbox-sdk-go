@@ -77,7 +77,7 @@ func newMockMCPServer(t *testing.T) *mockMCPServer {
 						Code:    -32004,
 						Message: "Protocol fallback",
 						Data: map[string]any{
-							"supported": []any{"2025-11-25"},
+							"supported": []any{"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"},
 						},
 					},
 				}
