@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.0.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v1.0.0...core/v1.0.1) (2026-07-01)
+
+
+### Miscellaneous Chores
+
+* Add MCPLatest protocol ([#271](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/271)) ([7154330](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/71543303a19cc5c57bec76eefc2143f453271e74))
+* **ci:** Update GCS Bucket name after MCP Toolbox v1 ([#232](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/232)) ([1de836d](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/1de836d496750f602e16ad5af5dd3d4f788e199c))
+* **ci:** Update toolbox version to 1.4.0 in integration tests ([#267](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/267)) ([ed7f993](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/ed7f993037a587bf233dcc400ee6c42a1c040654))
+* **deps:** bump github.com/go-jose/go-jose/v4 in /core ([#223](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/223)) ([3ff7232](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/3ff7232cbd524905b52e55f32bf01737bb15bba7))
+* **deps:** bump go.opentelemetry.io/otel/sdk in /core ([#228](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/228)) ([3e5a1bb](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/3e5a1bbc620a24fa5831e5b5b7a0c265c49e5302))
+* **deps:** bump google.golang.org/grpc from 1.79.2 to 1.79.3 in /core ([#237](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/237)) ([0eefd84](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/0eefd84012e894e19ddf8ae5f828632b252e12e9))
+* **deps:** update mcp toolbox server for integration tests to v1.6.0 ([#284](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/284)) ([e3e02e6](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/e3e02e61427749dee21a00fd4cebbe1dae87a5f9))
+* **deps:** update mcp-toolbox server to v1.5.0 ([#274](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/274)) ([b3e4313](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/b3e4313e2a1f1f3743e3b912f394e4c9d6ad3387))
+
+
+### Documentation
+
+* Update Links to repo and new docsite ([#229](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/229)) ([81718da](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/81718daa4b96fb719c68c7da4c3154ec4dc56b18))
+
 ## [1.0.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v0.7.0...core/v1.0.0) (2026-03-31)
 
 
