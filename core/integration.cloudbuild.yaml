@@ -137,5 +137,5 @@ steps:
 options:
   logging: CLOUD_LOGGING_ONLY
 substitutions:
-  _TOOLBOX_VERSION: 'mcp-v202606'
+  _TOOLBOX_VERSION: 'v1.6.0'
   _TOOLBOX_MANIFEST_VERSION: '34'
