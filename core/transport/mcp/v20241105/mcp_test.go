@@ -20,10 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	"testing"
 
 	"maps"
