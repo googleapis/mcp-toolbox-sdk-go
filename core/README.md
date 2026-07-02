@@ -102,7 +102,7 @@ import "github.com/googleapis/mcp-toolbox-sdk-go/core"
 
 client, err := core.NewToolboxClient(
 	"http://127.0.0.1:5000",
-	core.WithSupportedProtocols([]core.Protocol{core.MCPv20251125, core.MCPv20241105}),
+	core.WithSupportedProtocols([]core.Protocol{core.MCPLatest, core.MCPDraft}),
 )
 ```
 
