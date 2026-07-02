@@ -165,6 +165,21 @@ func TestWithSupportedProtocols(t *testing.T) {
 		}
 	})
 	
+	t.Run("Invalid protocol", func(t *testing.T) {
+		client := &ToolboxClient{}
+		protocols := []Protocol{MCPv20241105, Protocol("invalid-protocol")}
+		
+		opt := WithSupportedProtocols(protocols)
+		err := opt(client)
+		
+		if err == nil {
+			t.Error("Expected error for invalid protocol, got nil")
+		}
+		if err != nil && err.Error() != "invalid protocol version 'invalid-protocol'" {
+			t.Errorf("Unexpected error message: %v", err)
+		}
+	})
+	
 	t.Run("Empty protocols list", func(t *testing.T) {
 		client := &ToolboxClient{}
 		
