@@ -18,8 +18,9 @@ import (
 	"fmt"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core"
-	"google.golang.org/adk/model"
-	"google.golang.org/adk/tool"
+	"google.golang.org/adk/v2/agent"
+	"google.golang.org/adk/v2/model"
+	"google.golang.org/adk/v2/tool"
 	"google.golang.org/genai"
 )
 
@@ -41,7 +42,7 @@ func (tt ToolboxTool) IsLongRunning() bool {
 // This function is copied from ADK Go
 // if there is already a tool with a function declaration,
 // it appends another to it; otherwise, it creates a new genai tool.
-func (tt ToolboxTool) ProcessRequest(ctx tool.Context, req *model.LLMRequest) error {
+func (tt ToolboxTool) ProcessRequest(ctx agent.Context, req *model.LLMRequest) error {
 	if req.Tools == nil {
 		req.Tools = make(map[string]any)
 	}
@@ -93,7 +94,7 @@ func (tt ToolboxTool) Declaration() *genai.FunctionDeclaration {
 //
 //	The result from the API call, in the form of a map[string]any with the result
 //	in the 'output' field.
-func (tt ToolboxTool) Run(ctx tool.Context, args any) (result map[string]any, err error) {
+func (tt ToolboxTool) Run(ctx agent.Context, args any) (result map[string]any, err error) {
 	// Perform a safe type assertion for the input.
 	inputMap, ok := args.(map[string]any)
 	if !ok {
