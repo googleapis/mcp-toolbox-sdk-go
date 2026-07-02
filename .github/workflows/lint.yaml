@@ -13,7 +13,9 @@
 # limitations under the License.
 
 name: lint
-on:
+# pull_request_target only fires on `labeled`; running fork code is gated
+# behind the maintainer-applied 'tests: run' label
+on: # zizmor: ignore[dangerous-triggers] 
   pull_request:
   pull_request_target:
     types: [labeled]
