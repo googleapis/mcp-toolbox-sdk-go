@@ -32,7 +32,7 @@ func main() {
 	// Initialize genkit
   g := genkit.Init(ctx,
 		genkit.WithPlugins(&googlegenai.GoogleAI{}),
-		genkit.WithDefaultModel("googleai/gemini-1.5-flash"),
+		genkit.WithDefaultModel("googleai/gemini-2.5-flash"),
 	)
 
 	// Convert your tool to a Genkit tool.
@@ -53,7 +53,7 @@ func main() {
 
 	// Generate llm response using prompts and tools.
 	resp, err := genkit.Generate(ctx, g,
-		ai.WithPrompt("Find hotels in Basel with Basel in it's name."),
+		ai.WithPrompt("Find hotels with 'Basel' in it's name."),
 		ai.WithTools(toolRefs...),
 	)
 	if err != nil {
