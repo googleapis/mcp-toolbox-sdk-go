@@ -971,7 +971,7 @@ func TestMCP_ProtocolCustomArrayE2E(t *testing.T) {
 
 	opts := []core.ClientOption{
 		core.WithHTTPClient(httpClient),
-		core.WithSupportedProtocols([]core.Protocol{core.MCPLatest, core.MCPDraft}),
+		core.WithSupportedProtocols([]core.Protocol{core.MCPDraft, core.MCPLatest}),
 	}
 
 	client, err := core.NewToolboxClient(testBaseUrl, opts...)
