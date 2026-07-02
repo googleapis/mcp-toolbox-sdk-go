@@ -42,6 +42,7 @@ type ToolboxClient struct {
 	defaultOptionsSet   bool
 	clientName          string
 	clientVersion       string
+	supportedProtocols  []string
 }
 
 // NewToolboxClient creates and configures a new, immutable client for interacting with a
@@ -89,20 +90,28 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 }
 
 func (tc *ToolboxClient) createTransport(version Protocol) (transport.Transport, error) {
+	var t transport.Transport
+	var err error
+	
 	switch version {
 	case MCPDraft:
-		return mcp20260618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+		t, err = mcp20260618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20251125:
-		return mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+		t, err = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20250618:
-		return mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+		t, err = mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20250326:
-		return mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+		t, err = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20241105:
-		return mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+		t, err = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	default:
 		return nil, fmt.Errorf("unsupported protocol version: %s", version)
 	}
+	
+	if err == nil && tc.supportedProtocols != nil {
+		t.SetSupportedProtocols(tc.supportedProtocols)
+	}
+	return t, err
 }
 
 // newToolboxTool is an internal factory method that constructs a

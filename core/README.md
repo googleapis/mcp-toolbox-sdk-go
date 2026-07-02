@@ -85,12 +85,26 @@ The core package provides a framework-agnostic way to interact with your MCP Too
 
 - [Transport Protocols](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#transport-protocols)
 - [Loading Tools](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#loading-tools)
+
 - [Invoking Tools](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#invoking-tools)
 - [Client to Server Authentication](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#client-to-server-authentication)
 - [Authenticating Tools](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#authenticating-tools)
 - [Binding Parameter Values](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#binding-parameter-values)
 - [Default Parameters](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#default-parameters)
 - [Using with Orchestration Frameworks](https://mcp-toolbox.dev/documentation/connect-to/toolbox-sdks/go-sdk/core/#default-parameters)
+
+## Protocol Negotiation
+
+By default, the client negotiates the newest protocol version supported by the server. You can provide a custom list of supported protocols to restrict negotiation to specific versions or a single version. Ensure you pass the [`Protocol`](protocol.go) constants. Both `core.MCPLatest` and `core.MCPDraft` are supported as well.
+
+```go
+import "github.com/googleapis/mcp-toolbox-sdk-go/core"
+
+client, err := core.NewToolboxClient(
+	"http://127.0.0.1:5000",
+	core.WithSupportedProtocols([]core.Protocol{core.MCPLatest, core.MCPDraft}),
+)
+```
 
 # Contributing
 

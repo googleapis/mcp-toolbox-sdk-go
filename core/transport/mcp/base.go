@@ -43,6 +43,21 @@ type BaseMcpTransport struct {
 	// HandshakeHook is the abstract method _initialize_session.
 	// The specific version implementation will assign this function.
 	HandshakeHook func(ctx context.Context, headers map[string]string) error
+	
+	supportedProtocols []string
+}
+
+// SetSupportedProtocols sets the list of protocols supported by the client.
+func (b *BaseMcpTransport) SetSupportedProtocols(protocols []string) {
+	b.supportedProtocols = protocols
+}
+
+// GetSupportedProtocols returns the list of protocols supported by the client.
+func (b *BaseMcpTransport) GetSupportedProtocols() []string {
+	if len(b.supportedProtocols) == 0 {
+		return []string{"DRAFT-2026-v1", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
+	}
+	return b.supportedProtocols
 }
 
 // BaseURL returns the base URL for the transport.

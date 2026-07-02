@@ -64,6 +64,49 @@ func WithProtocol(p Protocol) ClientOption {
 	}
 }
 
+// WithSupportedProtocols allows overriding the list of supported protocols that the client
+// claims to support during protocol negotiation. The provided slice of protocols will be sorted
+// newest-to-oldest internally based on the SDK's global list of supported versions.
+func WithSupportedProtocols(protocols []Protocol) ClientOption {
+	return func(tc *ToolboxClient) error {
+		if len(protocols) == 0 {
+			return fmt.Errorf("WithSupportedProtocols: protocol list cannot be empty")
+		}
+		
+		// Sort newest-to-oldest using the SDK's known priority list.
+		// We iterate over the globally sorted list and keep ones present in the user's list.
+		globalSupported := GetSupportedMcpVersions()
+		
+		// Validate that all user-provided protocols are supported
+		for _, userVer := range protocols {
+			found := false
+			for _, globalVer := range globalSupported {
+				if string(userVer) == globalVer {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("invalid protocol version '%s'", userVer)
+			}
+		}
+		
+		var sorted []string
+		
+		for _, globalVer := range globalSupported {
+			for _, userVer := range protocols {
+				if string(userVer) == globalVer {
+					sorted = append(sorted, globalVer)
+					break
+				}
+			}
+		}
+		
+		tc.supportedProtocols = sorted
+		return nil
+	}
+}
+
 // WithHTTPClient provides a custom http.Client to the ToolboxClient.
 func WithHTTPClient(client *http.Client) ClientOption {
 	return func(tc *ToolboxClient) error {

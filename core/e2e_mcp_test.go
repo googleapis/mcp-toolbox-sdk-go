@@ -34,6 +34,11 @@ import (
 )
 
 // Global variables to hold session-scoped fixtures
+const (
+	serverURLStable = "http://localhost:5000"
+	serverURLDraft  = "http://localhost:5001"
+)
+
 var (
 	projectID       string = getEnvVar("GOOGLE_CLOUD_PROJECT")
 	toolboxVersion  string = getEnvVar("TOOLBOX_VERSION")
@@ -141,7 +146,7 @@ func (c *CapturingTransport) CapturedHeaders() http.Header {
 }
 
 func runAgainstBothServers(t *testing.T, fn func(t *testing.T, testBaseUrl string)) {
-	for _, url := range []string{"http://localhost:5000", "http://localhost:5001"} {
+	for _, url := range []string{serverURLStable, serverURLDraft} {
 		t.Run(url, func(t *testing.T) {
 			fn(t, url)
 		})
@@ -917,10 +922,76 @@ func TestMCP_ProtocolFallbackE2E(t *testing.T) {
 	// Verify that fallback occurred by checking the transport's final protocol version header
 	headers := capturer.CapturedHeaders()
 	// Depending on the fallback version, MCP-Protocol-Version header should not be the draft version.
-	if strings.Contains(testBaseUrl, "5001") {
+	if testBaseUrl == serverURLDraft {
 		assert.Equal(t, string(core.MCPDraft), headers.Get("MCP-Protocol-Version"))
 	} else {
 		assert.NotEqual(t, string(core.MCPDraft), headers.Get("MCP-Protocol-Version"))
+	}
+	})
+}
+
+func TestMCP_ProtocolLatestE2E(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
+	capturer := &CapturingTransport{}
+	httpClient := &http.Client{
+		Transport: capturer,
+		Timeout:   30 * time.Second,
+	}
+
+	opts := []core.ClientOption{
+		core.WithHTTPClient(httpClient),
+		core.WithProtocol(core.MCPLatest),
+	}
+
+	client, err := core.NewToolboxClient(testBaseUrl, opts...)
+	require.NoError(t, err)
+
+	tool, err := client.LoadTool("get-n-rows", context.Background())
+	require.NoError(t, err)
+
+	response, err := tool.Invoke(context.Background(), map[string]any{"num_rows": "1"})
+	require.NoError(t, err)
+
+	respStr, ok := response.(string)
+	require.True(t, ok)
+	assert.Contains(t, respStr, "row1")
+
+	headers := capturer.CapturedHeaders()
+	assert.Equal(t, string(core.MCPLatest), headers.Get("MCP-Protocol-Version"))
+	})
+}
+
+func TestMCP_ProtocolCustomArrayE2E(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
+	capturer := &CapturingTransport{}
+	httpClient := &http.Client{
+		Transport: capturer,
+		Timeout:   30 * time.Second,
+	}
+
+	opts := []core.ClientOption{
+		core.WithHTTPClient(httpClient),
+		core.WithSupportedProtocols([]core.Protocol{core.MCPDraft, core.MCPLatest}),
+	}
+
+	client, err := core.NewToolboxClient(testBaseUrl, opts...)
+	require.NoError(t, err)
+
+	tool, err := client.LoadTool("get-n-rows", context.Background())
+	require.NoError(t, err)
+
+	response, err := tool.Invoke(context.Background(), map[string]any{"num_rows": "1"})
+	require.NoError(t, err)
+
+	respStr, ok := response.(string)
+	require.True(t, ok)
+	assert.Contains(t, respStr, "row1")
+
+	headers := capturer.CapturedHeaders()
+	if testBaseUrl == serverURLDraft {
+		assert.Equal(t, string(core.MCPDraft), headers.Get("MCP-Protocol-Version"))
+	} else {
+		assert.Equal(t, string(core.MCPLatest), headers.Get("MCP-Protocol-Version"))
 	}
 	})
 }
