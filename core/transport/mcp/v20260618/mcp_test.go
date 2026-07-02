@@ -85,6 +85,23 @@ func newMockMCPServer(t *testing.T) *mockMCPServer {
 				json.NewEncoder(w).Encode(errResp)
 				return
 			}
+			if err.Error() == "fallback_200" {
+				w.WriteHeader(http.StatusOK)
+				errResp := jsonRPCResponse{
+					JSONRPC: "2.0",
+					ID:      req.ID,
+					Error: &jsonRPCError{
+						Code:    -32004,
+						Message: "Protocol fallback",
+						Data: map[string]any{
+							"supported": []any{"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"},
+						},
+					},
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(errResp)
+				return
+			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -192,6 +209,25 @@ func TestProtocolFallback(t *testing.T) {
 
 	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
 		return nil, errors.New("fallback")
+	}
+
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
+	ctx := context.Background()
+
+	_, err := client.ListTools(ctx, "", nil)
+	require.Error(t, err)
+
+	var negErr *transport.ProtocolNegotiationError
+	require.True(t, errors.As(err, &negErr))
+	assert.Equal(t, "2025-11-25", negErr.FallbackVersion)
+}
+
+func TestFallback200(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
+		return nil, errors.New("fallback_200")
 	}
 
 	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
