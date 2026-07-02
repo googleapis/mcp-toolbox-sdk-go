@@ -13,7 +13,7 @@
 # limitations under the License.
 
 name: lint
-on: # zizmor: ignore[dangerous-triggers]
+on: # zizmor: ignore[dangerous-triggers] 
   pull_request:
   pull_request_target:
     types: [labeled]
