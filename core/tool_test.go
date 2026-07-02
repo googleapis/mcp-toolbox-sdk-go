@@ -50,6 +50,7 @@ func (d *dummyTransport) ListTools(ctx context.Context, set string, h map[string
 func (d *dummyTransport) InvokeTool(ctx context.Context, name string, p map[string]any, h map[string]string) (any, error) {
 	return nil, nil
 }
+func (d *dummyTransport) SetSupportedProtocols(protocols []string) {}
 
 func TestToolboxTool_Getters(t *testing.T) {
 	sampleParams := []ParameterSchema{

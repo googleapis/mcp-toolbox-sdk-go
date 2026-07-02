@@ -260,7 +260,7 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 				data, ok := rpcResp.Error.Data.(map[string]any)
 				if ok {
 					if supported, ok := data["supported"].([]any); ok && len(supported) > 0 {
-						ourVersions := []string{"DRAFT-2026-v1", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
+						ourVersions := t.GetSupportedProtocols()
 						var mutuallySupportedVersion string
 						for _, ourVer := range ourVersions {
 							for _, theirVer := range supported {
@@ -312,7 +312,7 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 			data, ok := rpcResp.Error.Data.(map[string]any)
 			if ok {
 				if supported, ok := data["supported"].([]any); ok && len(supported) > 0 {
-					ourVersions := []string{"DRAFT-2026-v1", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
+					ourVersions := t.GetSupportedProtocols()
 					var mutuallySupportedVersion string
 					for _, ourVer := range ourVersions {
 						for _, theirVer := range supported {

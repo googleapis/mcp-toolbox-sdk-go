@@ -142,6 +142,44 @@ func TestWithProtocol(t *testing.T) {
 	})
 }
 
+func TestWithSupportedProtocols(t *testing.T) {
+	t.Run("Valid protocols, sorted correctly", func(t *testing.T) {
+		client := &ToolboxClient{}
+		protocols := []Protocol{MCPv20241105, MCPv20251125}
+		
+		opt := WithSupportedProtocols(protocols)
+		err := opt(client)
+		
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		
+		expected := []string{string(MCPv20251125), string(MCPv20241105)}
+		if len(client.supportedProtocols) != len(expected) {
+			t.Fatalf("Expected %d protocols, got %d", len(expected), len(client.supportedProtocols))
+		}
+		for i, v := range expected {
+			if client.supportedProtocols[i] != v {
+				t.Errorf("Expected protocol at index %d to be %s, got %s", i, v, client.supportedProtocols[i])
+			}
+		}
+	})
+	
+	t.Run("Empty protocols list", func(t *testing.T) {
+		client := &ToolboxClient{}
+		
+		opt := WithSupportedProtocols([]Protocol{})
+		err := opt(client)
+		
+		if err == nil {
+			t.Error("Expected error for empty protocols list, got nil")
+		}
+		if err.Error() != "WithSupportedProtocols: protocol list cannot be empty" {
+			t.Errorf("Unexpected error message: %v", err)
+		}
+	})
+}
+
 func TestWithClientHeaderString(t *testing.T) {
 	t.Run("Success case", func(t *testing.T) {
 		client := newTestClient()
