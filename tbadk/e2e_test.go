@@ -96,6 +96,7 @@ type protocolTestCase struct {
 
 var protocolsToTest = []protocolTestCase{
 	{name: "Default (Latest)", isDefault: true},
+	{name: "MCP Draft", protocol: core.MCPDraft},
 	{name: "v20241105", protocol: core.MCPv20241105},
 	{name: "v20250326", protocol: core.MCPv20250326},
 	{name: "v20250618", protocol: core.MCPv20250618},
@@ -133,6 +134,14 @@ func (c *BodyCapturingTransport) RoundTrip(req *http.Request) (*http.Response, e
 	return base.RoundTrip(req)
 }
 
+func runAgainstBothServers(t *testing.T, fn func(t *testing.T, testBaseUrl string)) {
+	for _, url := range []string{"http://localhost:5000", "http://localhost:5001"} {
+		t.Run(url, func(t *testing.T) {
+			fn(t, url)
+		})
+	}
+}
+
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 	log.Println("Starting E2E test setup...")
@@ -158,23 +167,28 @@ func TestMain(m *testing.M) {
 	defer os.Remove(toolsFilePath) // Ensure cleanup
 
 	// Download and start the toolbox server
-	cmd := setupAndStartToolboxServer(ctx, toolboxVersion, toolsFilePath)
+	cmd1, cmd2 := setupAndStartToolboxServers(ctx, toolboxVersion, toolsFilePath)
 
 	// Run Tests ---
 	log.Println("Setup complete. Running tests...")
 	exitCode := m.Run()
 
 	// Teardown Phase ---
-	log.Println("Tearing down toolbox server...")
-	if err := cmd.Process.Kill(); err != nil {
-		log.Printf("Failed to kill toolbox server process: %v", err)
+	log.Println("Tearing down toolbox servers...")
+	if err := cmd1.Process.Kill(); err != nil {
+		log.Printf("Failed to kill toolbox server 1 process: %v", err)
 	}
-	_ = cmd.Wait() // Clean up the process resources
+	if err := cmd2.Process.Kill(); err != nil {
+		log.Printf("Failed to kill toolbox server 2 process: %v", err)
+	}
+	_ = cmd1.Wait() // Clean up the process resources
+	_ = cmd2.Wait()
 
 	os.Exit(exitCode)
 }
 
 func TestE2E_Basic(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test, like a function-scoped fixture
@@ -183,7 +197,7 @@ func TestE2E_Basic(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := tbadk.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err, "Failed to create ToolboxClient")
 				return client
 			}
@@ -215,7 +229,7 @@ func TestE2E_Basic(t *testing.T) {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
 
-				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := tbadk.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err)
 
 				// Trigger the handshake by loading a tool
@@ -332,9 +346,11 @@ func TestE2E_Basic(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestE2E_LoadErrors(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) tbadk.ToolboxClient {
@@ -342,7 +358,7 @@ func TestE2E_LoadErrors(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := tbadk.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err, "Failed to create ToolboxClient")
 				return client
 			}
@@ -375,9 +391,11 @@ func TestE2E_LoadErrors(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestE2E_BindParams(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) tbadk.ToolboxClient {
@@ -385,7 +403,7 @@ func TestE2E_BindParams(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := tbadk.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err)
 				return client
 			}
@@ -444,16 +462,18 @@ func TestE2E_BindParams(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestE2E_BindParamErrors(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			opts := []core.ClientOption{}
 			if !proto.isDefault {
 				opts = append(opts, core.WithProtocol(proto.protocol))
 			}
-			client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+			client, err := tbadk.NewToolboxClient(testBaseUrl, opts...)
 			require.NoError(t, err)
 			tool, err := client.LoadTool("get-n-rows", context.Background())
 			require.NoError(t, err)
@@ -474,9 +494,11 @@ func TestE2E_BindParamErrors(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestE2E_Auth(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) tbadk.ToolboxClient {
@@ -484,7 +506,7 @@ func TestE2E_Auth(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := tbadk.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err)
 				return client
 			}
@@ -605,9 +627,11 @@ func TestE2E_Auth(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestE2E_OptionalParams(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client
@@ -616,7 +640,7 @@ func TestE2E_OptionalParams(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := tbadk.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err, "Failed to create ToolboxClient")
 				return client
 			}
@@ -807,9 +831,11 @@ func TestE2E_OptionalParams(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestE2E_MapParams(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client
@@ -818,7 +844,7 @@ func TestE2E_MapParams(t *testing.T) {
 				if !proto.isDefault {
 					opts = append(opts, core.WithProtocol(proto.protocol))
 				}
-				client, err := tbadk.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := tbadk.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err, "Failed to create ToolboxClient")
 				return client
 			}
@@ -933,4 +959,5 @@ func TestE2E_MapParams(t *testing.T) {
 			})
 		})
 	}
+	})
 }

@@ -66,18 +66,22 @@ func TestMain(m *testing.M) {
 	defer os.Remove(toolsFilePath) // Ensure cleanup
 
 	// Download and start the toolbox server
-	cmd := setupAndStartToolboxServer(ctx, toolboxVersion, toolsFilePath)
+	cmd1, cmd2 := setupAndStartToolboxServers(ctx, toolboxVersion, toolsFilePath)
 
 	// Run Tests
 	log.Println("Setup complete. Running tests...")
 	exitCode := m.Run()
 
 	// Teardown Phase
-	log.Println("Tearing down toolbox server...")
-	if err := cmd.Process.Kill(); err != nil {
-		log.Printf("Failed to kill toolbox server process: %v", err)
+	log.Println("Tearing down toolbox servers...")
+	if err := cmd1.Process.Kill(); err != nil {
+		log.Printf("Failed to kill toolbox server 1 process: %v", err)
 	}
-	_ = cmd.Wait() // Clean up the process resources
+	if err := cmd2.Process.Kill(); err != nil {
+		log.Printf("Failed to kill toolbox server 2 process: %v", err)
+	}
+	_ = cmd1.Wait() // Clean up the process resources
+	_ = cmd2.Wait()
 
 	os.Exit(exitCode)
 }
@@ -134,8 +138,16 @@ func (c *CapturingTransport) CapturedHeaders() http.Header {
 	return c.lastHeaders
 }
 
+func runAgainstBothServers(t *testing.T, fn func(t *testing.T, testBaseUrl string)) {
+	for _, url := range []string{"http://localhost:5000", "http://localhost:5001"} {
+		t.Run(url, func(t *testing.T) {
+			fn(t, url)
+		})
+	}
+}
+
 // helper factory to create a client with a specific protocol
-func getNewMCPToolboxClient(t *testing.T, tc protocolTestCase) *core.ToolboxClient {
+func getNewMCPToolboxClient(t *testing.T, testBaseUrl string, tc protocolTestCase) *core.ToolboxClient {
 	opts := []core.ClientOption{}
 
 	// Only add WithProtocol if it's NOT the default test case
@@ -143,17 +155,18 @@ func getNewMCPToolboxClient(t *testing.T, tc protocolTestCase) *core.ToolboxClie
 		opts = append(opts, core.WithProtocol(tc.protocol))
 	}
 
-	client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+	client, err := core.NewToolboxClient(testBaseUrl, opts...)
 	require.NoError(t, err, "Failed to create MCP ToolboxClient for %s", tc.name)
 	return client
 }
 
 func TestMCP_Basic(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			// Helper to create a new client for each sub-test
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto)
+				return getNewMCPToolboxClient(t, testBaseUrl, proto)
 			}
 
 			// Helper to load the get-n-rows tool
@@ -182,7 +195,7 @@ func TestMCP_Basic(t *testing.T) {
 				}
 
 				// Inject Transport into Client
-				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+				client, err := core.NewToolboxClient(testBaseUrl, opts...)
 				require.NoError(t, err)
 
 				// Trigger a request
@@ -195,7 +208,7 @@ func TestMCP_Basic(t *testing.T) {
 				// Determine which protocol to check against
 				protocolToCheck := proto.protocol
 				if proto.isDefault {
-					protocolToCheck = core.MCPv20250618 // Default should match latest
+					protocolToCheck = core.MCPv20251125 // Default should match latest stable
 				}
 
 				switch protocolToCheck {
@@ -311,13 +324,15 @@ func TestMCP_Basic(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestMCP_LoadErrors(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto)
+				return getNewMCPToolboxClient(t, testBaseUrl, proto)
 			}
 
 			t.Run("test_load_non_existent_tool", func(t *testing.T) {
@@ -336,24 +351,26 @@ func TestMCP_LoadErrors(t *testing.T) {
 	}
 
 	t.Run("test_new_client_with_nil_option", func(t *testing.T) {
-		_, err := core.NewToolboxClient("http://localhost:5000", nil)
+		_, err := core.NewToolboxClient(testBaseUrl, nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "received a nil ClientOption")
 	})
 
 	t.Run("test_load_tool_with_nil_option", func(t *testing.T) {
-		client := getNewMCPToolboxClient(t, protocolsToTest[0])
+		client := getNewMCPToolboxClient(t, testBaseUrl, protocolsToTest[0])
 		_, err := client.LoadTool("get-n-rows", context.Background(), nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "received a nil ToolOption")
 	})
+	})
 }
 
 func TestMCP_BindParams(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto)
+				return getNewMCPToolboxClient(t, testBaseUrl, proto)
 			}
 			getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
 				tool, err := client.LoadTool("get-n-rows", context.Background())
@@ -402,12 +419,14 @@ func TestMCP_BindParams(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestMCP_BindParamErrors(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
-			client := getNewMCPToolboxClient(t, proto)
+			client := getNewMCPToolboxClient(t, testBaseUrl, proto)
 			tool, err := client.LoadTool("get-n-rows", context.Background())
 			require.NoError(t, err)
 
@@ -427,9 +446,11 @@ func TestMCP_BindParamErrors(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestMCP_Auth(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	// Helper to create a static token source from a string token
 	staticTokenSource := func(token string) oauth2.TokenSource {
 		return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
@@ -438,7 +459,7 @@ func TestMCP_Auth(t *testing.T) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto)
+				return getNewMCPToolboxClient(t, testBaseUrl, proto)
 			}
 
 			t.Run("test_run_tool_unauth_with_auth", func(t *testing.T) {
@@ -543,13 +564,15 @@ func TestMCP_Auth(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestMCP_OptionalParams(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto)
+				return getNewMCPToolboxClient(t, testBaseUrl, proto)
 			}
 			searchRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
 				tool, err := client.LoadTool("search-rows", context.Background())
@@ -721,13 +744,15 @@ func TestMCP_OptionalParams(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestMCP_MapParams(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto)
+				return getNewMCPToolboxClient(t, testBaseUrl, proto)
 			}
 			processDataTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
 				tool, err := client.LoadTool("process-data", context.Background())
@@ -821,13 +846,15 @@ func TestMCP_MapParams(t *testing.T) {
 			})
 		})
 	}
+	})
 }
 
 func TestMCP_ContextHandling(t *testing.T) {
+	runAgainstBothServers(t, func(t *testing.T, testBaseUrl string) {
 	for _, proto := range protocolsToTest {
 		t.Run(proto.name, func(t *testing.T) {
 			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto)
+				return getNewMCPToolboxClient(t, testBaseUrl, proto)
 			}
 
 			t.Run("test_load_tool_with_cancelled_context", func(t *testing.T) {
@@ -855,4 +882,6 @@ func TestMCP_ContextHandling(t *testing.T) {
 			})
 		})
 	}
+	})
 }
+
