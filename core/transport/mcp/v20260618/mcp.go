@@ -66,12 +66,12 @@ func New(baseURL string, client *http.Client, clientName string, clientVersion s
 
 func (t *McpTransport) getMeta() map[string]any {
 	return map[string]any{
-		"protocolVersion": t.protocolVersion,
-		"clientInfo": map[string]any{
+		"io.modelcontextprotocol/protocolVersion": t.protocolVersion,
+		"io.modelcontextprotocol/clientInfo": map[string]any{
 			"name":    t.clientName,
 			"version": t.clientVersion,
 		},
-		"clientCapabilities": map[string]any{},
+		"io.modelcontextprotocol/clientCapabilities": map[string]any{},
 	}
 }
 
@@ -201,11 +201,12 @@ func prepareHeaders(method string, params any, headers map[string]string) map[st
 			newHeaders["Mcp-Name"] = p.Name
 		}
 	case map[string]any:
-		if method == "tools/call" || method == "prompts/get" {
+		switch method {
+		case "tools/call", "prompts/get":
 			if name, ok := p["name"].(string); ok {
 				newHeaders["Mcp-Name"] = name
 			}
-		} else if method == "resources/read" {
+		case "resources/read":
 			if uri, ok := p["uri"].(string); ok {
 				newHeaders["Mcp-Name"] = uri
 			}
@@ -224,17 +225,6 @@ func (t *McpTransport) sendRequest(ctx context.Context, url string, method strin
 		Params:  params,
 	}
 	return t.doRPC(ctx, url, req, headers, dest)
-}
-
-// sendNotification sends a standard JSON-RPC notification (no response expected).
-func (t *McpTransport) sendNotification(ctx context.Context, method string, params any, headers map[string]string) error {
-	headers = prepareHeaders(method, params, headers)
-	req := jsonRPCNotification{
-		JSONRPC: "2.0",
-		Method:  method,
-		Params:  params,
-	}
-	return t.doRPC(ctx, t.BaseURL(), req, headers, nil)
 }
 
 // doRPC performs the low-level HTTP POST and handles JSON-RPC wrapping/unwrapping.
@@ -280,6 +270,22 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 				data, ok := rpcResp.Error.Data.(map[string]any)
 				if ok {
 					if supported, ok := data["supported"].([]any); ok && len(supported) > 0 {
+						ourVersions := []string{"DRAFT-2026-v1", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
+						var mutuallySupportedVersion string
+						for _, ourVer := range ourVersions {
+							for _, theirVer := range supported {
+								if theirStr, ok := theirVer.(string); ok && theirStr == ourVer {
+									mutuallySupportedVersion = ourVer
+									break
+								}
+							}
+							if mutuallySupportedVersion != "" {
+								break
+							}
+						}
+						if mutuallySupportedVersion != "" {
+							return &transport.ProtocolNegotiationError{FallbackVersion: mutuallySupportedVersion}
+						}
 						if fallbackStr, ok := supported[0].(string); ok {
 							return &transport.ProtocolNegotiationError{FallbackVersion: fallbackStr}
 						}
@@ -315,6 +321,22 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 			data, ok := rpcResp.Error.Data.(map[string]any)
 			if ok {
 				if supported, ok := data["supported"].([]any); ok && len(supported) > 0 {
+					ourVersions := []string{"DRAFT-2026-v1", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
+					var mutuallySupportedVersion string
+					for _, ourVer := range ourVersions {
+						for _, theirVer := range supported {
+							if theirStr, ok := theirVer.(string); ok && theirStr == ourVer {
+								mutuallySupportedVersion = ourVer
+								break
+							}
+						}
+						if mutuallySupportedVersion != "" {
+							break
+						}
+					}
+					if mutuallySupportedVersion != "" {
+						return &transport.ProtocolNegotiationError{FallbackVersion: mutuallySupportedVersion}
+					}
 					if fallbackStr, ok := supported[0].(string); ok {
 						return &transport.ProtocolNegotiationError{FallbackVersion: fallbackStr}
 					}

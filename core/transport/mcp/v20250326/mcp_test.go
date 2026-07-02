@@ -20,10 +20,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	"testing"
 
 	"maps"
@@ -339,7 +339,7 @@ func TestProtocolVersionMismatch(t *testing.T) {
 	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	err := client.EnsureInitialized(context.Background(), nil)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "MCP version mismatch")
+	assert.Contains(t, err.Error(), "Server requires protocol fallback to")
 }
 
 func TestInitialization_MissingCapabilities(t *testing.T) {

@@ -25,8 +25,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/googleapis/mcp-toolbox-sdk-go/core"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -66,7 +65,7 @@ func newMockMCPServer(t *testing.T) *mockMCPServer {
 			return
 		}
 
-		result, err := handler(req.Params.(json.RawMessage))
+		result, err := handler(asRawMessage(req.Params))
 		if err != nil {
 			// Mock protocol fallback error code
 			if err.Error() == "fallback" {
@@ -78,7 +77,24 @@ func newMockMCPServer(t *testing.T) *mockMCPServer {
 						Code:    -32004,
 						Message: "Protocol fallback",
 						Data: map[string]any{
-							"supported": []any{"2025-11-25"},
+							"supported": []any{"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"},
+						},
+					},
+				}
+				w.Header().Set("Content-Type", "application/json")
+				json.NewEncoder(w).Encode(errResp)
+				return
+			}
+			if err.Error() == "fallback_200" {
+				w.WriteHeader(http.StatusOK)
+				errResp := jsonRPCResponse{
+					JSONRPC: "2.0",
+					ID:      req.ID,
+					Error: &jsonRPCError{
+						Code:    -32004,
+						Message: "Protocol fallback",
+						Data: map[string]any{
+							"supported": []any{"2024-11-05", "2025-03-26", "2025-06-18", "2025-11-25"},
 						},
 					},
 				}
@@ -145,10 +161,10 @@ func TestListToolsAndHeaders(t *testing.T) {
 
 	// Verify _meta
 	var params map[string]any
-	json.Unmarshal(req.Body.Params.(json.RawMessage), &params)
+	json.Unmarshal(asRawMessage(req.Body.Params), &params)
 	meta, ok := params["_meta"].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, "DRAFT-2026-v1", meta["protocolVersion"])
+	assert.Equal(t, "DRAFT-2026-v1", meta["io.modelcontextprotocol/protocolVersion"])
 }
 
 func TestInvokeToolAndHeaders(t *testing.T) {
@@ -181,10 +197,10 @@ func TestInvokeToolAndHeaders(t *testing.T) {
 
 	// Verify _meta
 	var params map[string]any
-	json.Unmarshal(req.Body.Params.(json.RawMessage), &params)
+	json.Unmarshal(asRawMessage(req.Body.Params), &params)
 	meta, ok := params["_meta"].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, "DRAFT-2026-v1", meta["protocolVersion"])
+	assert.Equal(t, "DRAFT-2026-v1", meta["io.modelcontextprotocol/protocolVersion"])
 }
 
 func TestProtocolFallback(t *testing.T) {
@@ -201,7 +217,26 @@ func TestProtocolFallback(t *testing.T) {
 	_, err := client.ListTools(ctx, "", nil)
 	require.Error(t, err)
 
-	var negErr *core.ProtocolNegotiationError
+	var negErr *transport.ProtocolNegotiationError
+	require.True(t, errors.As(err, &negErr))
+	assert.Equal(t, "2025-11-25", negErr.FallbackVersion)
+}
+
+func TestFallback200(t *testing.T) {
+	server := newMockMCPServer(t)
+	defer server.Close()
+
+	server.handlers["tools/list"] = func(params json.RawMessage) (any, error) {
+		return nil, errors.New("fallback_200")
+	}
+
+	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
+	ctx := context.Background()
+
+	_, err := client.ListTools(ctx, "", nil)
+	require.Error(t, err)
+
+	var negErr *transport.ProtocolNegotiationError
 	require.True(t, errors.As(err, &negErr))
 	assert.Equal(t, "2025-11-25", negErr.FallbackVersion)
 }

@@ -21,13 +21,14 @@ import "testing"
 func TestGetSupportedMcpVersions(t *testing.T) {
 	versions := GetSupportedMcpVersions()
 
-	// Verify we get exactly 4 versions
-	if len(versions) != 4 {
-		t.Errorf("Expected 4 supported versions, got %d", len(versions))
+	// Verify we get exactly 5 versions
+	if len(versions) != 5 {
+		t.Errorf("Expected 5 supported versions, got %d", len(versions))
 	}
 
 	// Verify the content matches our constants
 	expected := []string{
+		string(MCPDraft),
 		string(MCPv20251125),
 		string(MCPv20250618),
 		string(MCPv20250326),
