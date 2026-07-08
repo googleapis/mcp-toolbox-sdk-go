@@ -27,16 +27,16 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core"
 	"github.com/googleapis/mcp-toolbox-sdk-go/tbadk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
-	"google.golang.org/adk/agent"
-	"google.golang.org/adk/memory"
-	"google.golang.org/adk/session"
-	"google.golang.org/adk/tool"
+	"google.golang.org/adk/v2/agent"
+	"google.golang.org/adk/v2/memory"
+	"google.golang.org/adk/v2/session"
 	"google.golang.org/genai"
 )
 
@@ -57,8 +57,14 @@ func (f *failingTokenSource) Token() (*oauth2.Token, error) {
 
 // Implement all methods for agent.ReadonlyContext for a mock context
 type mockAgentContext struct {
-	context.Context
+	agent.Context
+	ctx context.Context
 }
+
+func (m *mockAgentContext) Deadline() (deadline time.Time, ok bool) { return m.ctx.Deadline() }
+func (m *mockAgentContext) Done() <-chan struct{}                   { return m.ctx.Done() }
+func (m *mockAgentContext) Err() error                              { return m.ctx.Err() }
+func (m *mockAgentContext) Value(key any) any                       { return m.ctx.Value(key) }
 
 func (m *mockAgentContext) UserContent() *genai.Content          { return nil }
 func (m *mockAgentContext) InvocationID() string                 { return "test-invocation-id" }
@@ -72,7 +78,7 @@ func (m *mockAgentContext) Branch() string                       { return "test-
 // Implement all methods for Tool Context
 
 type mockToolContext struct {
-	mockAgentContext
+	*mockAgentContext
 	MockFuncCallID string
 	MockAgtName    string
 }
@@ -86,7 +92,7 @@ func (m *mockToolContext) SearchMemory(ctx context.Context, query string) (*memo
 	return nil, nil
 }
 
-var _ tool.Context = (*mockToolContext)(nil)
+var _ agent.Context = (*mockToolContext)(nil)
 
 type protocolTestCase struct {
 	name      string
@@ -187,8 +193,8 @@ func TestE2E_Basic(t *testing.T) {
 				require.NoError(t, err, "Failed to create ToolboxClient")
 				return client
 			}
-			agentCtx := mockAgentContext{
-				Context: context.Background(),
+			agentCtx := &mockAgentContext{
+				ctx: context.Background(),
 			}
 
 			testToolCtx := &mockToolContext{
@@ -394,8 +400,8 @@ func TestE2E_BindParams(t *testing.T) {
 				require.NoError(t, err)
 				return tool
 			}
-			agentCtx := mockAgentContext{
-				Context: context.Background(),
+			agentCtx := &mockAgentContext{
+				ctx: context.Background(),
 			}
 
 			testToolCtx := &mockToolContext{
@@ -494,8 +500,8 @@ func TestE2E_Auth(t *testing.T) {
 				return oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 			}
 
-			agentCtx := mockAgentContext{
-				Context: context.Background(),
+			agentCtx := &mockAgentContext{
+				ctx: context.Background(),
 			}
 
 			testToolCtx := &mockToolContext{
@@ -628,8 +634,8 @@ func TestE2E_OptionalParams(t *testing.T) {
 				return tool
 			}
 
-			agentCtx := mockAgentContext{
-				Context: context.Background(),
+			agentCtx := &mockAgentContext{
+				ctx: context.Background(),
 			}
 
 			testToolCtx := &mockToolContext{
@@ -830,8 +836,8 @@ func TestE2E_MapParams(t *testing.T) {
 				return tool
 			}
 
-			agentCtx := mockAgentContext{
-				Context: context.Background(),
+			agentCtx := &mockAgentContext{
+				ctx: context.Background(),
 			}
 
 			testToolCtx := &mockToolContext{
