@@ -6,6 +6,7 @@
 ### ⚠ BREAKING CHANGES
 
 * **deps:** Update ADK to v2 ([#289](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/289)) ([9e71e9f](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/9e71e9f19c7a4757fe7e2f283f45c7b5811c656b))
+Please use the updated Sample as a guide to use ADK v2 with TBADK v1
 
 
 ## [0.8.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.7.0...tbadk/v0.8.0) (2026-04-01)
