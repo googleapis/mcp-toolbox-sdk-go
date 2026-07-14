@@ -26,6 +26,9 @@ title = "MCP Toolbox Go API"
     version = "dev"
     url = "/tbadk/dev/"
   [[params.versions.tbadk]]
+    version = "v1.0.0"
+    url = "/tbadk/v1.0.0/"
+  [[params.versions.tbadk]]
     version = "v0.8.0"
     url = "/tbadk/v0.8.0/"
   [[params.versions.tbadk]]
