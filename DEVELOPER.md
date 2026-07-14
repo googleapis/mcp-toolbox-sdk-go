@@ -91,9 +91,12 @@ Releases are managed by **Release Please**.
 ## API Reference Documentation
 
 The API reference is published to [go.mcp-toolbox.dev](https://go.mcp-toolbox.dev).
+
 It is generated with [`gomarkdoc`](https://github.com/princjef/gomarkdoc) and
 rendered by [Hugo](https://gohugo.io/) + [Docsy](https://www.docsy.dev/) from the
-`docs-site/` directory. Docs are built **per package, per version** and served at
+`docs-site/` directory.
+
+Docs are built **per package, per version** and served at
 `/<package>/<version>/` (e.g. `/core/v1.0.0/`), with a `/<package>/latest/`
 redirect to the newest release.
 
@@ -122,9 +125,9 @@ The package must already live as its own Go module in the repo root (e.g.
 
 ### Workflows
 
-The `api-docs.yml` workflow deploys to the `gh-pages` branch. It runs only on
-the upstream repository and uses the `api-docs-deploy` concurrency group, so it
-never races another deploy.
+The [`api-docs.yml`](./.github/workflows/api-docs.yml) workflow deploys to the
+`gh-pages` branch. It runs only on the upstream repository and uses the
+`api-docs-deploy` concurrency group, so it never races another deploy.
 
 The automatic flow is as follows:
 *   Push to `main` (or manual dispatch) → builds all three packages as `dev`.
@@ -141,41 +144,42 @@ that version.
 
 ### Backfilling old docs
 
-Use the **`api-docs-backfill.yml`** (API Reference Backfill) workflow to publish docs
-for a version whose pages are missing — typically releases that predate the docs
-tooling, or a deployment that failed. It builds **one historical version per run**.
+Use the [`api-docs-backfill.yml`](./.github/workflows/api-docs-backfill.yml)
+(API Reference Backfill) workflow to publish docs for a version whose pages are
+missing — typically a tag whose on-push deploy failed or never ran. It builds
+**one version per run**.
 
-Unlike `api-docs.yml`, this workflow does **not** deploy to production directly. Each
-run opens a **pull request into the `gh-pages` branch**, so the docs are reviewed
-before they go live. The page is published only when you merge that PR.
+The run builds **entirely from the release tag** — a release carries its own
+source plus the docs tooling (`docs-site/`, `scripts/`), so nothing is overlaid
+from `main` and `gomarkdoc` documents exactly that version's API. The build is
+overlaid onto a clone of the live `gh-pages` tree — existing versions, `CNAME`,
+and `.nojekyll` are preserved — and opened as a **pull request into `gh-pages`**
+from branch `backfill/<pkg>-<ver>`, so the docs are reviewed before they go live.
+The page is published only when you merge that PR.
 
-How a run works:
-
-1.  It checks out `main` for the current docs tooling (layouts, scripts, version
-    picker), then overlays the requested version's package source from its release
-    tag, so `gomarkdoc` documents that version's API.
-2.  It builds `/<package>/<version>/` (plus the package's `releases`/`latest` files).
-3.  It overlays the build onto a clone of the live `gh-pages` tree — existing
-    versions, `CNAME`, and `.nojekyll` are preserved — and opens a PR from branch
-    `backfill/<pkg>-<ver>` with `gh-pages` as the base.
+> Tags cut before the docs tooling landed (no `docs-site/` or
+> `scripts/generate-api-docs.sh`) will fail, since the run has nothing to build
+> from.
 
 Steps to backfill:
 
-1.  Make sure the version is listed in `docs-site/hugo.toml` (see
-    [Adding a version to the picker](#adding-a-version-to-the-picker)), so the
-    dropdown links to it.
-2.  Trigger the workflow from the Actions tab, or with:
+1.  Trigger the workflow from the Actions tab, or with:
 
     ```bash
     gh workflow run api-docs-backfill.yml -f package=core -f version=v1.0.0
     ```
 
-    To catch up several versions, dispatch it once per `package`/`version`. The
-    concurrency group is scoped per version, so the runs are independent and none
-    are cancelled — each opens its own PR.
-3.  Review the resulting `backfill/<pkg>-<ver>` PR (the diff should be just that
-    version's directory) and **merge it into `gh-pages`** to publish. Re-running the
-    workflow for the same version updates the existing PR's branch.
+    The `package`/`version` must match an existing release tag
+    (`<package>/<version>`, e.g. `core/v1.0.0`). To catch up several versions,
+    dispatch it once per `package`/`version`; the concurrency group is scoped per
+    version, so the runs are independent and none are cancelled.
+2.  Review the resulting `backfill/<pkg>-<ver>` PR — the diff should be just that
+    version's directory ([example](https://github.com/googleapis/mcp-toolbox-sdk-go/pull/250)) —
+    and **merge it into `gh-pages`** to publish. Re-running the workflow for the
+    same version updates the existing PR's branch.
+3.  **Add the version to the picker** if it isn't already listed. Add a
+    `[[params.versions.<pkg>]]` block on `main` (see
+    [Adding a version to the picker](#adding-a-version-to-the-picker)).
 
 #### Previewing a backfill PR
 
@@ -193,8 +197,10 @@ python3 -m http.server 8099 --directory /tmp/preview-docs
 ```
 
 The version dropdown fetches `/<pkg>/releases.releases` at runtime, so links to
-versions not present in this branch (other backfills) will 404 locally — that's
-expected. When done, clean up:
+versions not present in this branch (other backfills) will 404 locally. That's
+expected behaviour.
+
+When done, clean up:
 
 ```bash
 git worktree remove /tmp/preview-docs
