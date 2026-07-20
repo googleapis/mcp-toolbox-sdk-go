@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v1.0.0...tbadk/v1.0.1) (2026-07-20)
+
+
+### Miscellaneous Chores
+
+* **deps:** update mcp toolbox server for integration tests to v1.7.0 ([#302](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/302)) ([c8b6f3e](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/c8b6f3e601a7956edf881144be178db3421e2286))
+
 ## [1.0.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.8.0...tbadk/v1.0.0) (2026-07-09)
 
 
