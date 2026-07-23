@@ -98,3 +98,28 @@ func TestInvokeToolAndHeaders(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "hello", res)
 }
+
+func TestPrepareHeadersMcpName(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "mcp", r.Header.Get("X-Goog-Toolbox-Target-Format"))
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"jsonrpc": "2.0",
+			"id": "1",
+			"result": {
+				"content": [
+					{"type": "text", "text": "ok"}
+				]
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	tr, err := v20260618.New(ts.URL, ts.Client(), "test-client", "1.0.0")
+	require.NoError(t, err)
+
+	res, err := tr.InvokeTool(context.Background(), "my_tool", nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, "ok", res)
+}

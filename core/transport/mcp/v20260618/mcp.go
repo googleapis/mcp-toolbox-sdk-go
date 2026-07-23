@@ -214,6 +214,9 @@ func (t *McpTransport) sendRequest(ctx context.Context, reqURL string, bodyPaylo
 
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("MCP-Protocol-Version", t.protocolVersion)
+	if mcpName != "" {
+		httpReq.Header.Set("X-Goog-Toolbox-Target-Format", "mcp")
+	}
 	for k, v := range headers {
 		httpReq.Header.Set(k, v)
 	}
