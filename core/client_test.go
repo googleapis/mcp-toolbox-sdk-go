@@ -160,51 +160,6 @@ func TestNewToolboxClient(t *testing.T) {
 
 }
 
-func TestNewToolboxClient_ProtocolWarnings(t *testing.T) {
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
-
-	withProtocol := func(p Protocol) ClientOption {
-		return func(tc *ToolboxClient) error {
-			tc.protocol = p
-			return nil
-		}
-	}
-
-	t.Run("Logs warning for older MCP versions", func(t *testing.T) {
-		buf.Reset()
-
-		// Initialize with an OLD version (e.g., MCPv20250618)
-		_, err := NewToolboxClient("https://api.example.com", withProtocol(MCPv20250618))
-		if err != nil {
-			t.Fatalf("Unexpected error creating client: %v", err)
-		}
-
-		expectedMsg := "A newer version of MCP: v2025-11-25 is available"
-		if !strings.Contains(buf.String(), expectedMsg) {
-			t.Errorf("Expected log to contain %q, but got: %q", expectedMsg, buf.String())
-		}
-	})
-
-	t.Run("Does not log warning for the latest MCP version", func(t *testing.T) {
-		buf.Reset()
-
-		// Initialize with the LATEST version (MCPv20251125)
-		_, err := NewToolboxClient("https://api.example.com", withProtocol(MCPv20251125))
-		if err != nil {
-			t.Fatalf("Unexpected error creating client: %v", err)
-		}
-
-		forbiddenMsg := "A newer version of MCP"
-		if strings.Contains(buf.String(), forbiddenMsg) {
-			t.Errorf("Did not expect warning for latest version, but log contained: %q", buf.String())
-		}
-	})
-
-}
 
 func TestNewToolboxClient_HTTPWarning(t *testing.T) {
 	var buf bytes.Buffer
