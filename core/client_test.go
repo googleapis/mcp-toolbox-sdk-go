@@ -975,6 +975,157 @@ func TestExecuteWithFallback_EdgeCases(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, MCPv20251125, client.GetProtocol())
 	})
+
+	t.Run("Artificial Array Test", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32600,"message":"invalid protocol version"}}`))
+				return
+			}
+			body, _ := io.ReadAll(r.Body)
+			var req mcpRPCRequest
+			_ = json.Unmarshal(body, &req)
+
+			var result any
+			switch req.Method {
+			case "initialize":
+				paramsMap, _ := req.Params.(map[string]any)
+				reqVersion, _ := paramsMap["protocolVersion"].(string)
+				if reqVersion == "2025-11-25" {
+					result = map[string]any{
+						"protocolVersion": "2025-03-26",
+						"capabilities":    map[string]any{"tools": map[string]any{}},
+						"serverInfo":      map[string]any{"name": "mock-server", "version": "1.0.0"},
+					}
+				} else {
+					result = map[string]any{
+						"protocolVersion": "2024-11-05",
+						"capabilities":    map[string]any{"tools": map[string]any{}},
+						"serverInfo":      map[string]any{"name": "mock-server", "version": "1.0.0"},
+					}
+				}
+			case "notifications/initialized":
+				w.WriteHeader(http.StatusOK)
+				return
+			case "tools/list":
+				result = map[string]any{
+					"tools": []mcpTool{{Name: "art_tool", Description: "tool"}},
+				}
+			}
+			resBytes, _ := json.Marshal(result)
+			resp := mcpRPCResponse{
+				JSONRPC: "2.0",
+				ID:      req.ID,
+				Result:  resBytes,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer ts.Close()
+
+		client, err := NewToolboxClient(ts.URL,
+			WithHTTPClient(ts.Client()),
+			WithSupportedProtocols([]Protocol{MCPDraft, MCPv20241105}),
+		)
+		require.NoError(t, err)
+
+		tool, err := client.LoadTool("art_tool", context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, "art_tool", tool.Name())
+		assert.Equal(t, MCPv20241105, client.GetProtocol())
+	})
+
+	t.Run("Strict Constraint Test", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32600,"message":"invalid protocol version"}}`))
+				return
+			}
+			body, _ := io.ReadAll(r.Body)
+			var req mcpRPCRequest
+			_ = json.Unmarshal(body, &req)
+
+			var result any
+			if req.Method == "initialize" {
+				result = map[string]any{
+					"protocolVersion": "2024-11-05",
+					"capabilities":    map[string]any{"tools": map[string]any{}},
+					"serverInfo":      map[string]any{"name": "mock-server", "version": "1.0.0"},
+				}
+			}
+			resBytes, _ := json.Marshal(result)
+			resp := mcpRPCResponse{
+				JSONRPC: "2.0",
+				ID:      req.ID,
+				Result:  resBytes,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer ts.Close()
+
+		client, err := NewToolboxClient(ts.URL,
+			WithHTTPClient(ts.Client()),
+			WithSupportedProtocols([]Protocol{MCPDraft, MCPv20251125}),
+		)
+		require.NoError(t, err)
+
+		_, err = client.LoadTool("strict_tool", context.Background())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no mutually supported protocol version")
+	})
+
+	t.Run("Modern Smart Fallback Test", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported","data":{"supported":["2024-11-05"]}}}`))
+				return
+			}
+			body, _ := io.ReadAll(r.Body)
+			var req mcpRPCRequest
+			_ = json.Unmarshal(body, &req)
+
+			var result any
+			switch req.Method {
+			case "initialize":
+				result = map[string]any{
+					"protocolVersion": "2024-11-05",
+					"capabilities":    map[string]any{"tools": map[string]any{}},
+					"serverInfo":      map[string]any{"name": "mock-server", "version": "1.0.0"},
+				}
+			case "notifications/initialized":
+				w.WriteHeader(http.StatusOK)
+				return
+			case "tools/list":
+				result = map[string]any{
+					"tools": []mcpTool{{Name: "modern_tool", Description: "tool"}},
+				}
+			}
+			resBytes, _ := json.Marshal(result)
+			resp := mcpRPCResponse{
+				JSONRPC: "2.0",
+				ID:      req.ID,
+				Result:  resBytes,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer ts.Close()
+
+		client, err := NewToolboxClient(ts.URL,
+			WithHTTPClient(ts.Client()),
+			WithSupportedProtocols([]Protocol{MCPDraft, MCPv20241105}),
+		)
+		require.NoError(t, err)
+
+		tool, err := client.LoadTool("modern_tool", context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, "modern_tool", tool.Name())
+		assert.Equal(t, MCPv20241105, client.GetProtocol())
+	})
 }
 
 func TestExecuteWithFallback_NoInfiniteLoop(t *testing.T) {
