@@ -70,11 +70,22 @@ type jsonRPCError struct {
 	Data    any    `json:"data,omitempty"`
 }
 
+type MCPResultMeta struct {
+	ServerInfo *Implementation `json:"io.modelcontextprotocol/serverInfo,omitempty"`
+}
+
+type MCPResult struct {
+	ResultType string         `json:"resultType,omitempty"`
+	Meta       *MCPResultMeta `json:"_meta,omitempty"`
+}
+
 type ListToolsResult struct {
+	MCPResult
 	Tools []map[string]any `json:"tools"`
 }
 
 type CallToolResult struct {
+	MCPResult
 	Content []mcp.ToolContent `json:"content"`
 	IsError bool              `json:"isError,omitempty"`
 }
