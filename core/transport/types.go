@@ -55,7 +55,13 @@ func (p *ParameterSchema) ValidateType(value any) error {
 		switch value.(type) {
 		case float32, float64:
 		default:
-			return fmt.Errorf("parameter '%s' expects an float, but got %T", p.Name, value)
+			return fmt.Errorf("parameter '%s' expects a float, but got %T", p.Name, value)
+		}
+	case "number":
+		switch value.(type) {
+		case float32, float64, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		default:
+			return fmt.Errorf("parameter '%s' expects a number, but got %T", p.Name, value)
 		}
 	case "boolean":
 		if _, ok := value.(bool); !ok {
@@ -157,7 +163,7 @@ func (p *ParameterSchema) ValidateDefinition() error {
 			)
 		}
 
-	case "string", "integer", "float", "boolean":
+	case "string", "integer", "float", "number", "boolean":
 		// No type-specific rules for these.
 		break
 
@@ -179,4 +185,13 @@ type ToolSchema struct {
 type ManifestSchema struct {
 	ServerVersion string                `json:"serverVersion"`
 	Tools         map[string]ToolSchema `json:"tools"`
+}
+
+// ProtocolNegotiationError is returned when a server demands a protocol fallback.
+type ProtocolNegotiationError struct {
+	FallbackVersion string
+}
+
+func (e *ProtocolNegotiationError) Error() string {
+	return fmt.Sprintf("server requested protocol fallback to version %s", e.FallbackVersion)
 }

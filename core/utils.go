@@ -163,7 +163,7 @@ func resolveClientHeaders(clientHeaderSources map[string]oauth2.TokenSource) (ma
 func schemaToMap(p *ParameterSchema) (map[string]any, error) {
 	var schema = make(map[string]any)
 
-	if p.Type == "float" {
+	if p.Type == "float" || p.Type == "number" {
 		// Since there is no float type in JSON Schema Standard
 		schema["type"] = "number"
 	} else {
