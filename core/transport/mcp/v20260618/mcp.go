@@ -235,7 +235,21 @@ func (t *McpTransport) sendRequest(ctx context.Context, reqURL string, bodyPaylo
 	if resp.StatusCode != http.StatusOK {
 		var rpcResp jsonRPCResponse
 		if err := json.Unmarshal(body, &rpcResp); err == nil && rpcResp.Error != nil {
+			if rpcResp.Error.Code == -32004 || rpcResp.Error.Code == -32022 {
+				data, ok := rpcResp.Error.Data.(map[string]any)
+				if ok {
+					if supported, ok := data["supported"].([]any); ok && len(supported) > 0 {
+						if fallbackStr, ok := supported[0].(string); ok {
+							return &transport.ProtocolNegotiationError{FallbackVersion: fallbackStr}
+						}
+					}
+				}
+				return &transport.ProtocolNegotiationError{FallbackVersion: "2025-11-25"}
+			}
 			return fmt.Errorf("MCP request failed with code %d: %s", rpcResp.Error.Code, rpcResp.Error.Message)
+		}
+		if strings.Contains(string(body), "invalid protocol version") {
+			return &transport.ProtocolNegotiationError{FallbackVersion: "2025-11-25"}
 		}
 		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}

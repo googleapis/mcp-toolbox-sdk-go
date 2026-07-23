@@ -959,3 +959,66 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 		}
 	})
 }
+
+func TestExecuteWithFallback_EdgeCases(t *testing.T) {
+	t.Run("Infinite Loop Prevention", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported protocol version","data":{"supported":["DRAFT-2026-v1"]}}}`))
+		}))
+		defer ts.Close()
+
+		client, err := NewToolboxClient(ts.URL, WithHTTPClient(ts.Client()))
+		require.NoError(t, err)
+
+		_, err = client.LoadTool("test-tool", context.Background())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "Unsupported protocol version")
+	})
+
+	t.Run("MultiStep Cascading Fallback", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported","data":{"supported":["2025-06-18"]}}}`))
+				return
+			}
+			body, _ := io.ReadAll(r.Body)
+			var req mcpRPCRequest
+			_ = json.Unmarshal(body, &req)
+
+			var result any
+			switch req.Method {
+			case "initialize":
+				result = map[string]any{
+					"protocolVersion": "2025-06-18",
+					"capabilities":    map[string]any{"tools": map[string]any{}},
+					"serverInfo":      map[string]any{"name": "mock-server", "version": "1.0.0"},
+				}
+			case "notifications/initialized":
+				w.WriteHeader(http.StatusOK)
+				return
+			case "tools/list":
+				result = map[string]any{
+					"tools": []mcpTool{{Name: "cascaded_tool", Description: "tool"}},
+				}
+			}
+			resBytes, _ := json.Marshal(result)
+			resp := mcpRPCResponse{
+				JSONRPC: "2.0",
+				ID:      req.ID,
+				Result:  resBytes,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer ts.Close()
+
+		client, err := NewToolboxClient(ts.URL, WithHTTPClient(ts.Client()))
+		require.NoError(t, err)
+
+		tool, err := client.LoadTool("cascaded_tool", context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, "cascaded_tool", tool.Name())
+	})
+}

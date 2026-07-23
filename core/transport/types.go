@@ -180,3 +180,12 @@ type ManifestSchema struct {
 	ServerVersion string                `json:"serverVersion"`
 	Tools         map[string]ToolSchema `json:"tools"`
 }
+
+// ProtocolNegotiationError is returned when a server demands a protocol fallback.
+type ProtocolNegotiationError struct {
+	FallbackVersion string
+}
+
+func (e *ProtocolNegotiationError) Error() string {
+	return fmt.Sprintf("server requested protocol fallback to version %s", e.FallbackVersion)
+}

@@ -16,6 +16,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -207,6 +208,8 @@ func (tc *ToolboxClient) newToolboxTool(
 		requiredAuthnParams: remainingAuthnParams,
 		requiredAuthzTokens: remainingAuthzTokens,
 		clientHeaderSources: tc.clientHeaderSources,
+		clientName:          tc.clientName,
+		clientVersion:       tc.clientVersion,
 	}
 
 	return tt, usedAuthKeys, usedBoundKeys, nil
@@ -252,11 +255,15 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 	}
 
 	// Fetch the manifest for the specified tool.
-	manifest, err := tc.transport.GetTool(ctx, name, resolvedHeaders)
+	var manifest *transport.ManifestSchema
+	res, err := tc.executeWithFallback(func(tr transport.Transport) (any, error) {
+		return tr.GetTool(ctx, name, resolvedHeaders)
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tool manifest for '%s': %w", name, err)
 	}
+	manifest = res.(*transport.ManifestSchema)
 	if manifest.Tools == nil {
 		return nil, fmt.Errorf("tool '%s' not found (manifest contains no tools)", name)
 	}
@@ -347,10 +354,14 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 	}
 
 	// Fetch Manifest via Transport
-	manifest, err := tc.transport.ListTools(ctx, name, resolvedHeaders)
+	var manifest *transport.ManifestSchema
+	res, err := tc.executeWithFallback(func(tr transport.Transport) (any, error) {
+		return tr.ListTools(ctx, name, resolvedHeaders)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load toolset manifest for '%s': %w", name, err)
 	}
+	manifest = res.(*transport.ManifestSchema)
 	if manifest.Tools == nil {
 		return nil, fmt.Errorf("toolset '%s' not found (manifest contains no tools)", name)
 	}
@@ -435,4 +446,81 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 	}
 
 	return tools, nil
+}
+
+func (tc *ToolboxClient) executeWithFallback(fn func(tr transport.Transport) (any, error)) (any, error) {
+	if tc.protocolSet {
+		return fn(tc.transport)
+	}
+
+	result, err := fn(tc.transport)
+	if err == nil {
+		return result, nil
+	}
+
+	var negErr *transport.ProtocolNegotiationError
+	if errors.As(err, &negErr) {
+		fallbackVersion := Protocol(negErr.FallbackVersion)
+		if fallbackVersion == tc.protocol {
+			return nil, err
+		}
+
+		supportedVersions := GetSupportedMcpVersions()
+		var candidateVersions []Protocol
+		targetFound := false
+		for _, v := range supportedVersions {
+			if Protocol(v) == fallbackVersion {
+				targetFound = true
+			}
+			if targetFound {
+				candidateVersions = append(candidateVersions, Protocol(v))
+			}
+		}
+		if len(candidateVersions) == 0 {
+			candidateVersions = []Protocol{fallbackVersion}
+		}
+
+		for _, candVer := range candidateVersions {
+			if candVer == tc.protocol {
+				continue
+			}
+
+			var fallbackTransport transport.Transport
+			var createErr error
+			switch candVer {
+			case MCPv20260618:
+				fallbackTransport, createErr = mcp20260618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			case MCPv20251125:
+				fallbackTransport, createErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			case MCPv20250618:
+				fallbackTransport, createErr = mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			case MCPv20250326:
+				fallbackTransport, createErr = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			case MCPv20241105:
+				fallbackTransport, createErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			default:
+				continue
+			}
+
+			if createErr != nil {
+				continue
+			}
+
+			res, retryErr := fn(fallbackTransport)
+			if retryErr == nil {
+				tc.protocol = candVer
+				tc.transport = fallbackTransport
+				return res, nil
+			}
+
+			var innerNegErr *transport.ProtocolNegotiationError
+			if errors.As(retryErr, &innerNegErr) {
+				continue
+			} else {
+				return nil, retryErr
+			}
+		}
+	}
+
+	return nil, err
 }
