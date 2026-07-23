@@ -39,6 +39,9 @@ type ToolboxTool struct {
 	requiredAuthnParams map[string][]string
 	requiredAuthzTokens []string
 	clientHeaderSources map[string]oauth2.TokenSource
+	clientName          string
+	clientVersion       string
+	supportedProtocols  []string
 }
 
 // Name returns the tool's name.
@@ -206,6 +209,13 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 		requiredAuthnParams: make(map[string][]string, len(tt.requiredAuthnParams)),
 		requiredAuthzTokens: make([]string, len(tt.requiredAuthzTokens)),
 		clientHeaderSources: make(map[string]oauth2.TokenSource, len(tt.clientHeaderSources)),
+		clientName:          tt.clientName,
+		clientVersion:       tt.clientVersion,
+	}
+
+	if tt.supportedProtocols != nil {
+		newTt.supportedProtocols = make([]string, len(tt.supportedProtocols))
+		copy(newTt.supportedProtocols, tt.supportedProtocols)
 	}
 
 	if tt.boundParamSchemas != nil {

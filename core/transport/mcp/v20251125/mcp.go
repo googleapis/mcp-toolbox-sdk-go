@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
@@ -182,7 +183,7 @@ func (t *McpTransport) initializeSession(ctx context.Context, headers map[string
 
 	// Protocol Version Check
 	if result.ProtocolVersion != t.protocolVersion {
-		return fmt.Errorf("MCP version mismatch: client (%s) != server (%s)", t.protocolVersion, result.ProtocolVersion)
+		return &transport.ProtocolNegotiationError{FallbackVersion: result.ProtocolVersion}
 	}
 
 	// Capabilities Check
@@ -248,13 +249,42 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK {
-		// Continue to body parsing
-	} else if (resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusNoContent) && dest == nil {
+	checkRPCError := func(rpcErr *jsonRPCError) error {
+		if rpcErr == nil {
+			return nil
+		}
+		if rpcErr.Code == -32004 || rpcErr.Code == -32022 {
+			if data, ok := rpcErr.Data.(map[string]any); ok {
+				if supported, ok := data["supported"].([]any); ok && len(supported) > 0 {
+					if fallbackStr, ok := supported[0].(string); ok {
+						return &transport.ProtocolNegotiationError{FallbackVersion: fallbackStr}
+					}
+				}
+			}
+			return &transport.ProtocolNegotiationError{FallbackVersion: "2025-06-18"}
+		}
+		errMsgLower := strings.ToLower(rpcErr.Message)
+		if strings.Contains(errMsgLower, "invalid protocol version") || strings.Contains(errMsgLower, "unsupported protocol version") {
+			return &transport.ProtocolNegotiationError{FallbackVersion: "2025-06-18"}
+		}
+		return fmt.Errorf("MCP request failed with code %d: %s", rpcErr.Code, rpcErr.Message)
+	}
+
+	if (resp.StatusCode == http.StatusAccepted || resp.StatusCode == http.StatusNoContent) && dest == nil {
 		return nil // Valid notification success
-	} else {
-		// Any other code, OR a 202/204 when we expected a result, is a failure.
+	}
+	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		var rpcResp jsonRPCResponse
+		if err := json.Unmarshal(body, &rpcResp); err == nil && rpcResp.Error != nil {
+			if err := checkRPCError(rpcResp.Error); err != nil {
+				return err
+			}
+		}
+		bodyStrLower := strings.ToLower(string(body))
+		if strings.Contains(bodyStrLower, "invalid protocol version") || strings.Contains(bodyStrLower, "unsupported protocol version") {
+			return &transport.ProtocolNegotiationError{FallbackVersion: "2025-06-18"}
+		}
 		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -275,7 +305,9 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 
 	// Check RPC Error
 	if rpcResp.Error != nil {
-		return fmt.Errorf("MCP request failed with code %d: %s", rpcResp.Error.Code, rpcResp.Error.Message)
+		if err := checkRPCError(rpcResp.Error); err != nil {
+			return err
+		}
 	}
 
 	// Decode Result into specific struct
