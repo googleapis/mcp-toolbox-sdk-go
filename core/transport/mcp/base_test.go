@@ -53,6 +53,26 @@ func TestNewBaseTransport(t *testing.T) {
 			baseURL:  "http://example.com/api/v1",
 			expected: "http://example.com/api/v1/mcp/",
 		},
+		{
+			name:     "Preserves Query Parameters",
+			baseURL:  "http://example.com?num_rows=2",
+			expected: "http://example.com/mcp/?num_rows=2",
+		},
+		{
+			name:     "Multiple Query Parameters",
+			baseURL:  "http://api.com?proj=xyz&env=prod",
+			expected: "http://api.com/mcp/?proj=xyz&env=prod",
+		},
+		{
+			name:     "Escaped Query Parameters",
+			baseURL:  "http://api.com/mcp?q=a%20b&flag=true",
+			expected: "http://api.com/mcp/?q=a%20b&flag=true",
+		},
+		{
+			name:     "Repeated Query Parameters",
+			baseURL:  "http://api.com?tag=1&tag=2",
+			expected: "http://api.com/mcp/?tag=1&tag=2",
+		},
 	}
 
 	for _, tc := range tests {
@@ -63,6 +83,52 @@ func TestNewBaseTransport(t *testing.T) {
 			}
 			if tr.HTTPClient == nil {
 				t.Error("Expected HTTPClient to be initialized, got nil")
+			}
+		})
+	}
+}
+
+func TestAppendToolsetPath(t *testing.T) {
+	tests := []struct {
+		name        string
+		baseURL     string
+		toolsetName string
+		expected    string
+	}{
+		{
+			name:        "Empty toolset name",
+			baseURL:     "http://example.com/mcp/",
+			toolsetName: "",
+			expected:    "http://example.com/mcp/",
+		},
+		{
+			name:        "Append toolset name without query",
+			baseURL:     "http://example.com/mcp/",
+			toolsetName: "my_toolset",
+			expected:    "http://example.com/mcp/my_toolset",
+		},
+		{
+			name:        "Append toolset name with query parameters preserved",
+			baseURL:     "http://example.com/mcp/?num_rows=2&env=test",
+			toolsetName: "my_toolset",
+			expected:    "http://example.com/mcp/my_toolset?num_rows=2&env=test",
+		},
+		{
+			name:        "Append toolset name with spaces and special characters",
+			baseURL:     "http://example.com/mcp/?num_rows=2",
+			toolsetName: "my toolset",
+			expected:    "http://example.com/mcp/my%20toolset?num_rows=2",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := AppendToolsetPath(tc.baseURL, tc.toolsetName)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if res != tc.expected {
+				t.Errorf("Expected %s, got %s", tc.expected, res)
 			}
 		})
 	}
@@ -202,7 +268,8 @@ func TestConvertToolDefinition(t *testing.T) {
 
 	foundSimple := false
 	for _, p := range schema.Parameters {
-		if p.Name == "simple_str" {
+		switch p.Name {
+		case "simple_str":
 			foundSimple = true
 			if !p.Required {
 				t.Error("Expected simple_str to be required")
@@ -210,26 +277,26 @@ func TestConvertToolDefinition(t *testing.T) {
 			if len(p.AuthSources) != 1 || p.AuthSources[0] != "header:x-api-key" {
 				t.Errorf("Expected AuthSources=['header:x-api-key'], got %v", p.AuthSources)
 			}
-		} else if p.Name == "nested_obj" {
+		case "nested_obj":
 			if p.Type != "object" {
 				t.Errorf("Expected nested_obj type object, got %s", p.Type)
 			}
 			if p.AdditionalProperties == nil {
 				t.Error("Expected nested_obj to have AdditionalProperties schema")
 			}
-		} else if p.Name == "str_array" {
+		case "str_array":
 			if p.Type != "array" {
 				t.Errorf("Expected str_array type array, got %s", p.Type)
 			}
 			if p.Items == nil || p.Items.Type != "string" {
 				t.Error("Expected str_array items to be type string")
 			}
-		} else if p.Name == "missing_type_param" {
+		case "missing_type_param":
 			// Verifies the "type" defaults to "string"
 			if p.Type != "string" {
 				t.Errorf("Expected missing_type_param type string, got %s", p.Type)
 			}
-		} else if p.Name == "generic_array" {
+		case "generic_array":
 			// Verifies array parses correctly when Items are omitted
 			if p.Type != "array" {
 				t.Errorf("Expected generic_array type array, got %s", p.Type)
@@ -237,7 +304,7 @@ func TestConvertToolDefinition(t *testing.T) {
 			if p.Items != nil {
 				t.Error("Expected generic_array items to be nil")
 			}
-		} else if p.Name == "generic_object" {
+		case "generic_object":
 			// Verifies object parses correctly when additionalProperties are omitted
 			if p.Type != "object" {
 				t.Errorf("Expected generic_object type object, got %s", p.Type)

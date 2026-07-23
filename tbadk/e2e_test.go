@@ -991,3 +991,33 @@ func TestE2E_MapParams(t *testing.T) {
 		})
 	}
 }
+
+func TestRunToolURLBinding(t *testing.T) {
+	for _, serverURL := range getTestServerURLs() {
+		t.Run("server_"+serverURL, func(t *testing.T) {
+			toolbox, err := tbadk.NewToolboxClient(serverURL + "?num_rows=2")
+			require.NoError(t, err)
+
+			tool, err := toolbox.LoadTool("get-n-rows", context.Background())
+			require.NoError(t, err)
+
+			testToolCtx := &mockToolContext{
+				mockAgentContext: &mockAgentContext{
+					ctx: context.Background(),
+				},
+			}
+
+			res, err := tool.Run(testToolCtx, map[string]any{})
+			require.NoError(t, err)
+
+			resStr, ok := res["output"].(string)
+			if !ok {
+				resStr, ok = res["content"].(string)
+			}
+			require.True(t, ok)
+			assert.Contains(t, resStr, "row1")
+			assert.Contains(t, resStr, "row2")
+			assert.NotContains(t, resStr, "row3")
+		})
+	}
+}
