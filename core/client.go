@@ -455,12 +455,19 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 
 // GetProtocol returns the active protocol version for the client.
 func (tc *ToolboxClient) GetProtocol() Protocol {
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
 	return tc.protocol
 }
 
 func (tc *ToolboxClient) executeWithFallback(fn func(tr transport.Transport) (any, error)) (any, error) {
 	for {
-		result, err := fn(tc.transport)
+		tc.mu.RLock()
+		tr := tc.transport
+		currentProtocol := tc.protocol
+		tc.mu.RUnlock()
+
+		result, err := fn(tr)
 		if err == nil {
 			return result, nil
 		}
@@ -488,22 +495,26 @@ func (tc *ToolboxClient) executeWithFallback(fn func(tr transport.Transport) (an
 			}
 
 			var fallbackProtocol Protocol
-			if len(tc.supportedProtocols) > 0 {
+			tc.mu.RLock()
+			supportedProtos := tc.supportedProtocols
+			tc.mu.RUnlock()
+
+			if len(supportedProtos) > 0 {
 				var mutuallySupported []Protocol
-				for _, v := range tc.supportedProtocols {
+				for _, v := range supportedProtos {
 					if slices.Contains(serverSupported, v) {
 						mutuallySupported = append(mutuallySupported, v)
 					}
 				}
 				if len(mutuallySupported) == 0 {
-					return nil, fmt.Errorf("no mutually supported protocol version. Client supports: %v, Server supports: %s", tc.supportedProtocols, fallbackVersion)
+					return nil, fmt.Errorf("no mutually supported protocol version. Client supports: %v, Server supports: %s", supportedProtos, fallbackVersion)
 				}
 				fallbackProtocol = mutuallySupported[0]
 			} else {
 				fallbackProtocol = fallbackVersion
 			}
 
-			if fallbackProtocol == tc.protocol {
+			if fallbackProtocol == currentProtocol {
 				return nil, err
 			}
 
@@ -528,8 +539,10 @@ func (tc *ToolboxClient) executeWithFallback(fn func(tr transport.Transport) (an
 				return nil, fmt.Errorf("failed to create transport for fallback version %s: %w", fallbackProtocol, createErr)
 			}
 
+			tc.mu.Lock()
 			tc.protocol = fallbackProtocol
 			tc.transport = fallbackTransport
+			tc.mu.Unlock()
 		} else {
 			return nil, err
 		}
