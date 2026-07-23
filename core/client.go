@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 
@@ -44,6 +45,7 @@ type ToolboxClient struct {
 	defaultOptionsSet   bool
 	clientName          string
 	clientVersion       string
+	supportedProtocols  []Protocol
 }
 
 // NewToolboxClient creates and configures a new, immutable client for interacting with a
@@ -467,13 +469,47 @@ func (tc *ToolboxClient) executeWithFallback(fn func(tr transport.Transport) (an
 		if errors.As(err, &negErr) {
 			fallbackVersion := Protocol(negErr.FallbackVersion)
 
-			if fallbackVersion == tc.protocol {
+			supportedVersions := GetSupportedMcpVersions()
+			serverIdx := -1
+			for i, v := range supportedVersions {
+				if Protocol(v) == fallbackVersion {
+					serverIdx = i
+					break
+				}
+			}
+
+			if serverIdx == -1 {
+				return nil, fmt.Errorf("server returned unknown protocol version: %s", fallbackVersion)
+			}
+
+			var serverSupported []Protocol
+			for _, v := range supportedVersions[serverIdx:] {
+				serverSupported = append(serverSupported, Protocol(v))
+			}
+
+			var fallbackProtocol Protocol
+			if len(tc.supportedProtocols) > 0 {
+				var mutuallySupported []Protocol
+				for _, v := range tc.supportedProtocols {
+					if slices.Contains(serverSupported, v) {
+						mutuallySupported = append(mutuallySupported, v)
+					}
+				}
+				if len(mutuallySupported) == 0 {
+					return nil, fmt.Errorf("no mutually supported protocol version. Client supports: %v, Server supports: %s", tc.supportedProtocols, fallbackVersion)
+				}
+				fallbackProtocol = mutuallySupported[0]
+			} else {
+				fallbackProtocol = fallbackVersion
+			}
+
+			if fallbackProtocol == tc.protocol {
 				return nil, err
 			}
 
 			var fallbackTransport transport.Transport
 			var createErr error
-			switch fallbackVersion {
+			switch fallbackProtocol {
 			case MCPv20260618:
 				fallbackTransport, createErr = mcp20260618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 			case MCPv20251125:
@@ -485,14 +521,14 @@ func (tc *ToolboxClient) executeWithFallback(fn func(tr transport.Transport) (an
 			case MCPv20241105:
 				fallbackTransport, createErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 			default:
-				return nil, fmt.Errorf("unsupported fallback protocol: %s", fallbackVersion)
+				return nil, fmt.Errorf("unsupported fallback protocol: %s", fallbackProtocol)
 			}
 
 			if createErr != nil {
-				return nil, fmt.Errorf("failed to create transport for fallback version %s: %w", fallbackVersion, createErr)
+				return nil, fmt.Errorf("failed to create transport for fallback version %s: %w", fallbackProtocol, createErr)
 			}
 
-			tc.protocol = fallbackVersion
+			tc.protocol = fallbackProtocol
 			tc.transport = fallbackTransport
 		} else {
 			return nil, err

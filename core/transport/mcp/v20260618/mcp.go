@@ -26,6 +26,9 @@ import (
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
+	mcp20241105 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20241105"
+	mcp20250326 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250326"
+	mcp20250618 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250618"
 	mcp20251125 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20251125"
 )
 
@@ -49,6 +52,9 @@ func New(baseURL string, client *http.Client, clientName string, clientVersion s
 	baseTransport, err := mcp.NewBaseTransport(baseURL, client)
 	if err != nil {
 		return nil, err
+	}
+	if clientVersion == "" {
+		clientVersion = mcp.SDKVersion
 	}
 
 	return &McpTransport{
@@ -174,6 +180,13 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 	return t.ProcessToolResultContent(baseContent), nil
 }
 
+var supportedVersionsPriority = []string{
+	mcp20251125.ProtocolVersion,
+	mcp20250618.ProtocolVersion,
+	mcp20250326.ProtocolVersion,
+	mcp20241105.ProtocolVersion,
+}
+
 func checkRPCError(rpcErr *jsonRPCError) error {
 	if rpcErr == nil {
 		return nil
@@ -181,8 +194,16 @@ func checkRPCError(rpcErr *jsonRPCError) error {
 	if rpcErr.Code == -32004 || rpcErr.Code == -32022 {
 		if data, ok := rpcErr.Data.(map[string]any); ok {
 			if supported, ok := data["supported"].([]any); ok && len(supported) > 0 {
-				if fallbackStr, ok := supported[0].(string); ok {
-					return &transport.ProtocolNegotiationError{FallbackVersion: fallbackStr}
+				supportedSet := make(map[string]struct{})
+				for _, s := range supported {
+					if str, ok := s.(string); ok {
+						supportedSet[str] = struct{}{}
+					}
+				}
+				for _, v := range supportedVersionsPriority {
+					if _, exists := supportedSet[v]; exists {
+						return &transport.ProtocolNegotiationError{FallbackVersion: v}
+					}
 				}
 			}
 		}
