@@ -23,8 +23,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	"testing"
+
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 
 	"maps"
 
@@ -104,10 +106,8 @@ func newMockMCPServer() *mockMCPServer {
 
 		w.Header().Set("Content-Type", "application/json")
 
-		if headers != nil {
-			for k, v := range headers {
-				w.Header().Set(k, v)
-			}
+		for k, v := range headers {
+			w.Header().Set(k, v)
 		}
 
 		_ = json.NewEncoder(w).Encode(resp)
@@ -338,8 +338,9 @@ func TestProtocolVersionMismatch(t *testing.T) {
 
 	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
 	err := client.EnsureInitialized(context.Background(), nil)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "MCP version mismatch")
+	var negErr *transport.ProtocolNegotiationError
+	require.True(t, errors.As(err, &negErr))
+	assert.Equal(t, "2099-01-01", negErr.FallbackVersion)
 }
 
 func TestInitialization_MissingCapabilities(t *testing.T) {
@@ -375,7 +376,7 @@ func TestRequest_NetworkError(t *testing.T) {
 func TestRequest_ServerError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Error"))
+		_, _ = w.Write([]byte("Internal Error"))
 	}))
 	defer server.Close()
 
@@ -388,7 +389,7 @@ func TestRequest_ServerError(t *testing.T) {
 func TestRequest_BadJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{ broken json `))
+		_, _ = w.Write([]byte(`{ broken json `))
 	}))
 	defer server.Close()
 
@@ -448,7 +449,7 @@ func TestInit_NotificationFailure(t *testing.T) {
 		var req jsonRPCRequest
 		// Read body to clear buffer, though we just check fields
 		body, _ := io.ReadAll(r.Body)
-		json.Unmarshal(body, &req)
+		_ = json.Unmarshal(body, &req)
 
 		if req.Method == "initialize" {
 			// Success
@@ -458,16 +459,18 @@ func TestInit_NotificationFailure(t *testing.T) {
 				Result:  json.RawMessage(`{"protocolVersion":"2025-03-26","capabilities":{"tools":{}},"serverInfo":{"name":"mock","version":"1"},"Mcp-Session-Id":"s1"}`),
 			}
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
 			return
 		}
+
 		if req.Method == "notifications/initialized" {
 			// Fail
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Server Error"))
+			_, _ = w.Write([]byte("Server Error"))
 			return
 		}
 	}))
+
 	defer server.Close()
 
 	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
@@ -623,7 +626,7 @@ func TestEnsureInitialized_PassesHeaders(t *testing.T) {
 
 	capturedHeaders := make(map[string]string)
 
-	tr.BaseMcpTransport.HandshakeHook = func(ctx context.Context, headers map[string]string) error {
+	tr.HandshakeHook = func(ctx context.Context, headers map[string]string) error {
 		maps.Copy(capturedHeaders, headers)
 		return nil
 	}
@@ -653,7 +656,8 @@ func TestInitializeSession_PassesHeadersToWire(t *testing.T) {
 			return
 		}
 
-		if req.Method == "initialize" {
+		switch req.Method {
+		case "initialize":
 			resp := map[string]any{
 				"jsonrpc": "2.0",
 				"id":      "123",
@@ -665,11 +669,12 @@ func TestInitializeSession_PassesHeadersToWire(t *testing.T) {
 			}
 			// Set Session ID header required for this version
 			w.Header().Set("Mcp-Session-Id", "session-123")
-			json.NewEncoder(w).Encode(resp)
-		} else if req.Method == "notifications/initialized" {
+			_ = json.NewEncoder(w).Encode(resp)
+
+		case "notifications/initialized":
 			// Verify notification success
 			w.WriteHeader(http.StatusNoContent)
-		} else {
+		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}))

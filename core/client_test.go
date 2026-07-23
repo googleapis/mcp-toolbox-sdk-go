@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
+
 	"io"
 	"log"
 	"net/http"
@@ -103,13 +103,6 @@ func newMockMCPServer(t *testing.T, tools []mcpTool) *httptest.Server {
 }
 
 // Test Helpers & Mocks
-
-// failingTokenSource is a token source that always returns an error, for testing failure paths.
-type failingTokenSource struct{}
-
-func (f *failingTokenSource) Token() (*oauth2.Token, error) {
-	return nil, errors.New("token source failed as designed")
-}
 
 func getMyToken() string {
 	return "dynamic-token-from-func"
@@ -528,7 +521,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 
 		isToolBError := strings.Contains(errStr, "no parameter named 'param1' found on tool 'toolB'")
 
-		if !(isToolAError || isToolBError) {
+		if !isToolAError && !isToolBError {
 			t.Errorf("Incorrect error for unused auth token in strict mode. Got: %v", err)
 		}
 	})
@@ -913,4 +906,97 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 			t.Errorf("Incorrect error for completely unused param. Got: %v", err)
 		}
 	})
+}
+
+func TestExecuteWithFallback_EdgeCases(t *testing.T) {
+	t.Run("Infinite Loop Prevention", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported protocol version","data":{"supported":["DRAFT-2026-v1"]}}}`))
+		}))
+		defer ts.Close()
+
+		client, err := NewToolboxClient(ts.URL, WithHTTPClient(ts.Client()))
+		require.NoError(t, err)
+
+		_, err = client.LoadTool("test-tool", context.Background())
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "server requested protocol fallback")
+	})
+
+	t.Run("MultiStep Cascading Fallback", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported","data":{"supported":["2025-06-18"]}}}`))
+				return
+			}
+			body, _ := io.ReadAll(r.Body)
+			var req mcpRPCRequest
+			_ = json.Unmarshal(body, &req)
+
+			var result any
+			switch req.Method {
+			case "initialize":
+				result = map[string]any{
+					"protocolVersion": "2025-06-18",
+					"capabilities":    map[string]any{"tools": map[string]any{}},
+					"serverInfo":      map[string]any{"name": "mock-server", "version": "1.0.0"},
+				}
+			case "notifications/initialized":
+				w.WriteHeader(http.StatusOK)
+				return
+			case "tools/list":
+				result = map[string]any{
+					"tools": []mcpTool{{Name: "cascaded_tool", Description: "tool"}},
+				}
+			}
+			resBytes, _ := json.Marshal(result)
+			resp := mcpRPCResponse{
+				JSONRPC: "2.0",
+				ID:      req.ID,
+				Result:  resBytes,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer ts.Close()
+
+		client, err := NewToolboxClient(ts.URL, WithHTTPClient(ts.Client()))
+		require.NoError(t, err)
+
+		tool, err := client.LoadTool("cascaded_tool", context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, "cascaded_tool", tool.Name())
+	})
+
+	t.Run("GetProtocol returns active protocol", func(t *testing.T) {
+		client, err := NewToolboxClient("http://localhost:5000", WithProtocol(MCPv20251125))
+		require.NoError(t, err)
+		assert.Equal(t, MCPv20251125, client.GetProtocol())
+	})
+}
+
+func TestExecuteWithFallback_NoInfiniteLoop(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported","data":{"supported":["DRAFT-2026-v1"]}}}`))
+	}))
+	defer ts.Close()
+
+	client, err := NewToolboxClient(ts.URL, WithHTTPClient(ts.Client()))
+	require.NoError(t, err)
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := client.LoadTool("test_tool", context.Background())
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		require.Error(t, err, "expected error when server demands current protocol version as fallback")
+	case <-time.After(2 * time.Second):
+		t.Fatal("executeWithFallback hung in an infinite loop")
+	}
 }
