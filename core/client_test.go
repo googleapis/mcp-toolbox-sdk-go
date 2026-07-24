@@ -20,13 +20,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1125,6 +1126,81 @@ func TestExecuteWithFallback_EdgeCases(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "modern_tool", tool.Name())
 		assert.Equal(t, MCPv20241105, client.GetProtocol())
+	})
+
+	t.Run("Concurrent Goroutines Fallback & Thread Safety Test", func(t *testing.T) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported","data":{"supported":["2025-11-25"]}}}`))
+				return
+			}
+			body, _ := io.ReadAll(r.Body)
+			var req mcpRPCRequest
+			_ = json.Unmarshal(body, &req)
+
+			var result any
+			switch req.Method {
+			case "initialize":
+				result = map[string]any{
+					"protocolVersion": "2025-11-25",
+					"capabilities":    map[string]any{"tools": map[string]any{}},
+					"serverInfo":      map[string]any{"name": "mock-server", "version": "1.0.0"},
+				}
+			case "notifications/initialized":
+				w.WriteHeader(http.StatusOK)
+				return
+			case "tools/list":
+				result = map[string]any{
+					"tools": []mcpTool{{Name: "concurrent_tool", Description: "tool"}},
+				}
+			}
+			resBytes, _ := json.Marshal(result)
+			resp := mcpRPCResponse{
+				JSONRPC: "2.0",
+				ID:      req.ID,
+				Result:  resBytes,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+		}))
+		defer ts.Close()
+
+		client, err := NewToolboxClient(ts.URL,
+			WithHTTPClient(ts.Client()),
+			WithSupportedProtocols([]Protocol{MCPDraft, MCPv20251125}),
+		)
+		require.NoError(t, err)
+
+		const numGoroutines = 20
+		var wg sync.WaitGroup
+		errs := make(chan error, numGoroutines)
+
+		for i := 0; i < numGoroutines; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_ = client.GetProtocol()
+				tool, err := client.LoadTool("concurrent_tool", context.Background())
+				if err != nil {
+					errs <- err
+					return
+				}
+				if tool.Name() != "concurrent_tool" {
+					errs <- fmt.Errorf("unexpected tool name %s", tool.Name())
+					return
+				}
+				_ = client.GetProtocol()
+			}()
+		}
+
+		wg.Wait()
+		close(errs)
+
+		for err := range errs {
+			t.Errorf("Concurrent execution error: %v", err)
+		}
+		assert.Equal(t, MCPv20251125, client.GetProtocol())
 	})
 }
 
