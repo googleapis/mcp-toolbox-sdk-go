@@ -55,31 +55,37 @@ func NewBaseTransport(baseURL string, client *http.Client) (*BaseMcpTransport, e
 	if client == nil {
 		client = &http.Client{}
 	}
-	var fullURL string
-	var err error
-	// Normalize by removing trailing slash first
-	cleanBaseURL := strings.TrimRight(baseURL, "/")
+	parsedURL, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base URL: %w", err)
+	}
 
-	// Only append "/mcp/" if it is not already present
-	if strings.HasSuffix(cleanBaseURL, "/mcp") {
-		// It's already correct, just use it
-		fullURL = cleanBaseURL
-	} else {
-		// It's missing, so join it safely
-		// url.JoinPath handles the slash insertion automatically
-		fullURL, err = url.JoinPath(cleanBaseURL, "mcp")
+	path := strings.TrimRight(parsedURL.Path, "/")
+	if !strings.HasSuffix(path, "/mcp") {
+		path, err = url.JoinPath(path, "mcp")
 		if err != nil {
 			return nil, err
 		}
 	}
-
-	// Ensure trailing slash
-	fullURL += "/"
+	parsedURL.Path = path + "/"
 
 	return &BaseMcpTransport{
-		baseURL:    fullURL,
+		baseURL:    parsedURL.String(),
 		HTTPClient: client,
 	}, nil
+}
+
+// AppendToolsetPath appends a toolset name to the base URL path while preserving query parameters.
+func AppendToolsetPath(baseURLStr, toolsetName string) (string, error) {
+	if toolsetName == "" {
+		return baseURLStr, nil
+	}
+	parsedURL, err := url.Parse(baseURLStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse URL: %w", err)
+	}
+	parsedURL.Path = strings.TrimRight(parsedURL.Path, "/") + "/" + toolsetName
+	return parsedURL.String(), nil
 }
 
 // EnsureInitialized guarantees the session is ready before making requests.

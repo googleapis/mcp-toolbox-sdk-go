@@ -154,7 +154,6 @@ func TestNewToolboxClient(t *testing.T) {
 
 }
 
-
 func TestNewToolboxClient_HTTPWarning(t *testing.T) {
 	var buf bytes.Buffer
 	log.SetOutput(&buf)
@@ -1211,7 +1210,7 @@ func TestExecuteWithFallback_NoInfiniteLoop(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client, err := NewToolboxClient(ts.URL, WithHTTPClient(ts.Client()))
+	client, err := NewToolboxClient(ts.URL, WithHTTPClient(ts.Client()), WithSupportedProtocols([]Protocol{MCPDraft}))
 	require.NoError(t, err)
 
 	done := make(chan error, 1)
@@ -1226,4 +1225,57 @@ func TestExecuteWithFallback_NoInfiniteLoop(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("executeWithFallback hung in an infinite loop")
 	}
+}
+
+func TestToolInvocation_PreservesURLQueryParams(t *testing.T) {
+	var requestedRawQuery string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestedRawQuery = r.URL.RawQuery
+		body, _ := io.ReadAll(r.Body)
+		var req mcpRPCRequest
+		_ = json.Unmarshal(body, &req)
+
+		var result any
+		switch req.Method {
+		case "initialize":
+			result = map[string]any{
+				"protocolVersion": "2025-11-25",
+				"capabilities":    map[string]any{"tools": map[string]any{}},
+				"serverInfo":      map[string]any{"name": "mock-server", "version": "1.0.0"},
+			}
+		case "notifications/initialized":
+			w.WriteHeader(http.StatusOK)
+			return
+		case "tools/list":
+			result = map[string]any{
+				"tools": []mcpTool{{Name: "query_tool", Description: "Tool testing query params"}},
+			}
+		case "tools/call":
+			result = map[string]any{
+				"content": []map[string]any{
+					{"type": "text", "text": "result_ok"},
+				},
+			}
+		}
+		resBytes, _ := json.Marshal(result)
+		resp := mcpRPCResponse{
+			JSONRPC: "2.0",
+			ID:      req.ID,
+			Result:  resBytes,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer ts.Close()
+
+	client, err := NewToolboxClient(ts.URL+"?foo=bar&baz=123", WithHTTPClient(ts.Client()))
+	require.NoError(t, err)
+
+	tool, err := client.LoadTool("query_tool", context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, "foo=bar&baz=123", requestedRawQuery)
+
+	_, err = tool.Invoke(context.Background(), nil)
+	require.NoError(t, err)
+	assert.Equal(t, "foo=bar&baz=123", requestedRawQuery)
 }

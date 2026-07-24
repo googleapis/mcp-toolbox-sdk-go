@@ -889,6 +889,25 @@ func TestMCP_ContextHandling(t *testing.T) {
 	}
 }
 
+
+func TestRunToolURLBinding(t *testing.T) {
+	for _, serverURL := range getTestServerURLs() {
+		t.Run("server_"+serverURL, func(t *testing.T) {
+			client, err := core.NewToolboxClient(serverURL + "?num_rows=2")
+			require.NoError(t, err)
+			tool, err := client.LoadTool("get-n-rows", context.Background())
+			require.NoError(t, err)
+			res, err := tool.Invoke(context.Background(), map[string]any{})
+			require.NoError(t, err)
+			resStr, ok := res.(string)
+			require.True(t, ok)
+			assert.Contains(t, resStr, "row1")
+			assert.Contains(t, resStr, "row2")
+			assert.NotContains(t, resStr, "row3")
+		})
+	}
+}
+
 func TestMcpDraftFallback_E2E(t *testing.T) {
 	for _, serverURL := range getTestServerURLs() {
 		t.Run("server_"+serverURL, func(t *testing.T) {
