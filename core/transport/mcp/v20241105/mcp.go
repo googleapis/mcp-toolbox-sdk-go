@@ -266,11 +266,11 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 					}
 				}
 			}
-			return &transport.ProtocolNegotiationError{FallbackVersion: "2024-11-05"}
+			return &transport.ProtocolNegotiationError{FallbackVersion: ProtocolVersion}
 		}
 		errMsgLower := strings.ToLower(rpcErr.Message)
 		if strings.Contains(errMsgLower, "invalid protocol version") || strings.Contains(errMsgLower, "unsupported protocol version") {
-			return &transport.ProtocolNegotiationError{FallbackVersion: "2024-11-05"}
+			return &transport.ProtocolNegotiationError{FallbackVersion: ProtocolVersion}
 		}
 		return fmt.Errorf("MCP request failed with code %d: %s", rpcErr.Code, rpcErr.Message)
 	}
@@ -288,7 +288,7 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 		}
 		bodyStrLower := strings.ToLower(string(body))
 		if strings.Contains(bodyStrLower, "invalid protocol version") || strings.Contains(bodyStrLower, "unsupported protocol version") {
-			return &transport.ProtocolNegotiationError{FallbackVersion: "2024-11-05"}
+			return &transport.ProtocolNegotiationError{FallbackVersion: ProtocolVersion}
 		}
 		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
