@@ -28,7 +28,7 @@ const (
 	MCPv20241105 Protocol = "2024-11-05"
 
 	// MCP is the default alias pointing to the newest supported version.
-	MCP = MCPv20250618
+	MCP = MCPv20251125
 
 	MCPLatest Protocol = MCPv20251125
 	MCPDraft  Protocol = MCPv20260618
@@ -37,6 +37,7 @@ const (
 // GetSupportedMcpVersions returns a list of supported MCP protocol versions.
 func GetSupportedMcpVersions() []string {
 	return []string{
+		string(MCPDraft),
 		string(MCPv20251125),
 		string(MCPv20250618),
 		string(MCPv20250326),
