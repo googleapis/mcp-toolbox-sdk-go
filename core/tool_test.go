@@ -702,7 +702,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 			// Read body
 			body, _ := io.ReadAll(r.Body)
 			var req jsonRPCRequest
-			json.Unmarshal(body, &req)
+			_ = json.Unmarshal(body, &req)
 
 			// Handle Handshake
 			if req.Method == "initialize" {
@@ -712,7 +712,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 					"serverInfo":      map[string]any{"name": "mock", "version": "1"},
 				}
 				resp, _ := json.Marshal(res)
-				json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: resp})
+				_ = json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: resp})
 				return
 			}
 			if req.Method == "notifications/initialized" {
@@ -735,7 +735,8 @@ func TestToolboxTool_Invoke(t *testing.T) {
 				resBytes, _ := json.Marshal(res)
 				resp.Result = resBytes
 			}
-			json.NewEncoder(w).Encode(resp)
+			_ = json.NewEncoder(w).Encode(resp)
+
 		}))
 	}
 
@@ -743,7 +744,7 @@ func TestToolboxTool_Invoke(t *testing.T) {
 		server := newMockMCPServer(func(req jsonRPCRequest) (any, error) {
 			var params mcpToolCallParams
 			argsBytes, _ := json.Marshal(req.Params)
-			json.Unmarshal(argsBytes, &params)
+			_ = json.Unmarshal(argsBytes, &params)
 
 			// Validate payload
 			if params.Name != "weather" {
@@ -797,11 +798,11 @@ func TestToolboxTool_Invoke(t *testing.T) {
 			// Respond to handshake/call minimally
 			body, _ := io.ReadAll(r.Body)
 			var req jsonRPCRequest
-			json.Unmarshal(body, &req)
+			_ = json.Unmarshal(body, &req)
 
 			if req.Method == "initialize" {
 				res, _ := json.Marshal(map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "mock", "version": "1"}})
-				json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
+				_ = json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
 				return
 			}
 			if req.Method == "notifications/initialized" {
@@ -810,7 +811,8 @@ func TestToolboxTool_Invoke(t *testing.T) {
 			}
 			// tools/call
 			res, _ := json.Marshal(map[string]any{"content": []map[string]string{{"type": "text", "text": "ok"}}})
-			json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
+			_ = json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
+
 		}))
 		defer server.Close()
 
@@ -833,10 +835,10 @@ func TestToolboxTool_Invoke(t *testing.T) {
 			// Respond OK
 			body, _ := io.ReadAll(r.Body)
 			var req jsonRPCRequest
-			json.Unmarshal(body, &req)
+			_ = json.Unmarshal(body, &req)
 			if req.Method == "initialize" {
 				res, _ := json.Marshal(map[string]any{"protocolVersion": "2025-06-18", "capabilities": map[string]any{"tools": map[string]any{}}, "serverInfo": map[string]any{"name": "mock", "version": "1"}})
-				json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
+				_ = json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
 				return
 			}
 			if req.Method == "notifications/initialized" {
@@ -844,8 +846,9 @@ func TestToolboxTool_Invoke(t *testing.T) {
 				return
 			}
 			res, _ := json.Marshal(map[string]any{"content": []map[string]string{{"type": "text", "text": "ok"}}})
-			json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
+			_ = json.NewEncoder(w).Encode(jsonRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: res})
 		}))
+
 		defer server.Close()
 
 		tool := createBaseTool(server.Client(), server.URL)
