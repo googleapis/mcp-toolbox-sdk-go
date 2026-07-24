@@ -17,6 +17,7 @@ package core
 import (
 	"fmt"
 	"net/http"
+	"slices"
 
 	"golang.org/x/oauth2"
 )
@@ -25,6 +26,40 @@ import (
 
 // ClientOption configures a ToolboxClient at creation time.
 type ClientOption func(*ToolboxClient) error
+
+// WithSupportedProtocols configures a user-defined list of supported protocols for auto-negotiation.
+// The provided protocols are prioritized from newest to oldest version.
+func WithSupportedProtocols(protocols []Protocol) ClientOption {
+	return func(tc *ToolboxClient) error {
+		if len(protocols) == 0 {
+			return fmt.Errorf("WithSupportedProtocols: protocols slice cannot be empty")
+		}
+		if tc.protocolSet {
+			return fmt.Errorf("protocol is already set and cannot be overridden")
+		}
+
+		allVersions := GetSupportedMcpVersions()
+		for _, p := range protocols {
+			if !slices.Contains(allVersions, string(p)) {
+				return fmt.Errorf("invalid protocol version '%s'. Must be one of: %v", p, allVersions)
+			}
+		}
+
+		var sorted []Protocol
+		for _, verStr := range allVersions {
+			p := Protocol(verStr)
+			if slices.Contains(protocols, p) {
+				sorted = append(sorted, p)
+			}
+		}
+		if len(sorted) == 0 {
+			return fmt.Errorf("WithSupportedProtocols: none of the provided protocols are supported")
+		}
+		tc.supportedProtocols = sorted
+		tc.protocol = sorted[0]
+		return nil
+	}
+}
 
 // Constructor for a newToolConfig which initializes the maps for auth token sources and bound parameters
 func newToolConfig() *ToolConfig {

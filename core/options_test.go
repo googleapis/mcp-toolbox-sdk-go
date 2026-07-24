@@ -635,3 +635,42 @@ func TestNewToolConfig(t *testing.T) {
 		t.Errorf("Expected Strict to be false, but got %t", config.Strict)
 	}
 }
+
+func TestWithSupportedProtocols(t *testing.T) {
+	t.Run("Success case", func(t *testing.T) {
+		client := newTestClient()
+		opt := WithSupportedProtocols([]Protocol{MCPv20250618, MCPv20251125})
+		err := opt(client)
+
+		if err != nil {
+			t.Fatalf("Expected no error, but got: %v", err)
+		}
+		if len(client.supportedProtocols) != 2 {
+			t.Fatalf("Expected 2 supported protocols, got %d", len(client.supportedProtocols))
+		}
+		if client.protocol != MCPv20251125 {
+			t.Errorf("Expected highest priority protocol %s, got %s", MCPv20251125, client.protocol)
+		}
+	})
+
+	t.Run("Empty slice error", func(t *testing.T) {
+		client := newTestClient()
+		opt := WithSupportedProtocols([]Protocol{})
+		err := opt(client)
+		if err == nil {
+			t.Error("Expected error for empty protocols slice, got nil")
+		}
+	})
+
+	t.Run("Invalid protocol element error", func(t *testing.T) {
+		client := newTestClient()
+		opt := WithSupportedProtocols([]Protocol{MCPv20251125, Protocol("invalid-version")})
+		err := opt(client)
+		if err == nil {
+			t.Error("Expected error for invalid protocol version element, got nil")
+		}
+		if !strings.Contains(err.Error(), "invalid protocol version 'invalid-version'") {
+			t.Errorf("Unexpected error message: %v", err)
+		}
+	})
+}
