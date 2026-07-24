@@ -161,6 +161,57 @@ func TestPrepareHeadersMcpName(t *testing.T) {
 	assert.Equal(t, "ok", res)
 }
 
+func TestToolsList_UsesServerInfoFromMeta(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"jsonrpc": "2.0",
+			"id": "1",
+			"result": {
+				"resultType": "complete",
+				"tools": [{"name": "sample_tool", "description": "Sample"}],
+				"_meta": {
+					"io.modelcontextprotocol/serverInfo": {
+						"name": "ToolboxServer",
+						"version": "2.5.0"
+					}
+				}
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
+	require.NoError(t, err)
+
+	manifest, err := tr.ListTools(context.Background(), "", nil)
+	require.NoError(t, err)
+	assert.Equal(t, "2.5.0", manifest.ServerVersion)
+	assert.Contains(t, manifest.Tools, "sample_tool")
+}
+
+func TestToolsList_ResultMetaOptionalServerInfo(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"jsonrpc": "2.0",
+			"id": "1",
+			"result": {
+				"tools": [{"name": "sample_tool", "description": "Sample"}]
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
+	require.NoError(t, err)
+
+	manifest, err := tr.ListTools(context.Background(), "", nil)
+	require.NoError(t, err)
+	assert.Equal(t, "0.0.0", manifest.ServerVersion)
+	assert.Contains(t, manifest.Tools, "sample_tool")
+}
+
 func TestResultTypeParsingAndFallback(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
