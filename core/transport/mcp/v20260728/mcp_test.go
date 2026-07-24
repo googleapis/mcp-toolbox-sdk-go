@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v20260618
+package v20260728
 
 import (
 	"context"
@@ -30,7 +30,7 @@ import (
 
 func TestListToolsAndHeaders(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "DRAFT-2026-v1", r.Header.Get("MCP-Protocol-Version"))
+		assert.Equal(t, "2026-07-28", r.Header.Get("MCP-Protocol-Version"))
 		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
 		body, err := io.ReadAll(r.Body)
@@ -42,7 +42,7 @@ func TestListToolsAndHeaders(t *testing.T) {
 
 		params := req["params"].(map[string]any)
 		meta := params["_meta"].(map[string]any)
-		assert.Equal(t, "DRAFT-2026-v1", meta["io.modelcontextprotocol/protocolVersion"])
+		assert.Equal(t, "2026-07-28", meta["io.modelcontextprotocol/protocolVersion"])
 
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{
@@ -70,7 +70,7 @@ func TestListToolsAndHeaders(t *testing.T) {
 
 func TestInvokeToolAndHeaders(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "DRAFT-2026-v1", r.Header.Get("MCP-Protocol-Version"))
+		assert.Equal(t, "2026-07-28", r.Header.Get("MCP-Protocol-Version"))
 
 		body, err := io.ReadAll(r.Body)
 		require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestInvokeTool_NilArgumentsSerializedAsObject(t *testing.T) {
 
 func TestPrepareHeadersMcpName(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "DRAFT-2026-v1", r.Header.Get("MCP-Protocol-Version"))
+		assert.Equal(t, "2026-07-28", r.Header.Get("MCP-Protocol-Version"))
 		assert.Equal(t, "tools/call", r.Header.Get("Mcp-Method"))
 		assert.Equal(t, "my_tool", r.Header.Get("Mcp-Name"))
 
@@ -305,7 +305,7 @@ func TestJSONRPCError_HTTP200_ProtocolNegotiation(t *testing.T) {
 
 func TestSendRequest_AddsMcpNameHeaderForPromptsGet(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "DRAFT-2026-v1", r.Header.Get("MCP-Protocol-Version"))
+		assert.Equal(t, "2026-07-28", r.Header.Get("MCP-Protocol-Version"))
 		assert.Equal(t, "prompts/get", r.Header.Get("Mcp-Method"))
 		assert.Equal(t, "test_prompt", r.Header.Get("Mcp-Name"))
 
@@ -332,7 +332,7 @@ func TestSendRequest_AddsMcpNameHeaderForPromptsGet(t *testing.T) {
 
 func TestSendRequest_AddsMcpNameHeaderForResourcesRead(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "DRAFT-2026-v1", r.Header.Get("MCP-Protocol-Version"))
+		assert.Equal(t, "2026-07-28", r.Header.Get("MCP-Protocol-Version"))
 		assert.Equal(t, "resources/read", r.Header.Get("Mcp-Method"))
 		assert.Equal(t, "file:///test.txt", r.Header.Get("Mcp-Name"))
 
