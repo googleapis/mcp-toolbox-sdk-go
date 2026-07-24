@@ -23,8 +23,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	"testing"
+
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 
 	"maps"
 
@@ -267,8 +269,9 @@ func TestProtocolMismatch(t *testing.T) {
 	client, _ := New(server.URL, server.Client(), "custom-client", "1.0.0")
 
 	_, err := client.ListTools(context.Background(), "", nil)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "MCP version mismatch")
+	var negErr *transport.ProtocolNegotiationError
+	require.True(t, errors.As(err, &negErr))
+	assert.Equal(t, "2099-01-01", negErr.FallbackVersion)
 }
 
 func TestInitialize_MissingCapabilities(t *testing.T) {
@@ -363,7 +366,7 @@ func TestRequest_NetworkError(t *testing.T) {
 func TestRequest_ServerError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Error"))
+		_, _ = w.Write([]byte("Internal Error"))
 	}))
 	defer server.Close()
 
@@ -376,8 +379,9 @@ func TestRequest_ServerError(t *testing.T) {
 func TestRequest_BadJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{ broken json `))
+		_, _ = w.Write([]byte(`{ broken json `))
 	}))
+
 	defer server.Close()
 
 	client, _ := New(server.URL, server.Client(), "custom-client", "1.0.0")
@@ -553,7 +557,7 @@ func TestEnsureInitialized_PassesHeaders(t *testing.T) {
 	require.NoError(t, err)
 
 	capturedHeaders := make(map[string]string)
-	tr.BaseMcpTransport.HandshakeHook = func(ctx context.Context, headers map[string]string) error {
+	tr.HandshakeHook = func(ctx context.Context, headers map[string]string) error {
 		maps.Copy(capturedHeaders, headers)
 		return nil
 	}
@@ -582,7 +586,8 @@ func TestInitializeSession_PassesHeadersToWire(t *testing.T) {
 			return
 		}
 
-		if req.Method == "initialize" {
+		switch req.Method {
+		case "initialize":
 			resp := map[string]any{
 				"jsonrpc": "2.0",
 				"id":      "123",
@@ -592,10 +597,11 @@ func TestInitializeSession_PassesHeadersToWire(t *testing.T) {
 					"serverInfo":      map[string]any{"name": "test", "version": "1.0"},
 				},
 			}
-			json.NewEncoder(w).Encode(resp)
-		} else if req.Method == "notifications/initialized" {
+			_ = json.NewEncoder(w).Encode(resp)
+
+		case "notifications/initialized":
 			w.WriteHeader(http.StatusNoContent)
-		} else {
+		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
 	}))
@@ -635,4 +641,44 @@ func TestNew_ClientVersion(t *testing.T) {
 			t.Errorf("expected clientVersion %q, got %q", mcp.SDKVersion, tr2.clientVersion)
 		}
 	})
+}
+
+func TestJSONRPCError_ProtocolNegotiation(t *testing.T) {
+	testCases := []struct {
+		name    string
+		code    int
+		message string
+	}{
+		{"Code -32022", -32022, "version mismatch"},
+		{"Code -32004", -32004, "version mismatch"},
+		{"Message invalid protocol version", -32000, "invalid protocol version"},
+		{"Message unsupported protocol version", -32000, "unsupported protocol version"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				resp := jsonRPCResponse{
+					JSONRPC: "2.0",
+					ID:      "1",
+					Error: &jsonRPCError{
+						Code:    tc.code,
+						Message: tc.message,
+					},
+				}
+				_ = json.NewEncoder(w).Encode(resp)
+			}))
+			defer server.Close()
+
+			tr, err := New(server.URL, server.Client(), "custom-client", "1.0.0")
+			require.NoError(t, err)
+
+			_, err = tr.ListTools(context.Background(), "", nil)
+			require.Error(t, err)
+			var negErr *transport.ProtocolNegotiationError
+			require.True(t, errors.As(err, &negErr))
+			assert.Equal(t, "2024-11-05", negErr.FallbackVersion)
+		})
+	}
 }
