@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v20260618
+package v20260728
 
 import (
 	"bytes"
@@ -32,13 +32,13 @@ import (
 )
 
 const (
-	ProtocolVersion = "DRAFT-2026-v1"
+	ProtocolVersion = "2026-07-28"
 )
 
 // Ensure that McpTransport implements the Transport interface.
 var _ transport.Transport = &McpTransport{}
 
-// McpTransport implements the MCP DRAFT-2026-v1 protocol (Stateless MCP).
+// McpTransport implements the MCP 2026-07-28 protocol (Stateless MCP).
 type McpTransport struct {
 	*mcp.BaseMcpTransport
 	protocolVersion string
