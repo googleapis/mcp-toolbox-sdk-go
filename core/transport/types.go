@@ -174,6 +174,47 @@ func (p *ParameterSchema) ValidateDefinition() error {
 	return nil
 }
 
+const (
+	MCPv20260728 = "2026-07-28"
+	MCPv20251125 = "2025-11-25"
+	MCPv20250618 = "2025-06-18"
+	MCPv20250326 = "2025-03-26"
+	MCPv20241105 = "2024-11-05"
+)
+
+// GetSupportedMcpVersions returns a list of supported MCP protocol versions in descending preference order.
+func GetSupportedMcpVersions() []string {
+	return []string{
+		MCPv20260728,
+		MCPv20251125,
+		MCPv20250618,
+		MCPv20250326,
+		MCPv20241105,
+	}
+}
+
+// IsVersionAtLeast determines if currentVersion is greater than or equal to minVersion based on supported version hierarchy.
+func IsVersionAtLeast(currentVersion, minVersion string) (bool, error) {
+	supported := GetSupportedMcpVersions()
+	currentIndex := -1
+	minIndex := -1
+	for i, v := range supported {
+		if v == currentVersion {
+			currentIndex = i
+		}
+		if v == minVersion {
+			minIndex = i
+		}
+	}
+	if currentIndex == -1 {
+		return false, fmt.Errorf("unrecognized protocol version: %s", currentVersion)
+	}
+	if minIndex == -1 {
+		return false, fmt.Errorf("unrecognized target protocol version: %s", minVersion)
+	}
+	return currentIndex <= minIndex, nil
+}
+
 // Schema for a tool.
 type ToolSchema struct {
 	Description  string            `json:"description"`

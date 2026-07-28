@@ -62,8 +62,13 @@ type mcpTool struct {
 	Meta        map[string]any `json:"_meta,omitempty"`
 }
 
-// newMockMCPServer creates a server that simulates the MCP lifecycle (initialize -> list).
+// newMockMCPServer creates a server that simulates the MCP lifecycle (initialize -> list) defaulting to 2026-07-28 protocol version.
 func newMockMCPServer(t *testing.T, tools []mcpTool) *httptest.Server {
+	return newMockMCPServerWithVersion(t, tools, "2026-07-28")
+}
+
+// newMockMCPServerWithVersion creates a server that simulates the MCP lifecycle with a custom protocol version.
+func newMockMCPServerWithVersion(t *testing.T, tools []mcpTool, protocolVersion string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		var req mcpRPCRequest
@@ -76,7 +81,7 @@ func newMockMCPServer(t *testing.T, tools []mcpTool) *httptest.Server {
 		switch req.Method {
 		case "initialize":
 			result = map[string]any{
-				"protocolVersion": "2025-06-18",
+				"protocolVersion": protocolVersion,
 				"capabilities":    map[string]any{"tools": map[string]any{}},
 				"serverInfo":      map[string]any{"name": "mock-server", "version": "1.0.0"},
 			}
@@ -348,7 +353,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 				},
 			},
 			Meta: map[string]any{
-				"toolbox/authParam": map[string]any{
+				"com.google.cloud/authParam": map[string]any{
 					"param2": []string{"google"},
 				},
 			},
@@ -358,7 +363,7 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 			Description: "Tool B",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 			Meta: map[string]any{
-				"toolbox/authInvoke": []string{"github"},
+				"com.google.cloud/authInvoke": []string{"github"},
 			},
 		},
 	}
@@ -395,6 +400,44 @@ func TestLoadToolAndLoadToolset(t *testing.T) {
 		// Confirm the schema was captured for Invoke
 		assert.NotNil(t, tool.boundParamSchemas["param1"])
 		assert.Equal(t, "string", tool.boundParamSchemas["param1"].Type)
+	})
+
+	t.Run("LoadTool - Legacy Metadata Keys (pre-2026)", func(t *testing.T) {
+		legacyTools := []mcpTool{
+			{
+				Name:        "legacyTool",
+				Description: "Legacy tool",
+				InputSchema: map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"param1": map[string]any{"type": "string"},
+						"param2": map[string]any{"type": "string"},
+					},
+				},
+				Meta: map[string]any{
+					"toolbox/authParam": map[string]any{
+						"param2": []any{"google"},
+					},
+					"toolbox/authInvoke": []any{"github"},
+				},
+			},
+		}
+
+		legacyServer := newMockMCPServerWithVersion(t, legacyTools, "2025-06-18")
+		defer legacyServer.Close()
+
+		client, _ := NewToolboxClient(legacyServer.URL,
+			WithHTTPClient(legacyServer.Client()),
+			WithProtocol(MCPv20250618),
+		)
+		tool, err := client.LoadTool("legacyTool",
+			context.Background(),
+			WithBindParamString("param1", "value1"),
+			WithAuthTokenString("google", "token-google"),
+			WithAuthTokenString("github", "token-github"),
+		)
+		require.NoError(t, err, "LoadTool should succeed for legacy protocol version 2025-06-18")
+		assert.Equal(t, "legacyTool", tool.name)
 	})
 
 	t.Run("LoadTool - Allows Nested Arrays", func(t *testing.T) {
@@ -600,7 +643,7 @@ func TestDefaultOptionOverwriting(t *testing.T) {
 				},
 			},
 			Meta: map[string]any{
-				"toolbox/authInvoke": []string{"google"},
+				"com.google.cloud/authInvoke": []string{"google"},
 			},
 		},
 	}
@@ -773,7 +816,7 @@ func TestLoadToolAndLoadToolset_ErrorPaths(t *testing.T) {
 				},
 			},
 			Meta: map[string]any{
-				"toolbox/authParam": map[string]any{
+				"com.google.cloud/authParam": map[string]any{
 					"auth_param": []string{"google"},
 				},
 			},
