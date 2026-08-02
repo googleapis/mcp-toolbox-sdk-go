@@ -107,6 +107,10 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 		return nil, err
 	}
 
+	if result.ResultType == "" {
+		result.ResultType = "complete"
+	}
+
 	toolsMap := make(map[string]transport.ToolSchema)
 	for _, toolRaw := range result.Tools {
 		toolSchema, err := t.ConvertToolDefinition(toolRaw)
@@ -118,8 +122,13 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 		}
 	}
 
+	serverVersion := "0.0.0"
+	if result.Meta != nil && result.Meta.ServerInfo != nil && result.Meta.ServerInfo.Version != "" {
+		serverVersion = result.Meta.ServerInfo.Version
+	}
+
 	return &transport.ManifestSchema{
-		ServerVersion: "1.0.0",
+		ServerVersion: serverVersion,
 		Tools:         toolsMap,
 	}, nil
 }
@@ -152,6 +161,10 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 	var result CallToolResult
 	if err := t.sendRequest(ctx, t.BaseURL(), reqPayload, &result, headers, "tools/call", toolName); err != nil {
 		return nil, err
+	}
+
+	if result.ResultType == "" {
+		result.ResultType = "complete"
 	}
 
 	if result.IsError {
