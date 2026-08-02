@@ -104,7 +104,7 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 	}
 
 	var result ListToolsResult
-	if err := t.sendRequest(ctx, targetURL, reqPayload, &result, headers, ""); err != nil {
+	if err := t.sendRequest(ctx, targetURL, reqPayload, &result, headers, "tools/list", ""); err != nil {
 		return nil, err
 	}
 
@@ -151,7 +151,7 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 	}
 
 	var result CallToolResult
-	if err := t.sendRequest(ctx, t.BaseURL(), reqPayload, &result, headers, toolName); err != nil {
+	if err := t.sendRequest(ctx, t.BaseURL(), reqPayload, &result, headers, "tools/call", toolName); err != nil {
 		return nil, err
 	}
 
@@ -195,7 +195,7 @@ func checkRPCError(rpcErr *jsonRPCError) error {
 	return fmt.Errorf("MCP request failed with code %d: %s", rpcErr.Code, rpcErr.Message)
 }
 
-func (t *McpTransport) sendRequest(ctx context.Context, reqURL string, bodyPayload any, dest any, headers map[string]string, mcpName string) error {
+func (t *McpTransport) sendRequest(ctx context.Context, reqURL string, bodyPayload any, dest any, headers map[string]string, method string, mcpName string) error {
 	jsonBytes, err := json.Marshal(bodyPayload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request payload: %w", err)
@@ -208,6 +208,12 @@ func (t *McpTransport) sendRequest(ctx context.Context, reqURL string, bodyPaylo
 
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("MCP-Protocol-Version", t.protocolVersion)
+	if method != "" {
+		httpReq.Header.Set("Mcp-Method", method)
+	}
+	if mcpName != "" {
+		httpReq.Header.Set("Mcp-Name", mcpName)
+	}
 	for k, v := range headers {
 		httpReq.Header.Set(k, v)
 	}
