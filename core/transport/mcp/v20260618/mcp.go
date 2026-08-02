@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
@@ -82,15 +81,9 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 
 // ListTools fetches available tools from the server.
 func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]string) (*transport.ManifestSchema, error) {
-	var targetURL string
-	var err error
-	if toolsetName != "" {
-		targetURL, err = url.JoinPath(t.BaseURL(), toolsetName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build toolset URL: %w", err)
-		}
-	} else {
-		targetURL = t.BaseURL()
+	targetURL, err := mcp.AppendToolsetPath(t.BaseURL(), toolsetName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build toolset URL: %w", err)
 	}
 
 	reqPayload := ListToolsRequest{

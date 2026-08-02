@@ -926,3 +926,27 @@ func TestToGenkitTool_MapParams(t *testing.T) {
 		})
 	}
 }
+
+func TestRunToolURLBinding(t *testing.T) {
+	for _, serverURL := range getTestServerURLs() {
+		t.Run("server_"+serverURL, func(t *testing.T) {
+			client, err := core.NewToolboxClient(serverURL + "?num_rows=2")
+			require.NoError(t, err)
+			tool, err := client.LoadTool("get-n-rows", context.Background())
+			require.NoError(t, err)
+
+			g := genkit.Init(context.Background())
+			genkitTool, err := tbgenkit.ToGenkitTool(tool, g)
+			require.NoError(t, err)
+
+			res, err := genkitTool.RunRaw(context.Background(), map[string]any{})
+			require.NoError(t, err)
+
+			resStr, ok := res.(string)
+			require.True(t, ok)
+			assert.Contains(t, resStr, "row1")
+			assert.Contains(t, resStr, "row2")
+			assert.NotContains(t, resStr, "row3")
+		})
+	}
+}
