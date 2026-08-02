@@ -195,7 +195,7 @@ func TestMCP_Basic(t *testing.T) {
 				// Determine which protocol to check against
 				protocolToCheck := proto.protocol
 				if proto.isDefault {
-					protocolToCheck = core.MCPv20250618 // Default should match latest
+					protocolToCheck = core.MCPLatest // Default should match latest
 				}
 
 				switch protocolToCheck {
