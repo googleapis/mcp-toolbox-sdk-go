@@ -744,3 +744,31 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 		}
 	})
 }
+
+func TestParameterSchema_NumberType(t *testing.T) {
+	schema := ParameterSchema{
+		Name:        "num_param",
+		Type:        "number",
+		Description: "number parameter",
+	}
+
+	t.Run("ValidateType allows floats and ints", func(t *testing.T) {
+		for _, val := range []any{float64(3.14), float32(1.23), int(42), int64(100), uint64(200)} {
+			if err := schema.ValidateType(val); err != nil {
+				t.Errorf("expected no error for %T(%v), got %v", val, val, err)
+			}
+		}
+	})
+
+	t.Run("ValidateType rejects non-numeric types", func(t *testing.T) {
+		if err := schema.ValidateType("42"); err == nil {
+			t.Error("expected error for string value, got nil")
+		}
+	})
+
+	t.Run("ValidateDefinition allows number type", func(t *testing.T) {
+		if err := schema.ValidateDefinition(); err != nil {
+			t.Errorf("expected no error for ValidateDefinition with number, got %v", err)
+		}
+	})
+}
