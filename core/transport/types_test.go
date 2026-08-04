@@ -744,3 +744,111 @@ func TestParameterSchema_ValidateDefinition(t *testing.T) {
 		}
 	})
 }
+
+func TestParameterSchema_NumberType(t *testing.T) {
+	schema := ParameterSchema{
+		Name:        "num_param",
+		Type:        "number",
+		Description: "number parameter",
+	}
+
+	t.Run("ValidateType allows floats and ints", func(t *testing.T) {
+		for _, val := range []any{float64(3.14), float32(1.23), int(42), int64(100), uint64(200)} {
+			if err := schema.ValidateType(val); err != nil {
+				t.Errorf("expected no error for %T(%v), got %v", val, val, err)
+			}
+		}
+	})
+
+	t.Run("ValidateType rejects non-numeric types", func(t *testing.T) {
+		if err := schema.ValidateType("42"); err == nil {
+			t.Error("expected error for string value, got nil")
+		}
+	})
+
+	t.Run("ValidateDefinition allows number type", func(t *testing.T) {
+		if err := schema.ValidateDefinition(); err != nil {
+			t.Errorf("expected no error for ValidateDefinition with number, got %v", err)
+		}
+	})
+}
+
+func TestIsVersionAtLeast(t *testing.T) {
+	tests := []struct {
+		name           string
+		currentVersion string
+		minVersion     string
+		wantResult     bool
+		wantErr        bool
+	}{
+		{
+			name:           "Equal version",
+			currentVersion: "2026-07-28",
+			minVersion:     "2026-07-28",
+			wantResult:     true,
+			wantErr:        false,
+		},
+		{
+			name:           "Newer current version vs older min version",
+			currentVersion: "2026-07-28",
+			minVersion:     "2025-11-25",
+			wantResult:     true,
+			wantErr:        false,
+		},
+		{
+			name:           "Older current version vs newer min version",
+			currentVersion: "2025-03-26",
+			minVersion:     "2026-07-28",
+			wantResult:     false,
+			wantErr:        false,
+		},
+		{
+			name:           "Unrecognized current version",
+			currentVersion: "invalid-version",
+			minVersion:     "2026-07-28",
+			wantResult:     false,
+			wantErr:        true,
+		},
+		{
+			name:           "Unrecognized min version",
+			currentVersion: "2026-07-28",
+			minVersion:     "unknown-target",
+			wantResult:     false,
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := IsVersionAtLeast(tt.currentVersion, tt.minVersion)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("IsVersionAtLeast(%q, %q) error = %v, wantErr %v", tt.currentVersion, tt.minVersion, err, tt.wantErr)
+				return
+			}
+			if got != tt.wantResult {
+				t.Errorf("IsVersionAtLeast(%q, %q) = %v, want %v", tt.currentVersion, tt.minVersion, got, tt.wantResult)
+			}
+		})
+	}
+}
+
+func TestGetSupportedMcpVersions(t *testing.T) {
+	versions := GetSupportedMcpVersions()
+	expected := []string{
+		MCPv20260728,
+		MCPv20251125,
+		MCPv20250618,
+		MCPv20250326,
+		MCPv20241105,
+	}
+
+	if len(versions) != len(expected) {
+		t.Fatalf("Expected %d supported versions, got %d", len(expected), len(versions))
+	}
+
+	for i, v := range versions {
+		if v != expected[i] {
+			t.Errorf("Index %d: expected version %s, got %s", i, expected[i], v)
+		}
+	}
+}

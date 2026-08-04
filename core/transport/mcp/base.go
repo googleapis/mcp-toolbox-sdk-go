@@ -34,11 +34,12 @@ type ToolContent struct {
 
 // BaseMcpTransport holds the common state and logic for MCP HTTP transports.
 type BaseMcpTransport struct {
-	baseURL       string
-	HTTPClient    *http.Client
-	ServerVersion string
-	initOnce      sync.Once
-	initErr       error
+	baseURL         string
+	HTTPClient      *http.Client
+	ServerVersion   string
+	ProtocolVersion string
+	initOnce        sync.Once
+	initErr         error
 
 	// HandshakeHook is the abstract method _initialize_session.
 	// The specific version implementation will assign this function.
@@ -55,31 +56,37 @@ func NewBaseTransport(baseURL string, client *http.Client) (*BaseMcpTransport, e
 	if client == nil {
 		client = &http.Client{}
 	}
-	var fullURL string
-	var err error
-	// Normalize by removing trailing slash first
-	cleanBaseURL := strings.TrimRight(baseURL, "/")
+	parsedURL, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base URL: %w", err)
+	}
 
-	// Only append "/mcp/" if it is not already present
-	if strings.HasSuffix(cleanBaseURL, "/mcp") {
-		// It's already correct, just use it
-		fullURL = cleanBaseURL
-	} else {
-		// It's missing, so join it safely
-		// url.JoinPath handles the slash insertion automatically
-		fullURL, err = url.JoinPath(cleanBaseURL, "mcp")
+	path := strings.TrimRight(parsedURL.Path, "/")
+	if !strings.HasSuffix(path, "/mcp") {
+		path, err = url.JoinPath(path, "mcp")
 		if err != nil {
 			return nil, err
 		}
 	}
-
-	// Ensure trailing slash
-	fullURL += "/"
+	parsedURL.Path = path + "/"
 
 	return &BaseMcpTransport{
-		baseURL:    fullURL,
+		baseURL:    parsedURL.String(),
 		HTTPClient: client,
 	}, nil
+}
+
+// AppendToolsetPath appends a toolset name to the base URL path while preserving query parameters.
+func AppendToolsetPath(baseURLStr, toolsetName string) (string, error) {
+	if toolsetName == "" {
+		return baseURLStr, nil
+	}
+	parsedURL, err := url.Parse(baseURLStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse URL: %w", err)
+	}
+	parsedURL.Path = strings.TrimRight(parsedURL.Path, "/") + "/" + toolsetName
+	return parsedURL.String(), nil
 }
 
 // EnsureInitialized guarantees the session is ready before making requests.
@@ -138,15 +145,38 @@ func (b *BaseMcpTransport) ConvertToolDefinition(toolData map[string]any) (trans
 	var paramAuth map[string]any
 	var invokeAuth []string
 
+	version := b.ProtocolVersion
+	if version == "" {
+		version = transport.MCPv20260728
+	}
+	is2026OrNewer, err := transport.IsVersionAtLeast(version, transport.MCPv20260728)
+	if err != nil {
+		return transport.ToolSchema{}, fmt.Errorf("invalid protocol version check: %w", err)
+	}
+
 	if meta, ok := toolData["_meta"].(map[string]any); ok {
-		if pa, ok := meta["toolbox/authParam"].(map[string]any); ok {
-			paramAuth = pa
-		}
-		if ia, ok := meta["toolbox/authInvoke"].([]any); ok {
-			invokeAuth = make([]string, 0, len(ia))
-			for _, v := range ia {
-				if s, ok := v.(string); ok {
-					invokeAuth = append(invokeAuth, s)
+		if is2026OrNewer {
+			if pa, ok := meta["com.google.cloud/authParam"].(map[string]any); ok {
+				paramAuth = pa
+			}
+			if ia, ok := meta["com.google.cloud/authInvoke"].([]any); ok {
+				invokeAuth = make([]string, 0, len(ia))
+				for _, v := range ia {
+					if s, ok := v.(string); ok {
+						invokeAuth = append(invokeAuth, s)
+					}
+				}
+			}
+		} else {
+			if pa, ok := meta["toolbox/authParam"].(map[string]any); ok {
+				paramAuth = pa
+			}
+			if ia, ok := meta["toolbox/authInvoke"].([]any); ok {
+				invokeAuth = make([]string, 0, len(ia))
+				for _, v := range ia {
+					if s, ok := v.(string); ok {
+						invokeAuth = append(invokeAuth, s)
+					}
 				}
 			}
 		}

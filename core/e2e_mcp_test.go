@@ -32,6 +32,13 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const (
+	DefaultPortStable      = "5000"
+	DefaultPortDraft       = "5001"
+	DefaultServerURLStable = "http://localhost:5000"
+	DefaultServerURLDraft  = "http://localhost:5001"
+)
+
 // Global variables to hold session-scoped fixtures
 var (
 	projectID       string = getEnvVar("GOOGLE_CLOUD_PROJECT")
@@ -40,6 +47,17 @@ var (
 	authToken2      string
 	manifestVersion string = getEnvVar("TOOLBOX_MANIFEST_VERSION")
 )
+
+
+func getTestServerURLs() []string {
+	if os.Getenv("TOOLBOX_SERVER_URL") != "" {
+		return []string{os.Getenv("TOOLBOX_SERVER_URL")}
+	}
+	return []string{
+		getEnvVarWithDefault("TOOLBOX_SERVER_URL_STABLE", DefaultServerURLStable),
+		getEnvVarWithDefault("TOOLBOX_SERVER_URL_DRAFT", DefaultServerURLDraft),
+	}
+}
 
 func TestMain(m *testing.M) {
 	ctx := context.Background()
@@ -65,19 +83,25 @@ func TestMain(m *testing.M) {
 	toolsFilePath := toolsFile.Name()
 	defer os.Remove(toolsFilePath) // Ensure cleanup
 
-	// Download and start the toolbox server
-	cmd := setupAndStartToolboxServer(ctx, toolboxVersion, toolsFilePath)
+	// Download and start both stable and draft toolbox servers
+	cmdStable := setupAndStartToolboxServerWithFlags(ctx, toolboxVersion, toolsFilePath, DefaultPortStable)
+	cmdDraft := setupAndStartToolboxServerWithFlags(ctx, toolboxVersion, toolsFilePath, DefaultPortDraft, "--enable-draft-specs")
 
 	// Run Tests
 	log.Println("Setup complete. Running tests...")
 	exitCode := m.Run()
 
 	// Teardown Phase
-	log.Println("Tearing down toolbox server...")
-	if err := cmd.Process.Kill(); err != nil {
-		log.Printf("Failed to kill toolbox server process: %v", err)
+	log.Println("Tearing down toolbox servers...")
+	if err := cmdStable.Process.Kill(); err != nil {
+		log.Printf("Failed to kill stable toolbox server process: %v", err)
 	}
-	_ = cmd.Wait() // Clean up the process resources
+	_ = cmdStable.Wait()
+
+	if err := cmdDraft.Process.Kill(); err != nil {
+		log.Printf("Failed to kill draft toolbox server process: %v", err)
+	}
+	_ = cmdDraft.Wait()
 
 	os.Exit(exitCode)
 }
@@ -135,7 +159,11 @@ func (c *CapturingTransport) CapturedHeaders() http.Header {
 }
 
 // helper factory to create a client with a specific protocol
-func getNewMCPToolboxClient(t *testing.T, tc protocolTestCase) *core.ToolboxClient {
+func getNewMCPToolboxClient(t *testing.T, tc protocolTestCase, serverURL ...string) *core.ToolboxClient {
+	url := DefaultServerURLStable
+	if len(serverURL) > 0 && serverURL[0] != "" {
+		url = serverURL[0]
+	}
 	opts := []core.ClientOption{}
 
 	// Only add WithProtocol if it's NOT the default test case
@@ -143,46 +171,48 @@ func getNewMCPToolboxClient(t *testing.T, tc protocolTestCase) *core.ToolboxClie
 		opts = append(opts, core.WithProtocol(tc.protocol))
 	}
 
-	client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+	client, err := core.NewToolboxClient(url, opts...)
 	require.NoError(t, err, "Failed to create MCP ToolboxClient for %s", tc.name)
 	return client
 }
 
 func TestMCP_Basic(t *testing.T) {
-	for _, proto := range protocolsToTest {
-		t.Run(proto.name, func(t *testing.T) {
-			// Helper to create a new client for each sub-test
-			newClient := func(t *testing.T) *core.ToolboxClient {
-				return getNewMCPToolboxClient(t, proto)
-			}
+	for _, serverURL := range getTestServerURLs() {
+		t.Run("server_"+serverURL, func(t *testing.T) {
+			for _, proto := range protocolsToTest {
+				t.Run(proto.name, func(t *testing.T) {
+					// Helper to create a new client for each sub-test
+					newClient := func(t *testing.T) *core.ToolboxClient {
+						return getNewMCPToolboxClient(t, proto, serverURL)
+					}
 
-			// Helper to load the get-n-rows tool
-			getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
-				tool, err := client.LoadTool("get-n-rows", context.Background())
-				require.NoError(t, err, "Failed to load tool 'get-n-rows'")
-				require.Equal(t, "get-n-rows", tool.Name())
-				return tool
-			}
+					// Helper to load the get-n-rows tool
+					getNRowsTool := func(t *testing.T, client *core.ToolboxClient) *core.ToolboxTool {
+						tool, err := client.LoadTool("get-n-rows", context.Background())
+						require.NoError(t, err, "Failed to load tool 'get-n-rows'")
+						require.Equal(t, "get-n-rows", tool.Name())
+						return tool
+					}
 
-			t.Run("test_mcp_client_headers", func(t *testing.T) {
-				// Setup the Transport to capture headers
-				capturer := &CapturingTransport{}
-				httpClient := &http.Client{
-					Transport: capturer,
-					Timeout:   30 * time.Second,
-				}
+					t.Run("test_mcp_client_headers", func(t *testing.T) {
+						// Setup the Transport to capture headers
+						capturer := &CapturingTransport{}
+						httpClient := &http.Client{
+							Transport: capturer,
+							Timeout:   30 * time.Second,
+						}
 
-				// Build options manually to inject HTTP client
-				opts := []core.ClientOption{
-					core.WithHTTPClient(httpClient),
-				}
-				// Logic to handle Default vs Explicit protocol
-				if !proto.isDefault {
-					opts = append(opts, core.WithProtocol(proto.protocol))
-				}
+						// Build options manually to inject HTTP client
+						opts := []core.ClientOption{
+							core.WithHTTPClient(httpClient),
+						}
+						// Logic to handle Default vs Explicit protocol
+						if !proto.isDefault {
+							opts = append(opts, core.WithProtocol(proto.protocol))
+						}
 
-				// Inject Transport into Client
-				client, err := core.NewToolboxClient("http://localhost:5000", opts...)
+						// Inject Transport into Client
+						client, err := core.NewToolboxClient(serverURL, opts...)
 				require.NoError(t, err)
 
 				// Trigger a request
@@ -195,7 +225,7 @@ func TestMCP_Basic(t *testing.T) {
 				// Determine which protocol to check against
 				protocolToCheck := proto.protocol
 				if proto.isDefault {
-					protocolToCheck = core.MCPv20250618 // Default should match latest
+					protocolToCheck = core.MCPLatest // Default should match latest
 				}
 
 				switch protocolToCheck {
@@ -309,6 +339,8 @@ func TestMCP_Basic(t *testing.T) {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), "parameter 'num_rows' expects a string, but got int")
 			})
+				})
+			}
 		})
 	}
 }
@@ -336,7 +368,7 @@ func TestMCP_LoadErrors(t *testing.T) {
 	}
 
 	t.Run("test_new_client_with_nil_option", func(t *testing.T) {
-		_, err := core.NewToolboxClient("http://localhost:5000", nil)
+		_, err := core.NewToolboxClient(DefaultServerURLStable, nil)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "received a nil ClientOption")
 	})
@@ -853,6 +885,77 @@ func TestMCP_ContextHandling(t *testing.T) {
 				require.Error(t, err)
 				assert.ErrorIs(t, err, context.DeadlineExceeded)
 			})
+		})
+	}
+}
+
+func TestRunToolURLBinding(t *testing.T) {
+	for _, serverURL := range getTestServerURLs() {
+		t.Run("server_"+serverURL, func(t *testing.T) {
+			client, err := core.NewToolboxClient(serverURL + "?num_rows=2")
+			require.NoError(t, err)
+			tool, err := client.LoadTool("get-n-rows", context.Background())
+			require.NoError(t, err)
+			res, err := tool.Invoke(context.Background(), map[string]any{})
+			require.NoError(t, err)
+			resStr, ok := res.(string)
+			require.True(t, ok)
+			assert.Contains(t, resStr, "row1")
+			assert.Contains(t, resStr, "row2")
+			assert.NotContains(t, resStr, "row3")
+		})
+	}
+}
+
+func TestMcpProtocols_E2E(t *testing.T) {
+	tests := []struct {
+		name       string
+		clientOpts []core.ClientOption
+		validate   func(t *testing.T, client *core.ToolboxClient, serverURL string)
+	}{
+		{
+			name:       "DraftFallback",
+			clientOpts: []core.ClientOption{core.WithProtocol(core.MCPDraft)},
+		},
+		{
+			name:       "LatestProtocol",
+			clientOpts: []core.ClientOption{core.WithProtocol(core.MCPLatest)},
+		},
+		{
+			name: "CustomProtocolsList",
+			clientOpts: []core.ClientOption{core.WithSupportedProtocols([]core.Protocol{
+				core.MCPv20241105,
+				core.MCPv20250326,
+				core.MCPLatest,
+				core.MCPDraft,
+			})},
+			validate: func(t *testing.T, client *core.ToolboxClient, serverURL string) {
+				if serverURL == DefaultServerURLStable {
+					assert.Equal(t, core.MCPLatest, client.GetProtocol())
+				} else {
+					assert.Equal(t, core.MCPDraft, client.GetProtocol())
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, serverURL := range getTestServerURLs() {
+				t.Run("server_"+serverURL, func(t *testing.T) {
+					client, err := core.NewToolboxClient(serverURL, tc.clientOpts...)
+					require.NoError(t, err)
+					tool, err := client.LoadTool("get-n-rows", context.Background())
+					require.NoError(t, err)
+					res, err := tool.Invoke(context.Background(), map[string]any{"num_rows": "1"})
+					require.NoError(t, err)
+					assert.Contains(t, res, "row1")
+
+					if tc.validate != nil {
+						tc.validate(t, client, serverURL)
+					}
+				})
+			}
 		})
 	}
 }
