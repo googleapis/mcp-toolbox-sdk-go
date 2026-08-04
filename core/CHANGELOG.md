@@ -5,10 +5,13 @@
 
 ### Features
 
-* **core:** add MCP 2026 (July spec) stateless protocol support and auto-negotiation ([#317](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/317)) ([be1e47a](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/be1e47a551bfe300733480488fd6ff37d2e04451))
+*  Add MCP 2026 (July spec) stateless protocol support and auto-negotiation ([#317](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/317)) ([be1e47a](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/be1e47a551bfe300733480488fd6ff37d2e04451))
+
+* Add automatic protocol version fallback and negotiation (https://github.com/googleapis/mcp-toolbox-sdk-go/pull/305)
+
+* Add support response _meta serverInfo and resultType in July Spec (https://github.com/googleapis/mcp-toolbox-sdk-go/pull/308)
 
 * Add MCPLatest protocol ([#271](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/271)) ([7154330](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/71543303a19cc5c57bec76eefc2143f453271e74))
-
 
 ## [1.0.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v0.7.0...core/v1.0.0) (2026-03-31)
 
