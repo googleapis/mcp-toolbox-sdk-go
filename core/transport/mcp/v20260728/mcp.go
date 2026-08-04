@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v20250618
+package v20260728
 
 import (
 	"bytes"
@@ -28,16 +28,18 @@ import (
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp"
 	mcp20241105 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20241105"
 	mcp20250326 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250326"
+	mcp20250618 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250618"
+	mcp20251125 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20251125"
 )
 
 const (
-	ProtocolVersion = transport.MCPv20250618
+	ProtocolVersion = transport.MCPv20260728
 )
 
 // Ensure that McpTransport implements the Transport interface.
 var _ transport.Transport = &McpTransport{}
 
-// McpTransport implements the MCP v2025-06-18 protocol.
+// McpTransport implements the MCP 2026-07-28 protocol (Stateless MCP).
 type McpTransport struct {
 	*mcp.BaseMcpTransport
 	protocolVersion string
@@ -62,17 +64,16 @@ func New(baseURL string, client *http.Client, clientName string, clientVersion s
 		clientName:       clientName,
 		clientVersion:    clientVersion,
 	}
-	t.HandshakeHook = t.initializeSession
+	// MCP 2026-07-28 is stateless (SEP-2575) so no initialization handshake is required.
+	t.HandshakeHook = func(ctx context.Context, headers map[string]string) error {
+		return nil
+	}
 
 	return t, nil
 }
 
 // ListTools fetches available tools
 func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]string) (*transport.ManifestSchema, error) {
-	if err := t.EnsureInitialized(ctx, headers); err != nil {
-		return nil, err
-	}
-
 	requestURL, err := mcp.AppendToolsetPath(t.BaseURL(), toolsetName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct toolset URL: %w", err)
@@ -81,6 +82,14 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 	var result listToolsResult
 	if err := t.sendRequest(ctx, requestURL, "tools/list", map[string]any{}, headers, &result); err != nil {
 		return nil, fmt.Errorf("failed to list tools: %w", err)
+	}
+
+	if result.ResultType == "" {
+		result.ResultType = "complete"
+	}
+
+	if result.Meta != nil && result.Meta.ServerInfo != nil && result.Meta.ServerInfo.Version != "" {
+		t.ServerVersion = result.Meta.ServerInfo.Version
 	}
 
 	manifest := &transport.ManifestSchema{
@@ -133,8 +142,8 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 
 // InvokeTool executes a tool
 func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error) {
-	if err := t.EnsureInitialized(ctx, headers); err != nil {
-		return "", err
+	if payload == nil {
+		payload = make(map[string]any)
 	}
 	params := callToolRequestParams{
 		Name:      toolName,
@@ -150,49 +159,9 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 		return "", fmt.Errorf("tool execution resulted in error")
 	}
 
-	baseContent := make([]mcp.ToolContent, len(result.Content))
-	for i, item := range result.Content {
-		baseContent[i] = mcp.ToolContent{
-			Type: item.Type,
-			Text: item.Text,
-		}
-	}
-
-	output := t.ProcessToolResultContent(baseContent)
+	output := t.ProcessToolResultContent(result.Content)
 
 	return output, nil
-}
-
-// initializeSession performs the initial handshake with the server.
-func (t *McpTransport) initializeSession(ctx context.Context, headers map[string]string) error {
-	params := initializeRequestParams{
-		ProtocolVersion: t.protocolVersion,
-		Capabilities:    clientCapabilities{},
-		ClientInfo: implementation{
-			Name:    t.clientName,
-			Version: t.clientVersion,
-		},
-	}
-
-	var result initializeResult
-	if err := t.sendRequest(ctx, t.BaseURL(), "initialize", params, headers, &result); err != nil {
-		return err
-	}
-
-	// Protocol Version Check
-	if result.ProtocolVersion != t.protocolVersion {
-		return &transport.ProtocolNegotiationError{FallbackVersion: result.ProtocolVersion}
-	}
-
-	// Capabilities Check
-	if result.Capabilities.Tools == nil {
-		return fmt.Errorf("server does not support the 'tools' capability")
-	}
-
-	t.ServerVersion = result.ServerInfo.Version
-
-	// Confirm Handshake
-	return t.sendNotification(ctx, "notifications/initialized", map[string]any{}, headers)
 }
 
 // sendRequest sends a standard JSON-RPC request to the server.
@@ -217,8 +186,32 @@ func (t *McpTransport) sendNotification(ctx context.Context, method string, para
 }
 
 // doRPC performs the low-level HTTP POST and handles JSON-RPC wrapping/unwrapping.
-// v2025-06-18: Injects 'MCP-Protocol-Version' header.
+// v20260728 (Stateless MCP): Injects '_meta' in params and sets 'Mcp-Method' and 'Mcp-Name' headers.
 func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, headers map[string]string, dest any) error {
+	var method string
+
+	meta := mcpMeta{
+		ProtocolVersion: t.protocolVersion,
+		ClientInfo: implementation{
+			Name:    t.clientName,
+			Version: t.clientVersion,
+		},
+		ClientCapabilities: clientCapabilities{},
+	}
+
+	toolName := extractMcpName(reqBody)
+
+	switch r := reqBody.(type) {
+	case jsonRPCRequest:
+		method = r.Method
+		r.Params = injectMeta(r.Params, meta)
+		reqBody = r
+	case jsonRPCNotification:
+		method = r.Method
+		r.Params = injectMeta(r.Params, meta)
+		reqBody = r
+	}
+
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		return fmt.Errorf("marshal failed: %w", err)
@@ -231,11 +224,14 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-	// Set Accept header for MCP Spec 2025-03-26
-	// Since SSE is not supported, we only accept application/json
 	httpReq.Header.Set("Accept", "application/json")
-	// v2025-06-18 Specific: Inject Protocol Version Header
 	httpReq.Header.Set("MCP-Protocol-Version", t.protocolVersion)
+	if method != "" {
+		httpReq.Header.Set("Mcp-Method", method)
+	}
+	if toolName != "" {
+		httpReq.Header.Set("Mcp-Name", toolName)
+	}
 
 	// Apply resolved headers
 	for k, v := range headers {
@@ -250,6 +246,8 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 
 	supportedVersionsPriority := []string{
 		ProtocolVersion,
+		mcp20251125.ProtocolVersion,
+		mcp20250618.ProtocolVersion,
 		mcp20250326.ProtocolVersion,
 		mcp20241105.ProtocolVersion,
 	}
@@ -274,11 +272,11 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 					}
 				}
 			}
-			return &transport.ProtocolNegotiationError{FallbackVersion: mcp20250326.ProtocolVersion}
+			return &transport.ProtocolNegotiationError{FallbackVersion: mcp20251125.ProtocolVersion}
 		}
 		errMsgLower := strings.ToLower(rpcErr.Message)
 		if strings.Contains(errMsgLower, "invalid protocol version") || strings.Contains(errMsgLower, "unsupported protocol version") {
-			return &transport.ProtocolNegotiationError{FallbackVersion: mcp20250326.ProtocolVersion}
+			return &transport.ProtocolNegotiationError{FallbackVersion: mcp20251125.ProtocolVersion}
 		}
 		return fmt.Errorf("MCP request failed with code %d: %s", rpcErr.Code, rpcErr.Message)
 	}
@@ -296,7 +294,7 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 		}
 		bodyStrLower := strings.ToLower(string(body))
 		if strings.Contains(bodyStrLower, "invalid protocol version") || strings.Contains(bodyStrLower, "unsupported protocol version") {
-			return &transport.ProtocolNegotiationError{FallbackVersion: mcp20250326.ProtocolVersion}
+			return &transport.ProtocolNegotiationError{FallbackVersion: mcp20251125.ProtocolVersion}
 		}
 		return fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
@@ -330,4 +328,45 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 	}
 
 	return nil
+}
+
+// injectMeta wraps or injects _meta into JSON-RPC params.
+func injectMeta(params any, meta mcpMeta) map[string]any {
+	res := make(map[string]any)
+	if params != nil {
+		b, err := json.Marshal(params)
+		if err == nil {
+			_ = json.Unmarshal(b, &res)
+		}
+	}
+	res["_meta"] = meta
+	return res
+}
+
+// extractMcpName extracts the tool name from request payload for the Mcp-Name header.
+func extractMcpName(reqBody any) string {
+	var params any
+	switch r := reqBody.(type) {
+	case jsonRPCRequest:
+		params = r.Params
+	case jsonRPCNotification:
+		params = r.Params
+	default:
+		params = reqBody
+	}
+
+	if params == nil {
+		return ""
+	}
+
+	switch p := params.(type) {
+	case callToolRequestParams:
+		return p.Name
+	case map[string]any:
+		if n, ok := p["name"].(string); ok {
+			return n
+		}
+	}
+
+	return ""
 }

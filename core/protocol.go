@@ -14,32 +14,31 @@
 
 package core
 
-import "github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
+import (
+	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
+)
 
 // Protocol defines underlying transport protocols.
 type Protocol string
 
 const (
 	// MCP Version Constants
-	MCPv20251125 Protocol = "2025-11-25"
-	MCPv20250618 Protocol = "2025-06-18"
-	MCPv20250326 Protocol = "2025-03-26"
-	MCPv20241105 Protocol = "2024-11-05"
+	MCPv20260728 Protocol = transport.MCPv20260728
+	MCPv20251125 Protocol = transport.MCPv20251125
+	MCPv20250618 Protocol = transport.MCPv20250618
+	MCPv20250326 Protocol = transport.MCPv20250326
+	MCPv20241105 Protocol = transport.MCPv20241105
 
 	// MCP is the default alias pointing to the newest supported version.
-	MCP = MCPv20250618
+	MCP = MCPv20260728
 
-	MCPLatest = MCPv20251125
+	MCPLatest Protocol = MCPv20260728
+	MCPDraft  Protocol = MCPv20260728
 )
 
 // GetSupportedMcpVersions returns a list of supported MCP protocol versions.
 func GetSupportedMcpVersions() []string {
-	return []string{
-		string(MCPv20251125),
-		string(MCPv20250618),
-		string(MCPv20250326),
-		string(MCPv20241105),
-	}
+	return transport.GetSupportedMcpVersions()
 }
 
 type ManifestSchema = transport.ManifestSchema

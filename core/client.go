@@ -16,23 +16,25 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"net/http"
-	"strings"
-
 	"slices"
+	"strings"
+	"sync"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
 	mcp20241105 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20241105"
 	mcp20250326 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250326"
 	mcp20250618 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250618"
 	mcp20251125 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20251125"
+	mcp20260728 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20260728"
 	"golang.org/x/oauth2"
 )
 
 // The synchronous interface for a Toolbox service client.
 type ToolboxClient struct {
+	mu                  sync.RWMutex
 	baseURL             string
 	httpClient          *http.Client
 	protocol            Protocol
@@ -43,6 +45,7 @@ type ToolboxClient struct {
 	defaultOptionsSet   bool
 	clientName          string
 	clientVersion       string
+	supportedProtocols  []Protocol
 }
 
 // NewToolboxClient creates and configures a new, immutable client for interacting with a
@@ -84,11 +87,9 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	// Initialize the Transport based on the selected Protocol.
 	var transportErr error
 
-	if slices.Contains(GetSupportedMcpVersions(), string(tc.protocol)) && tc.protocol != MCPLatest {
-		log.Printf("A newer version of MCP: v%s is available. Please use MCPLatest to use the latest features.", MCPLatest)
-	}
-
 	switch tc.protocol {
+	case MCPv20260728:
+		tc.transport, transportErr = mcp20260728.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20251125:
 		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20250618:
@@ -204,6 +205,8 @@ func (tc *ToolboxClient) newToolboxTool(
 		requiredAuthnParams: remainingAuthnParams,
 		requiredAuthzTokens: remainingAuthzTokens,
 		clientHeaderSources: tc.clientHeaderSources,
+		clientName:          tc.clientName,
+		clientVersion:       tc.clientVersion,
 	}
 
 	return tt, usedAuthKeys, usedBoundKeys, nil
@@ -249,11 +252,15 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 	}
 
 	// Fetch the manifest for the specified tool.
-	manifest, err := tc.transport.GetTool(ctx, name, resolvedHeaders)
+	var manifest *transport.ManifestSchema
+	res, err := tc.executeWithFallback(func(tr transport.Transport) (any, error) {
+		return tr.GetTool(ctx, name, resolvedHeaders)
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to load tool manifest for '%s': %w", name, err)
 	}
+	manifest = res.(*transport.ManifestSchema)
 	if manifest.Tools == nil {
 		return nil, fmt.Errorf("tool '%s' not found (manifest contains no tools)", name)
 	}
@@ -263,7 +270,11 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 	}
 
 	// Construct the tool from its schema and the final configuration.
-	tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(name, schema, finalConfig, true, tc.transport)
+	tc.mu.RLock()
+	activeTransport := tc.transport
+	tc.mu.RUnlock()
+
+	tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(name, schema, finalConfig, true, activeTransport)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create toolbox tool from schema for '%s': %w", name, err)
 	}
@@ -344,10 +355,14 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 	}
 
 	// Fetch Manifest via Transport
-	manifest, err := tc.transport.ListTools(ctx, name, resolvedHeaders)
+	var manifest *transport.ManifestSchema
+	res, err := tc.executeWithFallback(func(tr transport.Transport) (any, error) {
+		return tr.ListTools(ctx, name, resolvedHeaders)
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load toolset manifest for '%s': %w", name, err)
 	}
+	manifest = res.(*transport.ManifestSchema)
 	if manifest.Tools == nil {
 		return nil, fmt.Errorf("toolset '%s' not found (manifest contains no tools)", name)
 	}
@@ -365,9 +380,13 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 		providedBoundKeys[k] = struct{}{}
 	}
 
+	tc.mu.RLock()
+	activeTransport := tc.transport
+	tc.mu.RUnlock()
+
 	for toolName, schema := range manifest.Tools {
 		// Construct each tool from its schema and the shared configuration.
-		tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(toolName, schema, finalConfig, finalConfig.Strict, tc.transport)
+		tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(toolName, schema, finalConfig, finalConfig.Strict, activeTransport)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create tool '%s': %w", toolName, err)
 		}
@@ -432,4 +451,100 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 	}
 
 	return tools, nil
+}
+
+// GetProtocol returns the active protocol version for the client.
+func (tc *ToolboxClient) GetProtocol() Protocol {
+	tc.mu.RLock()
+	defer tc.mu.RUnlock()
+	return tc.protocol
+}
+
+func (tc *ToolboxClient) executeWithFallback(fn func(tr transport.Transport) (any, error)) (any, error) {
+	for {
+		tc.mu.RLock()
+		tr := tc.transport
+		currentProtocol := tc.protocol
+		tc.mu.RUnlock()
+
+		result, err := fn(tr)
+		if err == nil {
+			return result, nil
+		}
+
+		var negErr *transport.ProtocolNegotiationError
+		if errors.As(err, &negErr) {
+			fallbackVersion := Protocol(negErr.FallbackVersion)
+
+			supportedVersions := GetSupportedMcpVersions()
+			serverIdx := -1
+			for i, v := range supportedVersions {
+				if Protocol(v) == fallbackVersion {
+					serverIdx = i
+					break
+				}
+			}
+
+			if serverIdx == -1 {
+				return nil, fmt.Errorf("server returned unknown protocol version: %s", fallbackVersion)
+			}
+
+			var serverSupported []Protocol
+			for _, v := range supportedVersions[serverIdx:] {
+				serverSupported = append(serverSupported, Protocol(v))
+			}
+
+			var fallbackProtocol Protocol
+			tc.mu.RLock()
+			supportedProtos := tc.supportedProtocols
+			tc.mu.RUnlock()
+
+			if len(supportedProtos) > 0 {
+				var mutuallySupported []Protocol
+				for _, v := range supportedProtos {
+					if slices.Contains(serverSupported, v) {
+						mutuallySupported = append(mutuallySupported, v)
+					}
+				}
+				if len(mutuallySupported) == 0 {
+					return nil, fmt.Errorf("no mutually supported protocol version. Client supports: %v, Server supports: %s", supportedProtos, fallbackVersion)
+				}
+				fallbackProtocol = mutuallySupported[0]
+			} else {
+				fallbackProtocol = fallbackVersion
+			}
+
+			if fallbackProtocol == currentProtocol {
+				return nil, err
+			}
+
+			var fallbackTransport transport.Transport
+			var createErr error
+			switch fallbackProtocol {
+			case MCPv20260728:
+				fallbackTransport, createErr = mcp20260728.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			case MCPv20251125:
+				fallbackTransport, createErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			case MCPv20250618:
+				fallbackTransport, createErr = mcp20250618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			case MCPv20250326:
+				fallbackTransport, createErr = mcp20250326.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			case MCPv20241105:
+				fallbackTransport, createErr = mcp20241105.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			default:
+				return nil, fmt.Errorf("unsupported fallback protocol: %s", fallbackProtocol)
+			}
+
+			if createErr != nil {
+				return nil, fmt.Errorf("failed to create transport for fallback version %s: %w", fallbackProtocol, createErr)
+			}
+
+			tc.mu.Lock()
+			tc.protocol = fallbackProtocol
+			tc.transport = fallbackTransport
+			tc.mu.Unlock()
+		} else {
+			return nil, err
+		}
+	}
 }

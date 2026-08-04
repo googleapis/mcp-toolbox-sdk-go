@@ -53,6 +53,26 @@ func TestNewBaseTransport(t *testing.T) {
 			baseURL:  "http://example.com/api/v1",
 			expected: "http://example.com/api/v1/mcp/",
 		},
+		{
+			name:     "Preserves Query Parameters",
+			baseURL:  "http://example.com?num_rows=2",
+			expected: "http://example.com/mcp/?num_rows=2",
+		},
+		{
+			name:     "Multiple Query Parameters",
+			baseURL:  "http://api.com?proj=xyz&env=prod",
+			expected: "http://api.com/mcp/?proj=xyz&env=prod",
+		},
+		{
+			name:     "Escaped Query Parameters",
+			baseURL:  "http://api.com/mcp?q=a%20b&flag=true",
+			expected: "http://api.com/mcp/?q=a%20b&flag=true",
+		},
+		{
+			name:     "Repeated Query Parameters",
+			baseURL:  "http://api.com?tag=1&tag=2",
+			expected: "http://api.com/mcp/?tag=1&tag=2",
+		},
 	}
 
 	for _, tc := range tests {
@@ -63,6 +83,52 @@ func TestNewBaseTransport(t *testing.T) {
 			}
 			if tr.HTTPClient == nil {
 				t.Error("Expected HTTPClient to be initialized, got nil")
+			}
+		})
+	}
+}
+
+func TestAppendToolsetPath(t *testing.T) {
+	tests := []struct {
+		name        string
+		baseURL     string
+		toolsetName string
+		expected    string
+	}{
+		{
+			name:        "Empty toolset name",
+			baseURL:     "http://example.com/mcp/",
+			toolsetName: "",
+			expected:    "http://example.com/mcp/",
+		},
+		{
+			name:        "Append toolset name without query",
+			baseURL:     "http://example.com/mcp/",
+			toolsetName: "my_toolset",
+			expected:    "http://example.com/mcp/my_toolset",
+		},
+		{
+			name:        "Append toolset name with query parameters preserved",
+			baseURL:     "http://example.com/mcp/?num_rows=2&env=test",
+			toolsetName: "my_toolset",
+			expected:    "http://example.com/mcp/my_toolset?num_rows=2&env=test",
+		},
+		{
+			name:        "Append toolset name with spaces and special characters",
+			baseURL:     "http://example.com/mcp/?num_rows=2",
+			toolsetName: "my toolset",
+			expected:    "http://example.com/mcp/my%20toolset?num_rows=2",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			res, err := AppendToolsetPath(tc.baseURL, tc.toolsetName)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if res != tc.expected {
+				t.Errorf("Expected %s, got %s", tc.expected, res)
 			}
 		})
 	}
@@ -127,259 +193,276 @@ func TestEnsureInitialized(t *testing.T) {
 }
 
 func TestConvertToolDefinition(t *testing.T) {
-	tr, _ := NewBaseTransport("http://example.com", nil)
+	t.Run("ComplexSchema", func(t *testing.T) {
+		tr, _ := NewBaseTransport("http://example.com", nil)
 
-	rawTool := map[string]any{
-		"name":        "complex_tool",
-		"description": "A test tool",
-		"inputSchema": map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"simple_str": map[string]any{
-					"type":        "string",
-					"description": "Simple string param",
-				},
-				"nested_obj": map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"inner_int": map[string]any{"type": "integer"},
+		rawTool := map[string]any{
+			"name":        "complex_tool",
+			"description": "A test tool",
+			"inputSchema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"simple_str": map[string]any{
+						"type":        "string",
+						"description": "Simple string param",
 					},
-					"additionalProperties": map[string]any{
-						"type": "string",
+					"nested_obj": map[string]any{
+						"type": "object",
+						"properties": map[string]any{
+							"inner_int": map[string]any{"type": "integer"},
+						},
+						"additionalProperties": map[string]any{
+							"type": "string",
+						},
+					},
+					"str_array": map[string]any{
+						"type": "array",
+						"items": map[string]any{
+							"type": "string",
+						},
+					},
+					"missing_type_param": map[string]any{
+						"description": "Should default to string",
+					},
+					"generic_array": map[string]any{
+						"type": "array",
+					},
+					"generic_object": map[string]any{
+						"type": "object",
 					},
 				},
-				"str_array": map[string]any{
-					"type": "array",
-					"items": map[string]any{
-						"type": "string",
-					},
-				},
-				"missing_type_param": map[string]any{
-					"description": "Should default to string",
-				},
-				"generic_array": map[string]any{
-					"type": "array",
-				},
-				"generic_object": map[string]any{
-					"type": "object",
-				},
+				"required": []any{"simple_str"},
 			},
-			"required": []any{"simple_str"},
-		},
-		"_meta": map[string]any{
-			"toolbox/authParam": map[string]any{
-				"simple_str": []any{"header:x-api-key"},
+			"_meta": map[string]any{
+				"com.google.cloud/authParam": map[string]any{
+					"simple_str": []any{"header:x-api-key"},
+				},
+				"com.google.cloud/authInvoke": []any{"oauth2"},
 			},
-			"toolbox/authInvoke": []any{"oauth2"},
-		},
-	}
+		}
 
-	schema, err := tr.ConvertToolDefinition(rawTool)
-	if err != nil {
-		t.Fatalf("ConvertToolDefinition failed: %v", err)
-	}
+		schema, err := tr.ConvertToolDefinition(rawTool)
+		if err != nil {
+			t.Fatalf("ConvertToolDefinition failed: %v", err)
+		}
 
-	// Check Top-Level Metadata
-	if schema.Description != "A test tool" {
-		t.Errorf("Expected description 'A test tool', got '%s'", schema.Description)
-	}
+		if schema.Description != "A test tool" {
+			t.Errorf("Expected description 'A test tool', got '%s'", schema.Description)
+		}
 
-	// Check Auth Requirements
-	if len(schema.AuthRequired) != 1 || schema.AuthRequired[0] != "oauth2" {
-		t.Errorf("Expected AuthRequired=['oauth2'], got %v", schema.AuthRequired)
-	}
+		if len(schema.AuthRequired) != 1 || schema.AuthRequired[0] != "oauth2" {
+			t.Errorf("Expected AuthRequired=['oauth2'], got %v", schema.AuthRequired)
+		}
 
-	// Check Parameters
-	if len(schema.Parameters) != 6 {
-		t.Fatalf("Expected 6 parameters, got %d", len(schema.Parameters))
-	}
+		if len(schema.Parameters) != 6 {
+			t.Fatalf("Expected 6 parameters, got %d", len(schema.Parameters))
+		}
 
-	// Helper map to find params by name easily
-	params := make(map[string]any)
-	for _, p := range schema.Parameters {
-		params[p.Name] = p
-	}
-
-	foundSimple := false
-	for _, p := range schema.Parameters {
-		if p.Name == "simple_str" {
-			foundSimple = true
-			if !p.Required {
-				t.Error("Expected simple_str to be required")
-			}
-			if len(p.AuthSources) != 1 || p.AuthSources[0] != "header:x-api-key" {
-				t.Errorf("Expected AuthSources=['header:x-api-key'], got %v", p.AuthSources)
-			}
-		} else if p.Name == "nested_obj" {
-			if p.Type != "object" {
-				t.Errorf("Expected nested_obj type object, got %s", p.Type)
-			}
-			if p.AdditionalProperties == nil {
-				t.Error("Expected nested_obj to have AdditionalProperties schema")
-			}
-		} else if p.Name == "str_array" {
-			if p.Type != "array" {
-				t.Errorf("Expected str_array type array, got %s", p.Type)
-			}
-			if p.Items == nil || p.Items.Type != "string" {
-				t.Error("Expected str_array items to be type string")
-			}
-		} else if p.Name == "missing_type_param" {
-			// Verifies the "type" defaults to "string"
-			if p.Type != "string" {
-				t.Errorf("Expected missing_type_param type string, got %s", p.Type)
-			}
-		} else if p.Name == "generic_array" {
-			// Verifies array parses correctly when Items are omitted
-			if p.Type != "array" {
-				t.Errorf("Expected generic_array type array, got %s", p.Type)
-			}
-			if p.Items != nil {
-				t.Error("Expected generic_array items to be nil")
-			}
-		} else if p.Name == "generic_object" {
-			// Verifies object parses correctly when additionalProperties are omitted
-			if p.Type != "object" {
-				t.Errorf("Expected generic_object type object, got %s", p.Type)
-			}
-			if p.AdditionalProperties != nil {
-				t.Error("Expected generic_object AdditionalProperties to be nil")
+		foundSimple := false
+		for _, p := range schema.Parameters {
+			switch p.Name {
+			case "simple_str":
+				foundSimple = true
+				if !p.Required {
+					t.Error("Expected simple_str to be required")
+				}
+				if len(p.AuthSources) != 1 || p.AuthSources[0] != "header:x-api-key" {
+					t.Errorf("Expected AuthSources=['header:x-api-key'], got %v", p.AuthSources)
+				}
+			case "nested_obj":
+				if p.Type != "object" {
+					t.Errorf("Expected nested_obj type object, got %s", p.Type)
+				}
+				if p.AdditionalProperties == nil {
+					t.Error("Expected nested_obj to have AdditionalProperties schema")
+				}
+			case "str_array":
+				if p.Type != "array" {
+					t.Errorf("Expected str_array type array, got %s", p.Type)
+				}
+				if p.Items == nil || p.Items.Type != "string" {
+					t.Error("Expected str_array items to be type string")
+				}
+			case "missing_type_param":
+				if p.Type != "string" {
+					t.Errorf("Expected missing_type_param type string, got %s", p.Type)
+				}
+			case "generic_array":
+				if p.Type != "array" {
+					t.Errorf("Expected generic_array type array, got %s", p.Type)
+				}
+				if p.Items != nil {
+					t.Error("Expected generic_array items to be nil")
+				}
+			case "generic_object":
+				if p.Type != "object" {
+					t.Errorf("Expected generic_object type object, got %s", p.Type)
+				}
+				if p.AdditionalProperties != nil {
+					t.Error("Expected generic_object AdditionalProperties to be nil")
+				}
 			}
 		}
-	}
 
-	if !foundSimple {
-		t.Error("Parameter 'simple_str' not found in converted schema")
-	}
-}
+		if !foundSimple {
+			t.Error("Parameter 'simple_str' not found in converted schema")
+		}
+	})
 
-func TestConvertToolDefinitionWithDefaults(t *testing.T) {
-	tr, _ := NewBaseTransport("http://example.com", nil)
+	t.Run("WithDefaults", func(t *testing.T) {
+		tr, _ := NewBaseTransport("http://example.com", nil)
 
-	rawTool := map[string]any{
-		"name": "default_tool",
-		"inputSchema": map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"count": map[string]any{
-					"type":    "integer",
-					"default": 10,
-				},
-				"text": map[string]any{
-					"type":    "string",
-					"default": "hello",
+		rawTool := map[string]any{
+			"name": "default_tool",
+			"inputSchema": map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"count": map[string]any{
+						"type":    "integer",
+						"default": 10,
+					},
+					"text": map[string]any{
+						"type":    "string",
+						"default": "hello",
+					},
 				},
 			},
-		},
-	}
+		}
 
-	schema, err := tr.ConvertToolDefinition(rawTool)
-	if err != nil {
-		t.Fatalf("ConvertToolDefinition failed: %v", err)
-	}
+		schema, err := tr.ConvertToolDefinition(rawTool)
+		if err != nil {
+			t.Fatalf("ConvertToolDefinition failed: %v", err)
+		}
 
-	if len(schema.Parameters) != 2 {
-		t.Fatalf("Expected 2 parameters, got %d", len(schema.Parameters))
-	}
+		if len(schema.Parameters) != 2 {
+			t.Fatalf("Expected 2 parameters, got %d", len(schema.Parameters))
+		}
 
-	foundCount := false
-	foundText := false
+		foundCount := false
+		foundText := false
 
-	for _, p := range schema.Parameters {
-		switch p.Name {
-		case "count":
-			foundCount = true
-			if p.Default == nil {
-				t.Error("Expected count to have a default value, got nil")
-			} else if val, ok := p.Default.(int); !ok || val != 10 {
-				t.Errorf("Expected count default 10, got %v (%T)", p.Default, p.Default)
-			}
-		case "text":
-			foundText = true
-			if p.Default == nil {
-				t.Error("Expected text to have a default value, got nil")
-			} else if val, ok := p.Default.(string); !ok || val != "hello" {
-				t.Errorf("Expected text default 'hello', got %v (%T)", p.Default, p.Default)
+		for _, p := range schema.Parameters {
+			switch p.Name {
+			case "count":
+				foundCount = true
+				if p.Default == nil {
+					t.Error("Expected count to have a default value, got nil")
+				} else if val, ok := p.Default.(int); !ok || val != 10 {
+					t.Errorf("Expected count default 10, got %v (%T)", p.Default, p.Default)
+				}
+			case "text":
+				foundText = true
+				if p.Default == nil {
+					t.Error("Expected text to have a default value, got nil")
+				} else if val, ok := p.Default.(string); !ok || val != "hello" {
+					t.Errorf("Expected text default 'hello', got %v (%T)", p.Default, p.Default)
+				}
 			}
 		}
-	}
 
-	if !foundCount || !foundText {
-		t.Errorf("Missing expected parameters: foundCount=%v, foundText=%v", foundCount, foundText)
-	}
-}
+		if !foundCount || !foundText {
+			t.Errorf("Missing expected parameters: foundCount=%v, foundText=%v", foundCount, foundText)
+		}
+	})
 
-func TestProcessToolResultContent(t *testing.T) {
-	// Setup a dummy transport (ProcessToolResultContent is a pure function, so state doesn't matter)
-	tr, _ := NewBaseTransport("http://example.com", nil)
+	t.Run("Pre2026", func(t *testing.T) {
+		tr, _ := NewBaseTransport("http://example.com", nil)
+		tr.ProtocolVersion = "2025-11-25"
 
-	tests := []struct {
-		name     string
-		content  []ToolContent
-		expected string
-	}{
-		{
-			// Single text
-			name: "Single text",
-			content: []ToolContent{
-				{Type: "text", Text: "hello"},
+		rawTool := map[string]any{
+			"name":        "legacyTool",
+			"description": "Legacy tool test",
+			"inputSchema": map[string]any{
+				"properties": map[string]any{
+					"param": map[string]any{"type": "string"},
+				},
 			},
-			expected: "hello",
-		},
-		{
-			// Multiple valid JSON objects
-			// Should be merged into a JSON array string
-			name: "Multiple valid JSON objects",
-			content: []ToolContent{
-				{Type: "text", Text: `{"a": 1}`},
-				{Type: "text", Text: `{"b": 2}`},
+			"_meta": map[string]any{
+				"toolbox/authParam": map[string]any{
+					"param": []any{"legacy-auth"},
+				},
+				"toolbox/authInvoke": []any{"legacy-invoke"},
 			},
-			expected: `[{"a": 1},{"b": 2}]`,
-		},
-		{
-			// Invalid JSON fallback
-			// One chunk is valid JSON, the other is not -> Fall back to concatenation
-			name: "Invalid JSON fallback",
-			content: []ToolContent{
-				{Type: "text", Text: `{"a": 1}`},
-				{Type: "text", Text: "invalid"},
-			},
-			expected: `{"a": 1}invalid`,
-		},
-		{
-			// Valid JSON but not objects (heuristic check)
-			// Numbers are valid JSON, but not "dictionaries", so they should be concatenated
-			name: "Valid JSON but not objects",
-			content: []ToolContent{
-				{Type: "text", Text: "1"},
-				{Type: "text", Text: "2"},
-			},
-			expected: "12",
-		},
-		{
-			// Empty
-			name:     "Empty",
-			content:  []ToolContent{},
-			expected: "null",
-		},
-		{
-			// Non-text ignored
-			// Image type should be skipped, leaving only "kept"
-			name: "Non-text ignored",
-			content: []ToolContent{
-				{Type: "image", Text: "ignored"},
-				{Type: "text", Text: "kept"},
-			},
-			expected: "kept",
-		},
-	}
+		}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			result := tr.ProcessToolResultContent(tc.content)
-			if result != tc.expected {
-				t.Errorf("\nExpected: %s\nGot:      %s", tc.expected, result)
-			}
-		})
-	}
+		schema, err := tr.ConvertToolDefinition(rawTool)
+		if err != nil {
+			t.Fatalf("ConvertToolDefinition failed: %v", err)
+		}
+
+		if len(schema.AuthRequired) != 1 || schema.AuthRequired[0] != "legacy-invoke" {
+			t.Errorf("Expected AuthRequired=['legacy-invoke'], got %v", schema.AuthRequired)
+		}
+		if len(schema.Parameters) != 1 || len(schema.Parameters[0].AuthSources) != 1 || schema.Parameters[0].AuthSources[0] != "legacy-auth" {
+			t.Errorf("Expected AuthSources=['legacy-auth'], got %v", schema.Parameters[0].AuthSources)
+		}
+	})
+
+	t.Run("LegacyIgnoredOn2026", func(t *testing.T) {
+		tr, _ := NewBaseTransport("http://example.com", nil)
+		tr.ProtocolVersion = "2026-07-28"
+
+		rawTool := map[string]any{
+			"name":        "legacyToolOn2026",
+			"description": "Legacy tool on 2026 version test",
+			"inputSchema": map[string]any{
+				"properties": map[string]any{
+					"param": map[string]any{"type": "string"},
+				},
+			},
+			"_meta": map[string]any{
+				"toolbox/authParam": map[string]any{
+					"param": []any{"legacy-auth"},
+				},
+				"toolbox/authInvoke":  []any{"legacy-invoke"},
+			},
+		}
+
+		schema, err := tr.ConvertToolDefinition(rawTool)
+		if err != nil {
+			t.Fatalf("ConvertToolDefinition failed: %v", err)
+		}
+
+		if len(schema.AuthRequired) != 0 {
+			t.Errorf("Expected empty AuthRequired, got %v", schema.AuthRequired)
+		}
+		if len(schema.Parameters) != 1 || len(schema.Parameters[0].AuthSources) != 0 {
+			t.Errorf("Expected empty AuthSources, got %v", schema.Parameters[0].AuthSources)
+		}
+	})
+
+	t.Run("MalformedMeta", func(t *testing.T) {
+		tr, _ := NewBaseTransport("http://example.com", nil)
+		tr.ProtocolVersion = "2026-07-28"
+
+		rawToolMalformed := map[string]any{
+			"name": "toolMalformed",
+			"_meta": map[string]any{
+				"com.google.cloud/authParam":  "invalid_string_instead_of_dict",
+				"com.google.cloud/authInvoke": 12345,
+			},
+		}
+
+		schema, err := tr.ConvertToolDefinition(rawToolMalformed)
+		if err != nil {
+			t.Fatalf("ConvertToolDefinition should handle malformed _meta without error, got: %v", err)
+		}
+		if len(schema.AuthRequired) != 0 {
+			t.Errorf("Expected empty AuthRequired, got %v", schema.AuthRequired)
+		}
+	})
+
+	t.Run("InvalidProtocolVersion", func(t *testing.T) {
+		tr, _ := NewBaseTransport("http://example.com", nil)
+		tr.ProtocolVersion = "invalid-version-string"
+
+		rawTool := map[string]any{
+			"name": "testTool",
+		}
+
+		_, err := tr.ConvertToolDefinition(rawTool)
+		if err == nil {
+			t.Fatal("Expected ConvertToolDefinition to fail with invalid protocol version, got nil error")
+		}
+	})
 }

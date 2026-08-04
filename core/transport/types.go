@@ -55,7 +55,13 @@ func (p *ParameterSchema) ValidateType(value any) error {
 		switch value.(type) {
 		case float32, float64:
 		default:
-			return fmt.Errorf("parameter '%s' expects an float, but got %T", p.Name, value)
+			return fmt.Errorf("parameter '%s' expects a float, but got %T", p.Name, value)
+		}
+	case "number":
+		switch value.(type) {
+		case float32, float64, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		default:
+			return fmt.Errorf("parameter '%s' expects a number, but got %T", p.Name, value)
 		}
 	case "boolean":
 		if _, ok := value.(bool); !ok {
@@ -157,7 +163,7 @@ func (p *ParameterSchema) ValidateDefinition() error {
 			)
 		}
 
-	case "string", "integer", "float", "boolean":
+	case "string", "integer", "float", "number", "boolean":
 		// No type-specific rules for these.
 		break
 
@@ -166,6 +172,47 @@ func (p *ParameterSchema) ValidateDefinition() error {
 	}
 
 	return nil
+}
+
+const (
+	MCPv20260728 = "2026-07-28"
+	MCPv20251125 = "2025-11-25"
+	MCPv20250618 = "2025-06-18"
+	MCPv20250326 = "2025-03-26"
+	MCPv20241105 = "2024-11-05"
+)
+
+// GetSupportedMcpVersions returns a list of supported MCP protocol versions in descending preference order.
+func GetSupportedMcpVersions() []string {
+	return []string{
+		MCPv20260728,
+		MCPv20251125,
+		MCPv20250618,
+		MCPv20250326,
+		MCPv20241105,
+	}
+}
+
+// IsVersionAtLeast determines if currentVersion is greater than or equal to minVersion based on supported version hierarchy.
+func IsVersionAtLeast(currentVersion, minVersion string) (bool, error) {
+	supported := GetSupportedMcpVersions()
+	currentIndex := -1
+	minIndex := -1
+	for i, v := range supported {
+		if v == currentVersion {
+			currentIndex = i
+		}
+		if v == minVersion {
+			minIndex = i
+		}
+	}
+	if currentIndex == -1 {
+		return false, fmt.Errorf("unrecognized protocol version: %s", currentVersion)
+	}
+	if minIndex == -1 {
+		return false, fmt.Errorf("unrecognized target protocol version: %s", minVersion)
+	}
+	return currentIndex <= minIndex, nil
 }
 
 // Schema for a tool.
@@ -179,4 +226,13 @@ type ToolSchema struct {
 type ManifestSchema struct {
 	ServerVersion string                `json:"serverVersion"`
 	Tools         map[string]ToolSchema `json:"tools"`
+}
+
+// ProtocolNegotiationError is returned when a server demands a protocol fallback.
+type ProtocolNegotiationError struct {
+	FallbackVersion string
+}
+
+func (e *ProtocolNegotiationError) Error() string {
+	return fmt.Sprintf("server requested protocol fallback to version %s", e.FallbackVersion)
 }
