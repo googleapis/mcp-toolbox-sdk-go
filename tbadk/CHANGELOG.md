@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.9.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v1.0.0...tbadk/v0.9.0) (2026-08-04)
+
+
+### Features
+
+* **core:** add MCP 2026 (July spec) stateless protocol support and auto-negotiation ([#317](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/317)) ([be1e47a](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/be1e47a551bfe300733480488fd6ff37d2e04451))
+
+
+### Miscellaneous Chores
+
+* **core:** release 1.1.0 ([#318](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/318)) ([3fe9d15](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/3fe9d15dd17f80c181b1576c0145ee3488e31d77))
+* **deps:** bump google.golang.org/grpc from 1.81.0 to 1.82.1 in /tbadk ([#313](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/313)) ([06fd29f](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/06fd29f8d87a177c2f446cb967da42850346dc41))
+* **deps:** update mcp toolbox server for integration tests to v1.7.0 ([#302](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/302)) ([c8b6f3e](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/c8b6f3e601a7956edf881144be178db3421e2286))
+* **tbgenkit:** release 0.9.0 ([#321](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/321)) ([cf5d040](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/cf5d0403c695e80340a175a471f3575b71e51368))
+* Update Toolbox Core SDK Dependency ([#320](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/320)) ([22b39a2](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/22b39a2bf63f77b0314115516ddbda9a644f536e))
+
 ## [1.0.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v0.8.0...tbadk/v1.0.0) (2026-07-09)
 
 
