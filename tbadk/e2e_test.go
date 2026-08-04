@@ -121,13 +121,15 @@ func (c *BodyCapturingTransport) RoundTrip(req *http.Request) (*http.Response, e
 		bodyBytes, _ := io.ReadAll(req.Body)
 		req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes)) // restore body
 
-		// Check if this is the initialize request
+		// Check if this is a request carrying client metadata (initialize for stateful, tools/list for stateless)
 		var rpcReq struct {
 			Method string `json:"method"`
 		}
-		if err := json.Unmarshal(bodyBytes, &rpcReq); err == nil && rpcReq.Method == "initialize" {
+		if err := json.Unmarshal(bodyBytes, &rpcReq); err == nil && (rpcReq.Method == "initialize" || rpcReq.Method == "tools/list") {
 			c.mu.Lock()
-			c.lastBody = bodyBytes
+			if len(c.lastBody) == 0 || rpcReq.Method == "initialize" {
+				c.lastBody = bodyBytes
+			}
 			c.mu.Unlock()
 		}
 	}
@@ -256,22 +258,35 @@ func TestE2E_Basic(t *testing.T) {
 						capturer.mu.Lock()
 						defer capturer.mu.Unlock()
 
-						require.NotEmpty(t, capturer.lastBody, "Expected to capture an initialize request")
+						require.NotEmpty(t, capturer.lastBody, "Expected to capture a client info request")
 
-						// Parse the JSON-RPC request to verify clientInfo
+						// Parse the JSON-RPC request to verify clientInfo across stateful and stateless protocol versions
 						var req struct {
 							Params struct {
 								ClientInfo struct {
 									Name    string `json:"name"`
 									Version string `json:"version"`
 								} `json:"clientInfo"`
+								Meta struct {
+									ClientInfo struct {
+										Name    string `json:"name"`
+										Version string `json:"version"`
+									} `json:"io.modelcontextprotocol/clientInfo"`
+								} `json:"_meta"`
 							} `json:"params"`
 						}
 						err = json.Unmarshal(capturer.lastBody, &req)
 						require.NoError(t, err)
 
-						assert.Equal(t, "toolbox-adk-go", req.Params.ClientInfo.Name)
-						assert.Equal(t, tbadk.Version, req.Params.ClientInfo.Version, "Expected client version to match tbadk.Version")
+						name := req.Params.ClientInfo.Name
+						version := req.Params.ClientInfo.Version
+						if name == "" {
+							name = req.Params.Meta.ClientInfo.Name
+							version = req.Params.Meta.ClientInfo.Version
+						}
+
+						assert.Equal(t, "toolbox-adk-go", name)
+						assert.Equal(t, tbadk.Version, version, "Expected client version to match tbadk.Version")
 					})
 
 					t.Run("test_load_toolset_specific", func(t *testing.T) {

@@ -912,7 +912,7 @@ func TestExecuteWithFallback_EdgeCases(t *testing.T) {
 	t.Run("Infinite Loop Prevention", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
-			_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported protocol version","data":{"supported":["DRAFT-2026-v1"]}}}`))
+			_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported protocol version","data":{"supported":["2026-07-28"]}}}`))
 		}))
 		defer ts.Close()
 
@@ -926,7 +926,7 @@ func TestExecuteWithFallback_EdgeCases(t *testing.T) {
 
 	t.Run("MultiStep Cascading Fallback", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+			if r.Header.Get("MCP-Protocol-Version") == "2026-07-28" {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported","data":{"supported":["2025-06-18","2024-11-05"]}}}`))
 				return
@@ -978,8 +978,8 @@ func TestExecuteWithFallback_EdgeCases(t *testing.T) {
 			expectedProtocol Protocol
 		}{
 			{
-				name:             "Fallback from DRAFT-2026-v1 to 2025-11-25",
-				initialProtocol:  MCPv20260618,
+				name:             "Fallback from 2026-07-28 to 2025-11-25",
+				initialProtocol:  MCPv20260728,
 				serverSupported:  []string{"2025-11-25", "2025-06-18"},
 				expectedProtocol: MCPv20251125,
 			},
@@ -1006,7 +1006,7 @@ func TestExecuteWithFallback_EdgeCases(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if tt.initialProtocol == MCPv20260618 && r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+					if tt.initialProtocol == MCPv20260728 && r.Header.Get("MCP-Protocol-Version") == "2026-07-28" {
 						w.WriteHeader(http.StatusBadRequest)
 						respErr, _ := json.Marshal(map[string]any{
 							"jsonrpc": "2.0",
@@ -1096,7 +1096,7 @@ func TestExecuteWithFallback_EdgeCases(t *testing.T) {
 
 	t.Run("Artificial Array Test", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+			if r.Header.Get("MCP-Protocol-Version") == "2026-07-28" {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32600,"message":"invalid protocol version"}}`))
 				return
@@ -1166,7 +1166,7 @@ func TestExecuteWithFallback_EdgeCases(t *testing.T) {
 
 	t.Run("Modern Smart Fallback Test", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+			if r.Header.Get("MCP-Protocol-Version") == "2026-07-28" {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported","data":{"supported":["2024-11-05"]}}}`))
 				return
@@ -1218,7 +1218,7 @@ func TestExecuteWithFallback_EdgeCases(t *testing.T) {
 
 	t.Run("Concurrent Goroutines Fallback & Thread Safety Test", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Header.Get("MCP-Protocol-Version") == "DRAFT-2026-v1" {
+			if r.Header.Get("MCP-Protocol-Version") == "2026-07-28" {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported","data":{"supported":["2025-11-25"]}}}`))
 				return
@@ -1295,7 +1295,7 @@ func TestExecuteWithFallback_EdgeCases(t *testing.T) {
 func TestExecuteWithFallback_NoInfiniteLoop(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
-		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported","data":{"supported":["DRAFT-2026-v1"]}}}`))
+		_, _ = w.Write([]byte(`{"jsonrpc":"2.0","id":"1","error":{"code":-32022,"message":"Unsupported","data":{"supported":["2026-07-28"]}}}`))
 	}))
 	defer ts.Close()
 

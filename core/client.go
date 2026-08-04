@@ -28,7 +28,7 @@ import (
 	mcp20250326 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250326"
 	mcp20250618 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20250618"
 	mcp20251125 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20251125"
-	mcp20260618 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20260618"
+	mcp20260728 "github.com/googleapis/mcp-toolbox-sdk-go/core/transport/mcp/v20260728"
 	"golang.org/x/oauth2"
 )
 
@@ -88,8 +88,8 @@ func NewToolboxClient(url string, opts ...ClientOption) (*ToolboxClient, error) 
 	var transportErr error
 
 	switch tc.protocol {
-	case MCPv20260618:
-		tc.transport, transportErr = mcp20260618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+	case MCPv20260728:
+		tc.transport, transportErr = mcp20260728.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20251125:
 		tc.transport, transportErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 	case MCPv20250618:
@@ -521,8 +521,8 @@ func (tc *ToolboxClient) executeWithFallback(fn func(tr transport.Transport) (an
 			var fallbackTransport transport.Transport
 			var createErr error
 			switch fallbackProtocol {
-			case MCPv20260618:
-				fallbackTransport, createErr = mcp20260618.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
+			case MCPv20260728:
+				fallbackTransport, createErr = mcp20260728.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 			case MCPv20251125:
 				fallbackTransport, createErr = mcp20251125.New(tc.baseURL, tc.httpClient, tc.clientName, tc.clientVersion)
 			case MCPv20250618:

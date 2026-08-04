@@ -28,7 +28,7 @@ func TestGetSupportedMcpVersions(t *testing.T) {
 
 	// Verify the content matches our constants
 	expected := []string{
-		string(MCPv20260618),
+		string(MCPv20260728),
 		string(MCPv20251125),
 		string(MCPv20250618),
 		string(MCPv20250326),
