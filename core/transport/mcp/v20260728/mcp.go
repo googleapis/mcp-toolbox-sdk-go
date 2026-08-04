@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	ProtocolVersion = "2026-07-28"
+	ProtocolVersion = transport.MCPv20260728
 )
 
 // Ensure that McpTransport implements the Transport interface.
@@ -53,6 +53,7 @@ func New(baseURL string, client *http.Client, clientName string, clientVersion s
 	if err != nil {
 		return nil, err
 	}
+	baseTransport.ProtocolVersion = ProtocolVersion
 	if clientVersion == "" {
 		clientVersion = mcp.SDKVersion
 	}

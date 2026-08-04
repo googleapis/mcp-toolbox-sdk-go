@@ -34,11 +34,12 @@ type ToolContent struct {
 
 // BaseMcpTransport holds the common state and logic for MCP HTTP transports.
 type BaseMcpTransport struct {
-	baseURL       string
-	HTTPClient    *http.Client
-	ServerVersion string
-	initOnce      sync.Once
-	initErr       error
+	baseURL         string
+	HTTPClient      *http.Client
+	ServerVersion   string
+	ProtocolVersion string
+	initOnce        sync.Once
+	initErr         error
 
 	// HandshakeHook is the abstract method _initialize_session.
 	// The specific version implementation will assign this function.
@@ -144,15 +145,38 @@ func (b *BaseMcpTransport) ConvertToolDefinition(toolData map[string]any) (trans
 	var paramAuth map[string]any
 	var invokeAuth []string
 
+	version := b.ProtocolVersion
+	if version == "" {
+		version = transport.MCPv20260728
+	}
+	is2026OrNewer, err := transport.IsVersionAtLeast(version, transport.MCPv20260728)
+	if err != nil {
+		return transport.ToolSchema{}, fmt.Errorf("invalid protocol version check: %w", err)
+	}
+
 	if meta, ok := toolData["_meta"].(map[string]any); ok {
-		if pa, ok := meta["toolbox/authParam"].(map[string]any); ok {
-			paramAuth = pa
-		}
-		if ia, ok := meta["toolbox/authInvoke"].([]any); ok {
-			invokeAuth = make([]string, 0, len(ia))
-			for _, v := range ia {
-				if s, ok := v.(string); ok {
-					invokeAuth = append(invokeAuth, s)
+		if is2026OrNewer {
+			if pa, ok := meta["com.google.cloud/authParam"].(map[string]any); ok {
+				paramAuth = pa
+			}
+			if ia, ok := meta["com.google.cloud/authInvoke"].([]any); ok {
+				invokeAuth = make([]string, 0, len(ia))
+				for _, v := range ia {
+					if s, ok := v.(string); ok {
+						invokeAuth = append(invokeAuth, s)
+					}
+				}
+			}
+		} else {
+			if pa, ok := meta["toolbox/authParam"].(map[string]any); ok {
+				paramAuth = pa
+			}
+			if ia, ok := meta["toolbox/authInvoke"].([]any); ok {
+				invokeAuth = make([]string, 0, len(ia))
+				for _, v := range ia {
+					if s, ok := v.(string); ok {
+						invokeAuth = append(invokeAuth, s)
+					}
 				}
 			}
 		}
