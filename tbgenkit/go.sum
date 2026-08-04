@@ -80,8 +80,8 @@ github.com/googleapis/enterprise-certificate-proxy v0.3.14 h1:yh8ncqsbUY4shRD5dA
 github.com/googleapis/enterprise-certificate-proxy v0.3.14/go.mod h1:vqVt9yG9480NtzREnTlmGSBmFrA+bzb0yl0TxoBQXOg=
 github.com/googleapis/gax-go/v2 v2.18.0 h1:jxP5Uuo3bxm3M6gGtV94P4lliVetoCB4Wk2x8QA86LI=
 github.com/googleapis/gax-go/v2 v2.18.0/go.mod h1:uSzZN4a356eRG985CzJ3WfbFSpqkLTjsnhWGJR6EwrE=
-github.com/googleapis/mcp-toolbox-sdk-go/core v1.0.0 h1:jqZALt7RyLO+oJKixCSgoO/EGoSSkpsuxCXUn2jwAvQ=
-github.com/googleapis/mcp-toolbox-sdk-go/core v1.0.0/go.mod h1:4BEXVKYhG7aqN6UVVyTG+7cbWJwHTV7BD7acNLIvtlc=
+github.com/googleapis/mcp-toolbox-sdk-go/core v1.1.0 h1:pjYUaHeZVfTS0weuEu0Mf5NasjiJamQhKVKGNT8F2fw=
+github.com/googleapis/mcp-toolbox-sdk-go/core v1.1.0/go.mod h1:NrLXP/ZL2wix2KDWMxPnfSg/HqqaoqXirvOl9cOQyaQ=
 github.com/invopop/jsonschema v0.13.0 h1:KvpoAJWEjR3uD9Kbm2HWJmqsEaHt8lBUpd0qHcIi21E=
 github.com/invopop/jsonschema v0.13.0/go.mod h1:ffZ5Km5SWWRAIN6wbDXItl95euhFz2uON45H2qjYt+0=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
