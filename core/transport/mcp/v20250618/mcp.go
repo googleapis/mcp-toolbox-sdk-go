@@ -146,10 +146,6 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 		return "", fmt.Errorf("failed to invoke tool '%s': %w", toolName, err)
 	}
 
-	if result.IsError {
-		return "", fmt.Errorf("tool execution resulted in error")
-	}
-
 	baseContent := make([]mcp.ToolContent, len(result.Content))
 	for i, item := range result.Content {
 		baseContent[i] = mcp.ToolContent{
@@ -159,6 +155,10 @@ func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload 
 	}
 
 	output := t.ProcessToolResultContent(baseContent)
+
+	if result.IsError {
+		return "", fmt.Errorf("tool execution resulted in error: %s", output)
+	}
 
 	return output, nil
 }
