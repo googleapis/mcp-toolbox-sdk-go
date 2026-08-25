@@ -689,3 +689,79 @@ func TestWithSupportedProtocols(t *testing.T) {
 		}
 	})
 }
+
+func TestWithSecureParams(t *testing.T) {
+	t.Run("Successfully sets secure parameters", func(t *testing.T) {
+		cfg := newToolConfig()
+		opt := WithSecureParams(map[string]any{
+			"api_key": "secret-123",
+			"count":   5,
+		})
+		err := opt(cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.SecureParams["api_key"] != "secret-123" || cfg.SecureParams["count"] != 5 {
+			t.Errorf("unexpected SecureParams map content: %+v", cfg.SecureParams)
+		}
+	})
+
+	t.Run("Rejects duplicate secure parameter binding", func(t *testing.T) {
+		cfg := newToolConfig()
+		cfg.SecureParams["api_key"] = "first"
+		opt := WithSecureParams(map[string]any{"api_key": "second"})
+		err := opt(cfg)
+		if err == nil {
+			t.Fatal("expected error on duplicate secure param, got nil")
+		}
+		if !strings.Contains(err.Error(), "duplicate secure parameter binding") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("Rejects secure param if already bound as regular param", func(t *testing.T) {
+		cfg := newToolConfig()
+		cfg.BoundParams["api_key"] = "regular"
+		opt := WithSecureParams(map[string]any{"api_key": "secure"})
+		err := opt(cfg)
+		if err == nil {
+			t.Fatal("expected error on conflicting binding, got nil")
+		}
+		if !strings.Contains(err.Error(), "already set as a regular bound parameter") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+}
+
+func TestWithBindSecureParam_TypedFunctions(t *testing.T) {
+	t.Run("String and StringFunc", func(t *testing.T) {
+		cfg := newToolConfig()
+		err := WithBindSecureParamString("s1", "val")(cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		err = WithBindSecureParamStringFunc("s2", func() (string, error) {
+			return "fn_val", nil
+		})(cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.SecureParams["s1"] != "val" {
+			t.Errorf("expected s1=val, got: %v", cfg.SecureParams["s1"])
+		}
+	})
+
+	t.Run("Int, Float, Bool and Array/Map bindings", func(t *testing.T) {
+		cfg := newToolConfig()
+		_ = WithBindSecureParamInt("i", 42)(cfg)
+		_ = WithBindSecureParamFloat("f", 3.14)(cfg)
+		_ = WithBindSecureParamBool("b", true)(cfg)
+		_ = WithBindSecureParamStringArray("arr", []string{"a", "b"})(cfg)
+		_ = WithBindSecureParamStringMap("m", map[string]string{"k": "v"})(cfg)
+
+		if cfg.SecureParams["i"] != 42 || cfg.SecureParams["f"] != 3.14 || cfg.SecureParams["b"] != true {
+			t.Errorf("unexpected values in SecureParams: %+v", cfg.SecureParams)
+		}
+	})
+}
+

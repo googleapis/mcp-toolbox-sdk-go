@@ -126,18 +126,24 @@ func (tc *ToolboxClient) newToolboxTool(
 	finalConfig *ToolConfig,
 	isStrict bool,
 	tr transport.Transport,
-) (*ToolboxTool, []string, []string, error) {
+) (*ToolboxTool, []string, []string, []string, error) {
 
 	// These will be the parameters that the end-user must provide at invocation time.
 	finalParameters := make([]ParameterSchema, 0)
 	// This map collects parameters that require an auth token to be fulfilled.
 	authnParams := make(map[string][]string)
-	// This set tracks all parameter names defined in the schema for validation.
-	paramSchema := make(map[string]struct{})
+	// This map tracks all parameter schemas defined in the schema.
+	allParamSchemas := make(map[string]ParameterSchema)
 	// This map stores bound parameters that are applicable to this specific tool.
 	localBoundParams := make(map[string]any)
 	// This map stores the schemas of the bound parameters for validation during invocation.
 	localBoundSchemas := make(map[string]ParameterSchema)
+
+	// Build lookup maps for validation.
+	secSchemaMap := make(map[string]ParameterSchema)
+	for _, sp := range schema.SecureParameters {
+		secSchemaMap[sp.Name] = sp
+	}
 
 	// Iterate over the tool's parameters from the schema to categorize them.
 	for _, p := range schema.Parameters {
@@ -145,16 +151,16 @@ func (tc *ToolboxClient) newToolboxTool(
 		if ap, ok := p.AdditionalProperties.(map[string]any); ok {
 			apParam, err := mapToSchema(ap)
 			if err != nil {
-				return nil, nil, nil, err
+				return nil, nil, nil, nil, err
 			}
 			p.AdditionalProperties = apParam
 		}
 		// Validate parameter schema
 		if err := p.ValidateDefinition(); err != nil {
 			// Return a detailed error indicating which tool failed validation.
-			return nil, nil, nil, fmt.Errorf("invalid schema for tool '%s': %w", name, err)
+			return nil, nil, nil, nil, fmt.Errorf("invalid schema for tool '%s': %w", name, err)
 		}
-		paramSchema[p.Name] = struct{}{}
+		allParamSchemas[p.Name] = p
 
 		if len(p.AuthSources) > 0 {
 			// The parameter is satisfied by an authentication source.
@@ -170,12 +176,42 @@ func (tc *ToolboxClient) newToolboxTool(
 		}
 	}
 
-	// In strict mode, ensure that all provided bound parameters actually exist
-	// on the tool's schema.
+	// Process secure parameters from the schema.
+	finalSecureParameters := make([]ParameterSchema, 0)
+	localBoundSecureParams := make(map[string]any)
+	localBoundSecureSchemas := make(map[string]ParameterSchema)
+	allSecureParamSchemas := make(map[string]ParameterSchema)
+
+	for _, sp := range schema.SecureParameters {
+		if err := sp.ValidateDefinition(); err != nil {
+			return nil, nil, nil, nil, fmt.Errorf("invalid secure parameter schema for tool '%s': %w", name, err)
+		}
+		allSecureParamSchemas[sp.Name] = sp
+
+		if val, isBound := finalConfig.SecureParams[sp.Name]; isBound {
+			localBoundSecureParams[sp.Name] = val
+			localBoundSecureSchemas[sp.Name] = sp
+		} else {
+			finalSecureParameters = append(finalSecureParameters, sp)
+		}
+	}
+
+	// In strict mode, validate that all provided bound parameters and secure parameters exist.
 	if isStrict {
 		for boundName := range finalConfig.BoundParams {
-			if _, exists := paramSchema[boundName]; !exists {
-				return nil, nil, nil, fmt.Errorf("unable to bind parameter: no parameter named '%s' found on tool '%s'", boundName, name)
+			if _, isSec := secSchemaMap[boundName]; isSec {
+				return nil, nil, nil, nil, fmt.Errorf("parameter %q is a secure parameter; use BindSecureParam/BindSecureParams instead", boundName)
+			}
+			if _, exists := allParamSchemas[boundName]; !exists {
+				return nil, nil, nil, nil, fmt.Errorf("unable to bind parameter: no parameter named '%s' found on tool '%s'", boundName, name)
+			}
+		}
+		for secName := range finalConfig.SecureParams {
+			if _, isReg := allParamSchemas[secName]; isReg {
+				return nil, nil, nil, nil, fmt.Errorf("parameter %q is a regular parameter; use BindParam/BindParams instead", secName)
+			}
+			if _, exists := secSchemaMap[secName]; !exists {
+				return nil, nil, nil, nil, fmt.Errorf("unable to bind secure parameters: no secure parameter named %q found on tool %q", secName, name)
 			}
 		}
 	}
@@ -184,6 +220,12 @@ func (tc *ToolboxClient) newToolboxTool(
 	var usedBoundKeys []string
 	for k := range localBoundParams {
 		usedBoundKeys = append(usedBoundKeys, k)
+	}
+
+	// Collect the keys of the bound secure parameters that were actually used.
+	var usedSecureKeys []string
+	for k := range localBoundSecureParams {
+		usedSecureKeys = append(usedSecureKeys, k)
 	}
 
 	// Determine which auth requirements are still unmet after applying the provided tokens.
@@ -195,21 +237,26 @@ func (tc *ToolboxClient) newToolboxTool(
 
 	// Construct the final tool object.
 	tt := &ToolboxTool{
-		name:                name,
-		description:         schema.Description,
-		parameters:          finalParameters,
-		transport:           tr,
-		authTokenSources:    finalConfig.AuthTokenSources,
-		boundParams:         localBoundParams,
-		boundParamSchemas:   localBoundSchemas,
-		requiredAuthnParams: remainingAuthnParams,
-		requiredAuthzTokens: remainingAuthzTokens,
-		clientHeaderSources: tc.clientHeaderSources,
-		clientName:          tc.clientName,
-		clientVersion:       tc.clientVersion,
+		name:                    name,
+		description:             schema.Description,
+		parameters:              finalParameters,
+		allParamSchemas:         allParamSchemas,
+		secureParameters:        finalSecureParameters,
+		allSecureParamSchemas:   allSecureParamSchemas,
+		transport:               tr,
+		authTokenSources:        finalConfig.AuthTokenSources,
+		boundParams:             localBoundParams,
+		boundParamSchemas:       localBoundSchemas,
+		boundSecureParams:       localBoundSecureParams,
+		boundSecureParamSchemas: localBoundSecureSchemas,
+		requiredAuthnParams:     remainingAuthnParams,
+		requiredAuthzTokens:     remainingAuthzTokens,
+		clientHeaderSources:     tc.clientHeaderSources,
+		clientName:              tc.clientName,
+		clientVersion:           tc.clientVersion,
 	}
 
-	return tt, usedAuthKeys, usedBoundKeys, nil
+	return tt, usedAuthKeys, usedBoundKeys, usedSecureKeys, nil
 }
 
 // LoadTool fetches a manifest for a single tool
@@ -274,7 +321,7 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 	activeTransport := tc.transport
 	tc.mu.RUnlock()
 
-	tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(name, schema, finalConfig, true, activeTransport)
+	tool, usedAuthKeys, usedBoundKeys, usedSecureKeys, err := tc.newToolboxTool(name, schema, finalConfig, true, activeTransport)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create toolbox tool from schema for '%s': %w", name, err)
 	}
@@ -288,6 +335,11 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 	for k := range finalConfig.BoundParams {
 		providedBoundKeys[k] = struct{}{}
 	}
+	providedSecureKeys := make(map[string]struct{})
+	for k := range finalConfig.SecureParams {
+		providedSecureKeys[k] = struct{}{}
+	}
+
 	usedAuthSet := make(map[string]struct{})
 	for _, k := range usedAuthKeys {
 		usedAuthSet[k] = struct{}{}
@@ -296,17 +348,25 @@ func (tc *ToolboxClient) LoadTool(name string, ctx context.Context, opts ...Tool
 	for _, k := range usedBoundKeys {
 		usedBoundSet[k] = struct{}{}
 	}
+	usedSecureSet := make(map[string]struct{})
+	for _, k := range usedSecureKeys {
+		usedSecureSet[k] = struct{}{}
+	}
 
 	// Find any provided options that were not consumed during tool creation.
 	var errorMessages []string
 	unusedAuth := findUnusedKeys(providedAuthKeys, usedAuthSet)
 	unusedBound := findUnusedKeys(providedBoundKeys, usedBoundSet)
+	unusedSecure := findUnusedKeys(providedSecureKeys, usedSecureSet)
 
 	if len(unusedAuth) > 0 {
 		errorMessages = append(errorMessages, fmt.Sprintf("unused auth tokens: %s", strings.Join(unusedAuth, ", ")))
 	}
 	if len(unusedBound) > 0 {
 		errorMessages = append(errorMessages, fmt.Sprintf("unused bound parameters: %s", strings.Join(unusedBound, ", ")))
+	}
+	if len(unusedSecure) > 0 {
+		errorMessages = append(errorMessages, fmt.Sprintf("unused secure parameters: %s", strings.Join(unusedSecure, ", ")))
 	}
 	if len(errorMessages) > 0 {
 		return nil, fmt.Errorf("validation failed for tool '%s': %s", name, strings.Join(errorMessages, "; "))
@@ -370,6 +430,7 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 	var tools []*ToolboxTool
 	overallUsedAuthKeys := make(map[string]struct{})
 	overallUsedBoundParams := make(map[string]struct{})
+	overallUsedSecureParams := make(map[string]struct{})
 
 	providedAuthKeys := make(map[string]struct{})
 	for k := range finalConfig.AuthTokenSources {
@@ -379,6 +440,10 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 	for k := range finalConfig.BoundParams {
 		providedBoundKeys[k] = struct{}{}
 	}
+	providedSecureKeys := make(map[string]struct{})
+	for k := range finalConfig.SecureParams {
+		providedSecureKeys[k] = struct{}{}
+	}
 
 	tc.mu.RLock()
 	activeTransport := tc.transport
@@ -386,7 +451,7 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 
 	for toolName, schema := range manifest.Tools {
 		// Construct each tool from its schema and the shared configuration.
-		tool, usedAuthKeys, usedBoundKeys, err := tc.newToolboxTool(toolName, schema, finalConfig, finalConfig.Strict, activeTransport)
+		tool, usedAuthKeys, usedBoundKeys, usedSecureKeys, err := tc.newToolboxTool(toolName, schema, finalConfig, finalConfig.Strict, activeTransport)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create tool '%s': %w", toolName, err)
 		}
@@ -403,9 +468,14 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 			for _, k := range usedBoundKeys {
 				usedBoundSet[k] = struct{}{}
 			}
+			usedSecureSet := make(map[string]struct{})
+			for _, k := range usedSecureKeys {
+				usedSecureSet[k] = struct{}{}
+			}
 
 			unusedAuth := findUnusedKeys(providedAuthKeys, usedAuthSet)
 			unusedBound := findUnusedKeys(providedBoundKeys, usedBoundSet)
+			unusedSecure := findUnusedKeys(providedSecureKeys, usedSecureSet)
 
 			var errorMessages []string
 			if len(unusedAuth) > 0 {
@@ -413,6 +483,9 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 			}
 			if len(unusedBound) > 0 {
 				errorMessages = append(errorMessages, fmt.Sprintf("unused bound parameters: %s", strings.Join(unusedBound, ", ")))
+			}
+			if len(unusedSecure) > 0 {
+				errorMessages = append(errorMessages, fmt.Sprintf("unused secure parameters: %s", strings.Join(unusedSecure, ", ")))
 			}
 			if len(errorMessages) > 0 {
 				return nil, fmt.Errorf("validation failed for tool '%s': %s", toolName, strings.Join(errorMessages, "; "))
@@ -426,6 +499,9 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 			for _, k := range usedBoundKeys {
 				overallUsedBoundParams[k] = struct{}{}
 			}
+			for _, k := range usedSecureKeys {
+				overallUsedSecureParams[k] = struct{}{}
+			}
 		}
 	}
 
@@ -434,6 +510,7 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 	if !finalConfig.Strict {
 		unusedAuth := findUnusedKeys(providedAuthKeys, overallUsedAuthKeys)
 		unusedBound := findUnusedKeys(providedBoundKeys, overallUsedBoundParams)
+		unusedSecure := findUnusedKeys(providedSecureKeys, overallUsedSecureParams)
 
 		var errorMessages []string
 		if len(unusedAuth) > 0 {
@@ -441,6 +518,9 @@ func (tc *ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...T
 		}
 		if len(unusedBound) > 0 {
 			errorMessages = append(errorMessages, fmt.Sprintf("unused bound parameters could not be applied to any tool: %s", strings.Join(unusedBound, ", ")))
+		}
+		if len(unusedSecure) > 0 {
+			errorMessages = append(errorMessages, fmt.Sprintf("unused secure parameters could not be applied to any tool: %s", strings.Join(unusedSecure, ", ")))
 		}
 		if len(errorMessages) > 0 {
 			if name == "" {
