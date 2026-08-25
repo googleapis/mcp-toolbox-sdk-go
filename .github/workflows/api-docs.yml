@@ -20,9 +20,13 @@ on:
     tags: [ '**' ]
   workflow_dispatch:
 
+# One group: runs share the site root and each package's releases/latest files,
+# and the deploy action pushes without retrying. queue: max holds 100 pending
+# runs instead of the default 1, which cancels a queued run on a third push.
 concurrency:
   group: api-docs-deploy
   cancel-in-progress: false
+  queue: max
 
 jobs:
   deploy:
