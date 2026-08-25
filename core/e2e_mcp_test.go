@@ -132,15 +132,17 @@ var protocolsToTest = []protocolTestCase{
 	{name: "MCP Alias (Latest)", protocol: core.MCP},
 }
 
-// CapturingTransport wraps http.RoundTripper to capture headers from the latest request.
+// CapturingTransport wraps http.RoundTripper to capture headers and request counts from requests.
 type CapturingTransport struct {
 	base        http.RoundTripper
 	lastHeaders http.Header
+	callCount   int
 	mu          sync.Mutex
 }
 
 func (c *CapturingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	c.mu.Lock()
+	c.callCount++
 	c.lastHeaders = req.Header.Clone()
 	c.mu.Unlock()
 
@@ -156,6 +158,12 @@ func (c *CapturingTransport) CapturedHeaders() http.Header {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.lastHeaders
+}
+
+func (c *CapturingTransport) CallCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.callCount
 }
 
 // helper factory to create a client with a specific protocol
@@ -291,21 +299,29 @@ func TestMCP_Basic(t *testing.T) {
 				toolset, err := client.LoadToolset("", context.Background())
 				require.NoError(t, err)
 
-				assert.Len(t, toolset, 7)
-				toolNames := make(map[string]struct{})
+				protocolToCheck := proto.protocol
+				if proto.isDefault {
+					protocolToCheck = core.MCPLatest
+				}
+
+				expectedTools := []string{
+					"get-row-by-content-auth",
+					"get-row-by-email-auth",
+					"get-row-by-id-auth",
+					"get-row-by-id",
+					"get-n-rows",
+					"search-rows",
+					"process-data",
+				}
+				if protocolToCheck.AtLeast(core.MCPv20260728) {
+					expectedTools = append(expectedTools, "my-secure-tool")
+				}
+
+				var toolNames []string
 				for _, tool := range toolset {
-					toolNames[tool.Name()] = struct{}{}
+					toolNames = append(toolNames, tool.Name())
 				}
-				expectedTools := map[string]struct{}{
-					"get-row-by-content-auth": {},
-					"get-row-by-email-auth":   {},
-					"get-row-by-id-auth":      {},
-					"get-row-by-id":           {},
-					"get-n-rows":              {},
-					"search-rows":             {},
-					"process-data":            {},
-				}
-				assert.Equal(t, expectedTools, toolNames)
+				assert.ElementsMatch(t, expectedTools, toolNames)
 			})
 
 			t.Run("test_run_tool", func(t *testing.T) {
@@ -956,6 +972,207 @@ func TestMcpProtocols_E2E(t *testing.T) {
 					}
 				})
 			}
+		})
+	}
+}
+
+func TestSecureParams_E2E(t *testing.T) {
+	for _, serverURL := range getTestServerURLs() {
+		t.Run("server_"+serverURL, func(t *testing.T) {
+			capturer := &CapturingTransport{}
+			httpClient := &http.Client{Transport: capturer}
+			client, err := core.NewToolboxClient(
+				serverURL,
+				core.WithProtocol(core.MCPDraft),
+				core.WithHTTPClient(httpClient),
+			)
+			require.NoError(t, err)
+
+			loadSecureTool := func(t *testing.T, opts ...core.ToolOption) *core.ToolboxTool {
+				tool, err := client.LoadTool("my-secure-tool", context.Background(), opts...)
+				if err != nil {
+					t.Skipf("Skipping: my-secure-tool not found on server %s: %v", serverURL, err)
+					return nil
+				}
+				require.NoError(t, err)
+				return tool
+			}
+
+			t.Run("test_schema_isolation", func(t *testing.T) {
+				tool := loadSecureTool(t)
+				if tool == nil {
+					return
+				}
+				schemaBytes, err := tool.InputSchema()
+				require.NoError(t, err)
+				assert.NotContains(t, string(schemaBytes), "name")
+			})
+
+			t.Run("test_missing_required_fast_fail", func(t *testing.T) {
+				tool := loadSecureTool(t)
+				if tool == nil {
+					return
+				}
+				callsBefore := capturer.CallCount()
+				_, err := tool.Invoke(context.Background(), map[string]any{})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "missing required secure parameter(s) [name]")
+				assert.Equal(t, callsBefore, capturer.CallCount(), "expected no network call to be made on fast-fail")
+			})
+
+			t.Run("test_static_binding_invoke", func(t *testing.T) {
+				tool := loadSecureTool(t)
+				if tool == nil {
+					return
+				}
+				boundTool, err := tool.ToolFrom(core.WithBindSecureParamString("name", "Alice"))
+				require.NoError(t, err)
+				res, err := boundTool.Invoke(context.Background(), map[string]any{"id": 1})
+				require.NoError(t, err)
+				assert.Contains(t, res, "Alice")
+			})
+
+			t.Run("test_batch_binding_invoke", func(t *testing.T) {
+				tool := loadSecureTool(t)
+				if tool == nil {
+					return
+				}
+				boundTool, err := tool.ToolFrom(
+					core.WithBindParamInt("id", 1),
+					core.WithBindSecureParamString("name", "Alice"),
+				)
+				require.NoError(t, err)
+				res, err := boundTool.Invoke(context.Background(), map[string]any{})
+				require.NoError(t, err)
+				assert.Contains(t, res, "Alice")
+			})
+
+			t.Run("test_dynamic_callable_invoke", func(t *testing.T) {
+				tool := loadSecureTool(t)
+				if tool == nil {
+					return
+				}
+				called := false
+				dynamicTool, err := tool.ToolFrom(core.WithBindSecureParamStringFunc("name", func() (string, error) {
+					called = true
+					return "Bob", nil
+				}))
+				require.NoError(t, err)
+				res, err := dynamicTool.Invoke(context.Background(), map[string]any{"id": 1})
+				require.NoError(t, err)
+				assert.True(t, called)
+				assert.Contains(t, res, "Bob")
+			})
+
+			t.Run("test_load_tool_with_secure_params", func(t *testing.T) {
+				loadedBoundTool := loadSecureTool(t, core.WithBindSecureParamString("name", "Charlie"))
+				if loadedBoundTool == nil {
+					return
+				}
+				res, err := loadedBoundTool.Invoke(context.Background(), map[string]any{"id": 1})
+				require.NoError(t, err)
+				assert.Contains(t, res, "Charlie")
+			})
+
+			t.Run("test_load_toolset_with_secure_params", func(t *testing.T) {
+				toolset, err := client.LoadToolset("my-secure-toolset", context.Background(), core.WithBindSecureParamString("name", "David"))
+				if err != nil {
+					t.Skipf("Skipping: my-secure-toolset not found on server %s: %v", serverURL, err)
+					return
+				}
+				require.NoError(t, err)
+				require.NotEmpty(t, toolset)
+
+				var secureTool *core.ToolboxTool
+				for _, tool := range toolset {
+					if tool.Name() == "my-secure-tool" {
+						secureTool = tool
+						break
+					}
+				}
+				require.NotNil(t, secureTool, "my-secure-tool not found in my-secure-toolset")
+
+				res, err := secureTool.Invoke(context.Background(), map[string]any{"id": 1})
+				require.NoError(t, err)
+				assert.Contains(t, res, "David")
+			})
+
+			t.Run("test_prompt_injection_defense", func(t *testing.T) {
+				tool := loadSecureTool(t)
+				if tool == nil {
+					return
+				}
+				boundTool, err := tool.ToolFrom(core.WithBindSecureParamString("name", "Alice"))
+				require.NoError(t, err)
+
+				_, err = boundTool.Invoke(context.Background(), map[string]any{
+					"id":   1,
+					"name": "MaliciousOverride",
+				})
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), "unexpected parameter 'name' provided")
+			})
+
+			t.Run("test_cross_binding_errors_tool_from", func(t *testing.T) {
+				tool := loadSecureTool(t)
+				if tool == nil {
+					return
+				}
+				testCases := []struct {
+					name        string
+					opt         core.ToolOption
+					errContains string
+				}{
+					{
+						name:        "bind_param_on_secure_param",
+						opt:         core.WithBindParamString("name", "Alice"),
+						errContains: "parameter \"name\" is a secure parameter; use WithBindSecureParam* instead",
+					},
+					{
+						name:        "bind_secure_param_on_regular_param",
+						opt:         core.WithBindSecureParamInt("id", 1),
+						errContains: "parameter \"id\" is a regular parameter; use WithBindParam* instead",
+					},
+				}
+
+				for _, tc := range testCases {
+					t.Run(tc.name, func(t *testing.T) {
+						_, err := tool.ToolFrom(tc.opt)
+						require.Error(t, err)
+						assert.Contains(t, err.Error(), tc.errContains)
+					})
+				}
+			})
+
+			t.Run("test_cross_binding_errors_load_tool", func(t *testing.T) {
+				if tool := loadSecureTool(t); tool == nil {
+					return
+				}
+				testCases := []struct {
+					name        string
+					opt         core.ToolOption
+					errContains string
+				}{
+					{
+						name:        "bind_param_on_secure_param",
+						opt:         core.WithBindParamString("name", "Alice"),
+						errContains: "parameter \"name\" is a secure parameter; use WithBindSecureParam* instead",
+					},
+					{
+						name:        "bind_secure_param_on_regular_param",
+						opt:         core.WithBindSecureParamInt("id", 1),
+						errContains: "parameter \"id\" is a regular parameter; use WithBindParam* instead",
+					},
+				}
+
+				for _, tc := range testCases {
+					t.Run(tc.name, func(t *testing.T) {
+						_, err := client.LoadTool("my-secure-tool", context.Background(), tc.opt)
+						require.Error(t, err)
+						assert.Contains(t, err.Error(), tc.errContains)
+					})
+				}
+			})
 		})
 	}
 }

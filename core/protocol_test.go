@@ -41,3 +41,53 @@ func TestGetSupportedMcpVersions(t *testing.T) {
 		}
 	}
 }
+
+func TestProtocol_AtLeast(t *testing.T) {
+	tests := []struct {
+		name           string
+		currentVersion Protocol
+		minVersion     Protocol
+		wantResult     bool
+	}{
+		{
+			name:           "Equal version",
+			currentVersion: MCPv20260728,
+			minVersion:     MCPv20260728,
+			wantResult:     true,
+		},
+		{
+			name:           "Newer current version vs older min version",
+			currentVersion: MCPv20260728,
+			minVersion:     MCPv20251125,
+			wantResult:     true,
+		},
+		{
+			name:           "Older current version vs newer min version",
+			currentVersion: MCPv20250326,
+			minVersion:     MCPv20260728,
+			wantResult:     false,
+		},
+		{
+			name:           "Unrecognized current version returns false",
+			currentVersion: Protocol("invalid-version"),
+			minVersion:     MCPv20260728,
+			wantResult:     false,
+		},
+		{
+			name:           "Unrecognized min version returns false",
+			currentVersion: MCPv20260728,
+			minVersion:     Protocol("unknown-target"),
+			wantResult:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.currentVersion.AtLeast(tt.minVersion)
+			if got != tt.wantResult {
+				t.Errorf("%q.AtLeast(%q) = %v, want %v", tt.currentVersion, tt.minVersion, got, tt.wantResult)
+			}
+		})
+	}
+}
+

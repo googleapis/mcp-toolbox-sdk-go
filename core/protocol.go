@@ -43,6 +43,12 @@ func GetSupportedMcpVersions() []string {
 	return transport.GetSupportedMcpVersions()
 }
 
+// AtLeast reports whether p is greater than or equal to min based on MCP version hierarchy.
+func (p Protocol) AtLeast(min Protocol) bool {
+	atLeast, err := transport.IsVersionAtLeast(string(p), string(min))
+	return err == nil && atLeast
+}
+
 type ManifestSchema = transport.ManifestSchema
 
 // ToolSchema defines a single tool in the manifest.

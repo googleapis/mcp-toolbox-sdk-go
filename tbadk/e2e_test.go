@@ -327,22 +327,29 @@ func TestE2E_Basic(t *testing.T) {
 						toolset, err := client.LoadToolset("", context.Background())
 						require.NoError(t, err)
 
-						assert.Len(t, toolset, 7)
-						toolNames := make(map[string]struct{})
+						protocolToCheck := proto.protocol
+						if proto.isDefault {
+							protocolToCheck = core.MCPLatest
+						}
 
+						expectedTools := []string{
+							"get-row-by-content-auth",
+							"get-row-by-email-auth",
+							"get-row-by-id-auth",
+							"get-row-by-id",
+							"get-n-rows",
+							"search-rows",
+							"process-data",
+						}
+						if protocolToCheck.AtLeast(core.MCPv20260728) {
+							expectedTools = append(expectedTools, "my-secure-tool")
+						}
+
+						var toolNames []string
 						for _, tool := range toolset {
-							toolNames[tool.Name()] = struct{}{}
+							toolNames = append(toolNames, tool.Name())
 						}
-						expectedTools := map[string]struct{}{
-							"get-row-by-content-auth": {},
-							"get-row-by-email-auth":   {},
-							"get-row-by-id-auth":      {},
-							"get-row-by-id":           {},
-							"get-n-rows":              {},
-							"search-rows":             {},
-							"process-data":            {},
-						}
-						assert.Equal(t, expectedTools, toolNames)
+						assert.ElementsMatch(t, expectedTools, toolNames)
 					})
 
 					t.Run("test_run_tool", func(t *testing.T) {
@@ -1033,6 +1040,144 @@ func TestRunToolURLBinding(t *testing.T) {
 			assert.Contains(t, resStr, "row1")
 			assert.Contains(t, resStr, "row2")
 			assert.NotContains(t, resStr, "row3")
+		})
+	}
+}
+
+func TestSecureParams_E2E(t *testing.T) {
+	for _, serverURL := range getTestServerURLs() {
+		t.Run("server_"+serverURL, func(t *testing.T) {
+			toolbox, err := tbadk.NewToolboxClient(serverURL, core.WithProtocol(core.MCPDraft))
+			require.NoError(t, err)
+
+			loadSecureADKTool := func(t *testing.T, opts ...core.ToolOption) tbadk.ToolboxTool {
+				tool, err := toolbox.LoadTool("my-secure-tool", context.Background(), opts...)
+				if err != nil {
+					t.Skipf("Skipping: my-secure-tool not found on server %s: %v", serverURL, err)
+					return tbadk.ToolboxTool{}
+				}
+				require.NoError(t, err)
+				return tool
+			}
+
+			t.Run("test_declaration_isolation", func(t *testing.T) {
+				tool := loadSecureADKTool(t)
+				if tool.ToolboxTool == nil {
+					return
+				}
+				decl := tool.Declaration()
+				require.NotNil(t, decl)
+				if decl.Parameters != nil {
+					assert.NotContains(t, decl.Parameters.Properties, "name")
+				}
+			})
+
+			t.Run("test_static_binding_run", func(t *testing.T) {
+				tool := loadSecureADKTool(t)
+				if tool.ToolboxTool == nil {
+					return
+				}
+				boundTool, err := tool.ToolFrom(core.WithBindSecureParamString("name", "Alice"))
+				require.NoError(t, err)
+
+				testToolCtx := &mockToolContext{
+					mockAgentContext: &mockAgentContext{
+						ctx: context.Background(),
+					},
+				}
+				res, err := boundTool.Run(testToolCtx, map[string]any{"id": 1})
+				require.NoError(t, err)
+				assert.Contains(t, res["output"], "Alice")
+			})
+
+			t.Run("test_load_toolset_with_secure_params", func(t *testing.T) {
+				toolset, err := toolbox.LoadToolset("my-secure-toolset", context.Background(), core.WithBindSecureParamString("name", "Alice"))
+				if err != nil {
+					t.Skipf("Skipping: my-secure-toolset not found on server %s: %v", serverURL, err)
+					return
+				}
+				require.NoError(t, err)
+				require.NotEmpty(t, toolset)
+
+				var secureTool *tbadk.ToolboxTool
+				for i, tool := range toolset {
+					if tool.Name() == "my-secure-tool" {
+						secureTool = &toolset[i]
+						break
+					}
+				}
+				require.NotNil(t, secureTool, "my-secure-tool not found in my-secure-toolset")
+
+				testToolCtx := &mockToolContext{
+					mockAgentContext: &mockAgentContext{
+						ctx: context.Background(),
+					},
+				}
+				res, err := secureTool.Run(testToolCtx, map[string]any{"id": 1})
+				require.NoError(t, err)
+				assert.Contains(t, res["output"], "Alice")
+			})
+
+			t.Run("test_cross_binding_errors_tool_from", func(t *testing.T) {
+				tool := loadSecureADKTool(t)
+				if tool.ToolboxTool == nil {
+					return
+				}
+				testCases := []struct {
+					name        string
+					opt         core.ToolOption
+					errContains string
+				}{
+					{
+						name:        "bind_param_on_secure_param",
+						opt:         core.WithBindParamString("name", "Alice"),
+						errContains: "parameter \"name\" is a secure parameter; use WithBindSecureParam* instead",
+					},
+					{
+						name:        "bind_secure_param_on_regular_param",
+						opt:         core.WithBindSecureParamInt("id", 1),
+						errContains: "parameter \"id\" is a regular parameter; use WithBindParam* instead",
+					},
+				}
+
+				for _, tc := range testCases {
+					t.Run(tc.name, func(t *testing.T) {
+						_, err := tool.ToolFrom(tc.opt)
+						require.Error(t, err)
+						assert.Contains(t, err.Error(), tc.errContains)
+					})
+				}
+			})
+
+			t.Run("test_cross_binding_errors_load_tool", func(t *testing.T) {
+				if tool := loadSecureADKTool(t); tool.ToolboxTool == nil {
+					return
+				}
+				testCases := []struct {
+					name        string
+					opt         core.ToolOption
+					errContains string
+				}{
+					{
+						name:        "bind_param_on_secure_param",
+						opt:         core.WithBindParamString("name", "Alice"),
+						errContains: "parameter \"name\" is a secure parameter; use WithBindSecureParam* instead",
+					},
+					{
+						name:        "bind_secure_param_on_regular_param",
+						opt:         core.WithBindSecureParamInt("id", 1),
+						errContains: "parameter \"id\" is a regular parameter; use WithBindParam* instead",
+					},
+				}
+
+				for _, tc := range testCases {
+					t.Run(tc.name, func(t *testing.T) {
+						_, err := toolbox.LoadTool("my-secure-tool", context.Background(), tc.opt)
+						require.Error(t, err)
+						assert.Contains(t, err.Error(), tc.errContains)
+					})
+				}
+			})
 		})
 	}
 }

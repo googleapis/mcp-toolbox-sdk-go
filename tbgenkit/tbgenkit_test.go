@@ -950,3 +950,30 @@ func TestRunToolURLBinding(t *testing.T) {
 		})
 	}
 }
+
+func TestToGenkitTool_SecureParams_E2E(t *testing.T) {
+	for _, serverURL := range getTestServerURLs() {
+		t.Run("server_"+serverURL, func(t *testing.T) {
+			client, err := core.NewToolboxClient(serverURL, core.WithProtocol(core.MCPDraft))
+			require.NoError(t, err)
+
+			tool, err := client.LoadTool("my-secure-tool", context.Background())
+			if err != nil {
+				t.Skipf("Skipping: my-secure-tool not found on server %s: %v", serverURL, err)
+				return
+			}
+			require.NoError(t, err)
+
+			boundTool, err := tool.ToolFrom(core.WithBindSecureParamString("name", "Alice"))
+			require.NoError(t, err)
+
+			g := genkit.Init(context.Background())
+			genkitTool, err := tbgenkit.ToGenkitTool(boundTool, g)
+			require.NoError(t, err)
+
+			res, err := genkitTool.RunRaw(context.Background(), map[string]any{"id": 1})
+			require.NoError(t, err)
+			assert.Contains(t, res, "Alice")
+		})
+	}
+}
