@@ -135,5 +135,40 @@ func (tt ToolboxTool) ToolFrom(opts ...core.ToolOption) (ToolboxTool, error) {
 	}
 
 	return toADKTool(coreTool)
+}
 
+// BindParam binds a single regular parameter to a value or dynamic function.
+func (tt ToolboxTool) BindParam(name string, value any) (ToolboxTool, error) {
+	coreTool, err := tt.ToolboxTool.BindParam(name, value)
+	if err != nil {
+		return ToolboxTool{}, err
+	}
+	return toADKTool(coreTool)
+}
+
+// BindParams binds multiple regular parameters to values or dynamic functions.
+func (tt ToolboxTool) BindParams(params map[string]any) (ToolboxTool, error) {
+	coreTool, err := tt.ToolboxTool.BindParams(params)
+	if err != nil {
+		return ToolboxTool{}, err
+	}
+	return toADKTool(coreTool)
+}
+
+// BindSecureParam binds a single secure parameter to a value or dynamic function.
+func (tt ToolboxTool) BindSecureParam(name string, value any) (ToolboxTool, error) {
+	coreTool, err := tt.ToolboxTool.BindSecureParam(name, value)
+	if err != nil {
+		return ToolboxTool{}, err
+	}
+	return toADKTool(coreTool)
+}
+
+// BindSecureParams binds multiple secure parameters to values or dynamic functions.
+func (tt ToolboxTool) BindSecureParams(params map[string]any) (ToolboxTool, error) {
+	coreTool, err := tt.ToolboxTool.BindSecureParams(params)
+	if err != nil {
+		return ToolboxTool{}, err
+	}
+	return toADKTool(coreTool)
 }
