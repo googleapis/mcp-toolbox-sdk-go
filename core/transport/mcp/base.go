@@ -227,10 +227,33 @@ func (b *BaseMcpTransport) ConvertToolDefinition(toolData map[string]any) (trans
 		parameters = append(parameters, param)
 	}
 
+	var secureParameters []transport.ParameterSchema
+	if secureInputSchema, ok := toolData["secureInputSchema"].(map[string]any); ok {
+		secProperties, _ := secureInputSchema["properties"].(map[string]any)
+		secRequiredSet := make(map[string]bool)
+		if reqList, ok := secureInputSchema["required"].([]any); ok {
+			for _, r := range reqList {
+				if s, ok := r.(string); ok {
+					secRequiredSet[s] = true
+				}
+			}
+		}
+		secureParameters = make([]transport.ParameterSchema, 0, len(secProperties))
+		for propertyName, definition := range secProperties {
+			definitionMap, ok := definition.(map[string]any)
+			if !ok {
+				continue
+			}
+			param := parseProperty(propertyName, definitionMap, secRequiredSet[propertyName])
+			secureParameters = append(secureParameters, param)
+		}
+	}
+
 	return transport.ToolSchema{
-		Description:  description,
-		Parameters:   parameters,
-		AuthRequired: invokeAuth,
+		Description:      description,
+		Parameters:       parameters,
+		SecureParameters: secureParameters,
+		AuthRequired:     invokeAuth,
 	}, nil
 }
 

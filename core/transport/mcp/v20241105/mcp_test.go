@@ -244,7 +244,7 @@ func TestInvokeTool(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		args := map[string]any{"message": "Hello MCP"}
-		result, err := client.InvokeTool(ctx, "echo", args, nil)
+		result, err := client.InvokeTool(ctx, "echo", args, nil, nil)
 		require.NoError(t, err)
 
 		resStr, ok := result.(string)
@@ -407,9 +407,17 @@ func TestRequest_MarshalError(t *testing.T) {
 
 	// Pass a type that cannot be marshaled to JSON (e.g. channel)
 	badPayload := map[string]any{"bad": make(chan int)}
-	_, err := client.InvokeTool(context.Background(), "tool", badPayload, nil)
+	_, err := client.InvokeTool(context.Background(), "tool", badPayload, nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "marshal failed")
+}
+
+func TestInvokeTool_SecureParams_NotSupported(t *testing.T) {
+	client, _ := New("http://example.com", nil, "custom-client", "1.0.0")
+	_, err := client.InvokeTool(context.Background(), "tool", map[string]any{}, map[string]any{"secret": "val"}, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "secure parameters are not supported in MCP protocol version \"2024-11-05\"")
+	assert.Contains(t, err.Error(), "Please use protocol version '2026-07-28' or newer")
 }
 
 func TestInvokeTool_ErrorResult(t *testing.T) {
@@ -424,7 +432,7 @@ func TestInvokeTool_ErrorResult(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client(), "custom-client", "1.0.0")
-	_, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+	_, err := client.InvokeTool(context.Background(), "tool", nil, nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "tool execution resulted in error")
 }
@@ -438,7 +446,7 @@ func TestInvokeTool_RPCError(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client(), "custom-client", "1.0.0")
-	_, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+	_, err := client.InvokeTool(context.Background(), "tool", nil, nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "internal server error")
 }
@@ -458,7 +466,7 @@ func TestInvokeTool_ComplexContent(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client(), "custom-client", "1.0.0")
-	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
+	res, err := client.InvokeTool(context.Background(), "t", nil, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "Part 1 Part 2", res)
 }
@@ -474,7 +482,7 @@ func TestInvokeTool_EmptyResult(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client(), "custom-client", "1.0.0")
-	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
+	res, err := client.InvokeTool(context.Background(), "t", nil, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "null", res)
 }
@@ -496,7 +504,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 		}
 
 		client, _ := New(server.URL, server.Client(), "custom-client", "1.0.0")
-		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+		result, err := client.InvokeTool(context.Background(), "tool", nil, nil, nil)
 		require.NoError(t, err)
 
 		// Expectation: The transport should merge these into a single JSON array string
@@ -520,7 +528,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 		}
 
 		client, _ := New(server.URL, server.Client(), "custom-client", "1.0.0")
-		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+		result, err := client.InvokeTool(context.Background(), "tool", nil, nil, nil)
 		require.NoError(t, err)
 
 		// Expectation: Simple concatenation
@@ -544,7 +552,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 		}
 
 		client, _ := New(server.URL, server.Client(), "custom-client", "1.0.0")
-		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+		result, err := client.InvokeTool(context.Background(), "tool", nil, nil, nil)
 		require.NoError(t, err)
 
 		// Expectation: Concatenated to form the valid JSON string

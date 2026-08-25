@@ -133,7 +133,10 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 }
 
 // InvokeTool executes a tool
-func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error) {
+func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, securePayload map[string]any, headers map[string]string) (any, error) {
+	if len(securePayload) > 0 {
+		return "", fmt.Errorf("secure parameters are not supported in MCP protocol version %q. Please use protocol version '2026-07-28' or newer", t.protocolVersion)
+	}
 	if err := t.EnsureInitialized(ctx, headers); err != nil {
 		return "", err
 	}

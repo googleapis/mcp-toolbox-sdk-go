@@ -34,6 +34,8 @@ const (
 
 	MCPLatest Protocol = MCPv20260728
 	MCPDraft  Protocol = MCPv20260728
+
+	ExtensionSecureParams = transport.ExtensionSecureParams
 )
 
 // GetSupportedMcpVersions returns a list of supported MCP protocol versions.

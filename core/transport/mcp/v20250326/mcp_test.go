@@ -191,7 +191,7 @@ func TestSessionId_Injection_InvokeTool(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
-	_, err := client.InvokeTool(context.Background(), "test-tool", map[string]any{"a": 1}, nil)
+	_, err := client.InvokeTool(context.Background(), "test-tool", map[string]any{"a": 1}, nil, nil)
 	require.NoError(t, err)
 
 	// Verify requests
@@ -290,7 +290,7 @@ func TestInvokeTool_ErrorResult(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
-	_, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+	_, err := client.InvokeTool(context.Background(), "tool", nil, nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "tool execution resulted in error")
 }
@@ -304,9 +304,17 @@ func TestInvokeTool_RPCError(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
-	_, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+	_, err := client.InvokeTool(context.Background(), "tool", nil, nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "internal server error")
+}
+
+func TestInvokeTool_SecureParams_NotSupported(t *testing.T) {
+	client, _ := New("http://example.com", nil, "test-client", "1.0.0")
+	_, err := client.InvokeTool(context.Background(), "tool", map[string]any{}, map[string]any{"secret": "val"}, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "secure parameters are not supported in MCP protocol version \"2025-03-26\"")
+	assert.Contains(t, err.Error(), "Please use protocol version '2026-07-28' or newer")
 }
 
 func TestListTools_WithAuthHeaders(t *testing.T) {
@@ -414,7 +422,7 @@ func TestRequest_MarshalError(t *testing.T) {
 	_ = client.EnsureInitialized(context.Background(), nil)
 
 	badPayload := map[string]any{"bad": make(chan int)}
-	_, err := client.InvokeTool(context.Background(), "tool", badPayload, nil)
+	_, err := client.InvokeTool(context.Background(), "tool", badPayload, nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "marshal failed")
 }
@@ -494,7 +502,7 @@ func TestInvokeTool_ComplexContent(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
-	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
+	res, err := client.InvokeTool(context.Background(), "t", nil, nil, nil)
 	require.NoError(t, err)
 	// Only text types should be concatenated
 	assert.Equal(t, "Part 1 Part 2", res)
@@ -511,7 +519,7 @@ func TestInvokeTool_EmptyResult(t *testing.T) {
 	}
 
 	client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
-	res, err := client.InvokeTool(context.Background(), "t", nil, nil)
+	res, err := client.InvokeTool(context.Background(), "t", nil, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "null", res)
 }
@@ -565,7 +573,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 		}
 
 		client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
-		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+		result, err := client.InvokeTool(context.Background(), "tool", nil, nil, nil)
 		require.NoError(t, err)
 
 		// Expectation: The transport should merge these into a single JSON array string
@@ -589,7 +597,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 		}
 
 		client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
-		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+		result, err := client.InvokeTool(context.Background(), "tool", nil, nil, nil)
 		require.NoError(t, err)
 
 		// Expectation: Simple concatenation
@@ -601,6 +609,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 		defer server.Close()
 
 		// Mock response where a single JSON object is split across chunks.
+		// Since individual chunks are NOT valid JSON objects, it falls back to concatenation.
 		server.handlers["tools/call"] = func(params json.RawMessage) (any, map[string]string, error) {
 			return callToolResult{
 				Content: []textContent{
@@ -612,7 +621,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 		}
 
 		client, _ := New(server.URL, server.Client(), "test-client", "1.0.0")
-		result, err := client.InvokeTool(context.Background(), "tool", nil, nil)
+		result, err := client.InvokeTool(context.Background(), "tool", nil, nil, nil)
 		require.NoError(t, err)
 
 		// Expectation: Concatenated to form the valid JSON string

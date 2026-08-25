@@ -107,6 +107,9 @@ func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, header
 			"description": tool.Description,
 			"inputSchema": tool.InputSchema,
 		}
+		if tool.SecureInputSchema != nil {
+			rawTool["secureInputSchema"] = tool.SecureInputSchema
+		}
 		if tool.Meta != nil {
 			rawTool["_meta"] = tool.Meta
 		}
@@ -141,13 +144,17 @@ func (t *McpTransport) GetTool(ctx context.Context, toolName string, headers map
 }
 
 // InvokeTool executes a tool
-func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error) {
+func (t *McpTransport) InvokeTool(ctx context.Context, toolName string, payload map[string]any, securePayload map[string]any, headers map[string]string) (any, error) {
 	if payload == nil {
 		payload = make(map[string]any)
 	}
+	if len(securePayload) == 0 {
+		securePayload = nil
+	}
 	params := callToolRequestParams{
-		Name:      toolName,
-		Arguments: payload,
+		Name:            toolName,
+		Arguments:       payload,
+		SecureArguments: securePayload,
 	}
 
 	var result callToolResult
@@ -196,7 +203,11 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 			Name:    t.clientName,
 			Version: t.clientVersion,
 		},
-		ClientCapabilities: clientCapabilities{},
+		ClientCapabilities: clientCapabilities{
+			"extensions": map[string]any{
+				transport.ExtensionSecureParams: map[string]any{},
+			},
+		},
 	}
 
 	toolName := extractMcpName(reqBody)

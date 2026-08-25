@@ -175,6 +175,10 @@ func (p *ParameterSchema) ValidateDefinition() error {
 }
 
 const (
+	ExtensionSecureParams = "com.google.cloud/toolbox.v1"
+)
+
+const (
 	MCPv20260728 = "2026-07-28"
 	MCPv20251125 = "2025-11-25"
 	MCPv20250618 = "2025-06-18"
@@ -217,9 +221,10 @@ func IsVersionAtLeast(currentVersion, minVersion string) (bool, error) {
 
 // Schema for a tool.
 type ToolSchema struct {
-	Description  string            `json:"description"`
-	Parameters   []ParameterSchema `json:"parameters"`
-	AuthRequired []string          `json:"authRequired,omitempty"`
+	Description      string            `json:"description"`
+	Parameters       []ParameterSchema `json:"parameters"`
+	SecureParameters []ParameterSchema `json:"secureParameters,omitempty"`
+	AuthRequired     []string          `json:"authRequired,omitempty"`
 }
 
 // Schema for the Toolbox manifest.

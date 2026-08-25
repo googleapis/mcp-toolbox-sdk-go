@@ -28,5 +28,5 @@ type Transport interface {
 	ListTools(ctx context.Context, toolsetName string, headers map[string]string) (*ManifestSchema, error)
 
 	// InvokeTool executes a tool.
-	InvokeTool(ctx context.Context, toolName string, payload map[string]any, headers map[string]string) (any, error)
+	InvokeTool(ctx context.Context, toolName string, payload map[string]any, securePayload map[string]any, headers map[string]string) (any, error)
 }
