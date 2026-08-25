@@ -117,12 +117,12 @@ func (tt ToolboxTool) Run(ctx agent.Context, args any) (result map[string]any, e
 
 // ToolFrom creates a new, more specialized tool from an existing one by applying
 // additional options. This is useful for creating variations of a tool with
-// different bound parameters / auth tokens without modifying the original and
+// different bound parameters, secure parameters, or auth tokens without modifying the original and
 // all provided options must be applicable.
 //
 // Inputs:
 //   - opts: A variadic list of ToolOption functions to further configure the
-//     new tool, such as binding more parameters.
+//     new tool, such as binding parameters, binding secure parameters, or configuring auth tokens.
 //
 // Returns:
 //
@@ -135,5 +135,4 @@ func (tt ToolboxTool) ToolFrom(opts ...core.ToolOption) (ToolboxTool, error) {
 	}
 
 	return toADKTool(coreTool)
-
 }

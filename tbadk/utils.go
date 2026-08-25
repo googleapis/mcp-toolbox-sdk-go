@@ -24,7 +24,7 @@ import (
 
 func toADKTool(t *core.ToolboxTool) (ToolboxTool, error) {
 	if t == nil {
-		return ToolboxTool{}, fmt.Errorf("nil tool recieved")
+		return ToolboxTool{}, fmt.Errorf("nil tool received")
 	}
 
 	paramsJSON, err := t.InputSchema()

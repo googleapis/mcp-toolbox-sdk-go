@@ -60,6 +60,9 @@ func createCoreTool(t *testing.T, toolName string, schema core.ToolSchema) (*cor
 		"description": schema.Description,
 		"inputSchema": convertParamsToJSONSchema(schema.Parameters),
 	}
+	if len(schema.SecureParameters) > 0 {
+		mcpToolDef["secureInputSchema"] = convertParamsToJSONSchema(schema.SecureParameters)
+	}
 
 	// Setup a Mock MCP Server (JSON-RPC 2.0)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +83,7 @@ func createCoreTool(t *testing.T, toolName string, schema core.ToolSchema) (*cor
 		case "initialize":
 			// Handshake
 			result = map[string]any{
-				"protocolVersion": "2025-06-18", // Matches latest default
+				"protocolVersion": "2026-07-28",
 				"capabilities":    map[string]any{"tools": map[string]any{}},
 				"serverInfo": map[string]any{
 					"name":    "mock-server",
@@ -94,6 +97,12 @@ func createCoreTool(t *testing.T, toolName string, schema core.ToolSchema) (*cor
 			// List available tools
 			result = map[string]any{
 				"tools": []any{mcpToolDef},
+			}
+		case "tools/call":
+			result = map[string]any{
+				"content": []map[string]any{
+					{"type": "text", "text": "result-success"},
+				},
 			}
 		default:
 			// Ignore other methods for this test
@@ -110,7 +119,7 @@ func createCoreTool(t *testing.T, toolName string, schema core.ToolSchema) (*cor
 		_ = json.NewEncoder(w).Encode(resp)
 	}))
 
-	//  Create Client, defaults to Latest MCP (v2025-06-18)
+	// Create Client, defaults to Latest MCP (v2026-07-28)
 	client, err := core.NewToolboxClient(server.URL, core.WithHTTPClient(server.Client()))
 	if err != nil {
 		server.Close()
@@ -229,4 +238,47 @@ func TestToADKTool(t *testing.T) {
 		}
 	})
 
+	t.Run("Secure Parameters Isolation and Binding", func(t *testing.T) {
+		toolSchema := core.ToolSchema{
+			Description: "Tool with secure params",
+			Parameters: []core.ParameterSchema{
+				{Name: "public_query", Type: "string", Required: true, Description: "Public search query"},
+			},
+			SecureParameters: []core.ParameterSchema{
+				{Name: "api_key", Type: "string", Required: true, Description: "Secret API token"},
+			},
+		}
+
+		coreTool, server := createCoreTool(t, "secureSearch", toolSchema)
+		defer server.Close()
+
+		adkTool, err := toADKTool(coreTool)
+		if err != nil {
+			t.Fatalf("toADKTool() unexpected error = %v", err)
+		}
+
+		// Verify genai.FunctionDeclaration strictly excludes secure params
+		decl := adkTool.Declaration()
+		if decl == nil {
+			t.Fatal("expected non-nil Declaration()")
+		}
+		if decl.Parameters == nil || len(decl.Parameters.Properties) != 1 {
+			t.Fatalf("expected exactly 1 property in FunctionDeclaration, got %v", decl.Parameters)
+		}
+		if _, exists := decl.Parameters.Properties["public_query"]; !exists {
+			t.Errorf("expected public_query in FunctionDeclaration")
+		}
+		if _, exists := decl.Parameters.Properties["api_key"]; exists {
+			t.Errorf("CRITICAL: secure parameter 'api_key' leaked into genai.FunctionDeclaration")
+		}
+
+		// Test ToolFrom with WithBindSecureParamString on ADK tool
+		boundADKTool, err := adkTool.ToolFrom(core.WithBindSecureParamString("api_key", "secret-token-123"))
+		if err != nil {
+			t.Fatalf("ToolFrom failed: %v", err)
+		}
+		if len(boundADKTool.SecureParameters()) != 0 {
+			t.Errorf("expected 0 unbound secure parameters after binding, got %d", len(boundADKTool.SecureParameters()))
+		}
+	})
 }

@@ -50,10 +50,10 @@ func NewToolboxClient(url string, opts ...core.ClientOption) (ToolboxClient, err
 // LoadToolset fetches  a collection of tools from the Toolbox server
 //
 // Inputs:
-//   - name: Name of the toolset to be loaded.Set this arg to "" to load the default toolset
+//   - name: Name of the toolset to be loaded. Set this arg to "" to load the default toolset.
 //   - ctx: The context to control the lifecycle of the request.
 //   - opts: A variadic list of ToolOption functions. These can include WithStrict
-//     and options for auth or bound params that may apply to tools in the set.
+//     and options for auth, bound params, or secure params that may apply to tools in the set.
 //
 // Returns:
 //
@@ -85,8 +85,8 @@ func (tc ToolboxClient) LoadToolset(name string, ctx context.Context, opts ...co
 // Inputs:
 //   - name: The specific name of the tool to load.
 //   - ctx: The context to control the lifecycle of the request.
-//   - opts: A variadic list of ToolOption functions to configure auth tokens
-//     or bind parameters for this tool.
+//   - opts: A variadic list of ToolOption functions to configure auth tokens,
+//     bind parameters, or bind secure parameters for this tool.
 //
 // Returns:
 //
