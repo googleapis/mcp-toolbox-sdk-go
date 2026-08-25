@@ -58,11 +58,12 @@ func WithSupportedProtocols(protocols []Protocol) ClientOption {
 	}
 }
 
-// Constructor for a newToolConfig which initializes the maps for auth token sources and bound parameters
+// Constructor for a newToolConfig which initializes the maps for auth token sources, bound parameters, and secure parameters
 func newToolConfig() *ToolConfig {
 	return &ToolConfig{
 		AuthTokenSources: make(map[string]oauth2.TokenSource),
 		BoundParams:      make(map[string]any),
+		SecureParams:     make(map[string]any),
 	}
 }
 
@@ -152,6 +153,7 @@ func WithDefaultToolOptions(opts ...ToolOption) ClientOption {
 type ToolConfig struct {
 	AuthTokenSources map[string]oauth2.TokenSource
 	BoundParams      map[string]any
+	SecureParams     map[string]any
 	Strict           bool
 	strictSet        bool
 }
@@ -209,7 +211,27 @@ func createBoundParamToolOption(name string, value any) ToolOption {
 		if _, exists := c.BoundParams[name]; exists {
 			return fmt.Errorf("duplicate parameter binding: parameter '%s' is already set", name)
 		}
+		if _, exists := c.SecureParams[name]; exists {
+			return fmt.Errorf("duplicate parameter binding: parameter '%s' is already set as a secure parameter", name)
+		}
 		c.BoundParams[name] = value
+		return nil
+	}
+}
+
+// Helper function for secure parameters
+func createBoundSecureParamToolOption(name string, value any) ToolOption {
+	return func(c *ToolConfig) error {
+		if c.SecureParams == nil {
+			c.SecureParams = make(map[string]any)
+		}
+		if _, exists := c.SecureParams[name]; exists {
+			return fmt.Errorf("duplicate secure parameter binding: parameter '%s' is already set", name)
+		}
+		if _, exists := c.BoundParams[name]; exists {
+			return fmt.Errorf("duplicate parameter binding: parameter '%s' is already set as a regular bound parameter", name)
+		}
+		c.SecureParams[name] = value
 		return nil
 	}
 }
@@ -408,4 +430,198 @@ func WithBindParamAnyMap(name string, value map[string]any) ToolOption {
 // WithBindParamAnyMapFunc binds a function that returns a generic map to a parameter.
 func WithBindParamAnyMapFunc(name string, fn func() (map[string]any, error)) ToolOption {
 	return createBoundParamToolOption(name, fn)
+}
+
+// ----- Secure Parameter Tool Options -----
+
+// WithBindSecureParamString binds a static string value to a secure parameter.
+func WithBindSecureParamString(name string, value string) ToolOption {
+	return createBoundSecureParamToolOption(name, value)
+}
+
+// WithBindSecureParamStringFunc binds a function that returns a string to a secure parameter.
+func WithBindSecureParamStringFunc(name string, fn func() (string, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, fn)
+}
+
+// WithBindSecureParamInt binds a static integer value to a secure parameter.
+func WithBindSecureParamInt[T Integer](name string, value T) ToolOption {
+	return createBoundSecureParamToolOption(name, int(value))
+}
+
+// WithBindSecureParamIntFunc binds a function that returns an integer to a secure parameter.
+func WithBindSecureParamIntFunc[T Integer](name string, fn func() (T, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, func() (int, error) {
+		v, err := fn()
+		return int(v), err
+	})
+}
+
+// WithBindSecureParamFloat binds a static float value to a secure parameter.
+func WithBindSecureParamFloat[T Float](name string, value T) ToolOption {
+	return createBoundSecureParamToolOption(name, float64(value))
+}
+
+// WithBindSecureParamFloatFunc binds a function that returns a float to a secure parameter.
+func WithBindSecureParamFloatFunc[T Float](name string, fn func() (T, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, func() (float64, error) {
+		v, err := fn()
+		return float64(v), err
+	})
+}
+
+// WithBindSecureParamBool binds a static boolean value to a secure parameter.
+func WithBindSecureParamBool(name string, value bool) ToolOption {
+	return createBoundSecureParamToolOption(name, value)
+}
+
+// WithBindSecureParamBoolFunc binds a function that returns a boolean to a secure parameter.
+func WithBindSecureParamBoolFunc(name string, fn func() (bool, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, fn)
+}
+
+// WithBindSecureParamStringArray binds a static slice of strings to a secure parameter.
+func WithBindSecureParamStringArray(name string, value []string) ToolOption {
+	return createBoundSecureParamToolOption(name, value)
+}
+
+// WithBindSecureParamStringArrayFunc binds a function that returns a slice of strings to a secure parameter.
+func WithBindSecureParamStringArrayFunc(name string, fn func() ([]string, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, fn)
+}
+
+// WithBindSecureParamIntArray binds a static slice of integers to a secure parameter.
+func WithBindSecureParamIntArray[T Integer](name string, value []T) ToolOption {
+	normalized := make([]int, len(value))
+	for i, v := range value {
+		normalized[i] = int(v)
+	}
+	return createBoundSecureParamToolOption(name, normalized)
+}
+
+// WithBindSecureParamIntArrayFunc binds a function that returns a slice of integers to a secure parameter.
+func WithBindSecureParamIntArrayFunc[T Integer](name string, fn func() ([]T, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, func() ([]int, error) {
+		val, err := fn()
+		if err != nil {
+			return nil, err
+		}
+		normalized := make([]int, len(val))
+		for i, v := range val {
+			normalized[i] = int(v)
+		}
+		return normalized, nil
+	})
+}
+
+// WithBindSecureParamFloatArray binds a static slice of floats to a secure parameter.
+func WithBindSecureParamFloatArray[T Float](name string, value []T) ToolOption {
+	normalized := make([]float64, len(value))
+	for i, v := range value {
+		normalized[i] = float64(v)
+	}
+	return createBoundSecureParamToolOption(name, normalized)
+}
+
+// WithBindSecureParamFloatArrayFunc binds a function that returns a slice of floats to a secure parameter.
+func WithBindSecureParamFloatArrayFunc[T Float](name string, fn func() ([]T, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, func() ([]float64, error) {
+		val, err := fn()
+		if err != nil {
+			return nil, err
+		}
+		normalized := make([]float64, len(val))
+		for i, v := range val {
+			normalized[i] = float64(v)
+		}
+		return normalized, nil
+	})
+}
+
+// WithBindSecureParamBoolArray binds a static slice of booleans to a secure parameter.
+func WithBindSecureParamBoolArray(name string, value []bool) ToolOption {
+	return createBoundSecureParamToolOption(name, value)
+}
+
+// WithBindSecureParamBoolArrayFunc binds a function that returns a slice of booleans to a secure parameter.
+func WithBindSecureParamBoolArrayFunc(name string, fn func() ([]bool, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, fn)
+}
+
+// WithBindSecureParamStringMap binds a static map of strings to a secure parameter.
+func WithBindSecureParamStringMap(name string, value map[string]string) ToolOption {
+	return createBoundSecureParamToolOption(name, value)
+}
+
+// WithBindSecureParamStringMapFunc binds a function that returns a map of strings to a secure parameter.
+func WithBindSecureParamStringMapFunc(name string, fn func() (map[string]string, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, fn)
+}
+
+// WithBindSecureParamIntMap binds a static map of integers to a secure parameter.
+func WithBindSecureParamIntMap[T Integer](name string, value map[string]T) ToolOption {
+	normalized := make(map[string]int, len(value))
+	for k, v := range value {
+		normalized[k] = int(v)
+	}
+	return createBoundSecureParamToolOption(name, normalized)
+}
+
+// WithBindSecureParamIntMapFunc binds a function that returns a map of integers to a secure parameter.
+func WithBindSecureParamIntMapFunc[T Integer](name string, fn func() (map[string]T, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, func() (map[string]int, error) {
+		val, err := fn()
+		if err != nil {
+			return nil, err
+		}
+		normalized := make(map[string]int, len(val))
+		for k, v := range val {
+			normalized[k] = int(v)
+		}
+		return normalized, nil
+	})
+}
+
+// WithBindSecureParamFloatMap binds a static map of floats to a secure parameter.
+func WithBindSecureParamFloatMap[T Float](name string, value map[string]T) ToolOption {
+	normalized := make(map[string]float64, len(value))
+	for k, v := range value {
+		normalized[k] = float64(v)
+	}
+	return createBoundSecureParamToolOption(name, normalized)
+}
+
+// WithBindSecureParamFloatMapFunc binds a function that returns a map of floats to a secure parameter.
+func WithBindSecureParamFloatMapFunc[T Float](name string, fn func() (map[string]T, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, func() (map[string]float64, error) {
+		val, err := fn()
+		if err != nil {
+			return nil, err
+		}
+		normalized := make(map[string]float64, len(val))
+		for k, v := range val {
+			normalized[k] = float64(v)
+		}
+		return normalized, nil
+	})
+}
+
+// WithBindSecureParamBoolMap binds a static map of booleans to a secure parameter.
+func WithBindSecureParamBoolMap(name string, value map[string]bool) ToolOption {
+	return createBoundSecureParamToolOption(name, value)
+}
+
+// WithBindSecureParamBoolMapFunc binds a function that returns a map of booleans to a secure parameter.
+func WithBindSecureParamBoolMapFunc(name string, fn func() (map[string]bool, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, fn)
+}
+
+// WithBindSecureParamAnyMap binds a generic map to a secure parameter.
+func WithBindSecureParamAnyMap(name string, value map[string]any) ToolOption {
+	return createBoundSecureParamToolOption(name, value)
+}
+
+// WithBindSecureParamAnyMapFunc binds a function that returns a generic map to a secure parameter.
+func WithBindSecureParamAnyMapFunc(name string, fn func() (map[string]any, error)) ToolOption {
+	return createBoundSecureParamToolOption(name, fn)
 }

@@ -1331,3 +1331,414 @@ func TestInputSchema(t *testing.T) {
 		})
 	}
 }
+
+type recordingTransport struct {
+	baseURL         string
+	capturedPayload map[string]any
+	capturedSecure  map[string]any
+	capturedHeaders map[string]string
+}
+
+func (r *recordingTransport) BaseURL() string { return r.baseURL }
+func (r *recordingTransport) GetTool(ctx context.Context, name string, h map[string]string) (*transport.ManifestSchema, error) {
+	return nil, nil
+}
+func (r *recordingTransport) ListTools(ctx context.Context, set string, h map[string]string) (*transport.ManifestSchema, error) {
+	return nil, nil
+}
+func (r *recordingTransport) InvokeTool(ctx context.Context, name string, p map[string]any, sp map[string]any, h map[string]string) (any, error) {
+	r.capturedPayload = p
+	r.capturedSecure = sp
+	r.capturedHeaders = h
+	return "ok", nil
+}
+
+func TestToolboxTool_SecureParams_GettersAndInputSchema(t *testing.T) {
+	tool := &ToolboxTool{
+		name:        "secure-tool",
+		description: "A tool with secure parameters",
+		parameters: []ParameterSchema{
+			{Name: "public_arg", Type: "string", Required: true},
+		},
+		secureParameters: []ParameterSchema{
+			{Name: "api_key", Type: "string", Required: true, Description: "Secret API Key"},
+			{Name: "opt_sec", Type: "string", Required: false, Description: "Optional Secret"},
+		},
+		transport: &dummyTransport{baseURL: "http://example.com"},
+	}
+
+	t.Run("SecureParameters returns safe copy of unbound secure params", func(t *testing.T) {
+		secParams := tool.SecureParameters()
+		if len(secParams) != 2 {
+			t.Fatalf("expected 2 secure parameters, got %d", len(secParams))
+		}
+		if secParams[0].Name != "api_key" || secParams[1].Name != "opt_sec" {
+			t.Errorf("unexpected secure parameter names: %+v", secParams)
+		}
+		secParams[0].Name = "MUTATED"
+		if tool.secureParameters[0].Name == "MUTATED" {
+			t.Fatalf("SecureParameters did not return a safe copy")
+		}
+	})
+
+	t.Run("SecureParameters handles nil or empty secure parameters", func(t *testing.T) {
+		nilTool := &ToolboxTool{
+			transport: &dummyTransport{baseURL: "http://example.com"},
+		}
+		nilParams := nilTool.SecureParameters()
+		if nilParams == nil {
+			t.Fatalf("SecureParameters() should return a non-nil, empty slice for a tool with nil secure parameters, but got nil")
+		}
+		if len(nilParams) != 0 {
+			t.Fatalf("expected 0 secure parameters, got %d", len(nilParams))
+		}
+	})
+
+	t.Run("InputSchema strictly excludes secure parameters", func(t *testing.T) {
+		schemaBytes, err := tool.InputSchema()
+		if err != nil {
+			t.Fatalf("InputSchema error: %v", err)
+		}
+		var schemaMap map[string]any
+		if err := json.Unmarshal(schemaBytes, &schemaMap); err != nil {
+			t.Fatalf("Unmarshal error: %v", err)
+		}
+		props, ok := schemaMap["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("missing properties in schema")
+		}
+		if _, exists := props["public_arg"]; !exists {
+			t.Errorf("expected public_arg in InputSchema properties")
+		}
+		if _, exists := props["api_key"]; exists {
+			t.Errorf("CRITICAL: secure parameter 'api_key' leaked in InputSchema properties")
+		}
+		if _, exists := props["opt_sec"]; exists {
+			t.Errorf("CRITICAL: secure parameter 'opt_sec' leaked in InputSchema properties")
+		}
+	})
+}
+
+func TestToolboxTool_BindSecureParam_And_Validation(t *testing.T) {
+	baseTool := &ToolboxTool{
+		name: "my-secure-tool",
+		parameters: []ParameterSchema{
+			{Name: "query", Type: "string", Required: true},
+		},
+		secureParameters: []ParameterSchema{
+			{Name: "token", Type: "string", Required: true},
+			{Name: "opt_token", Type: "string", Required: false},
+		},
+		transport: &dummyTransport{baseURL: "http://example.com"},
+	}
+
+	t.Run("BindSecureParam binds static and dynamic values", func(t *testing.T) {
+		boundTool, err := baseTool.ToolFrom(WithBindSecureParamString("token", "secret-xyz"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(boundTool.SecureParameters()) != 1 {
+			t.Fatalf("expected 1 remaining unbound secure param, got %d", len(boundTool.SecureParameters()))
+		}
+		if boundTool.boundSecureParams["token"] != "secret-xyz" {
+			t.Fatalf("expected bound secure param 'token' to be 'secret-xyz'")
+		}
+
+		// Dynamic func binding
+		dynamicTool, err := baseTool.ToolFrom(WithBindSecureParamStringFunc("token", func() (string, error) {
+			return "dynamic-token", nil
+		}))
+		if err != nil {
+			t.Fatalf("unexpected error binding func: %v", err)
+		}
+		if dynamicTool.boundSecureParams["token"] == nil {
+			t.Fatalf("expected bound secure param function")
+		}
+	})
+
+	t.Run("Mutual exclusivity: WithBindParamString on secure param fails", func(t *testing.T) {
+		_, err := baseTool.ToolFrom(WithBindParamString("token", "val"))
+		if err == nil {
+			t.Fatalf("expected error binding secure param via WithBindParamString, got nil")
+		}
+		if !strings.Contains(err.Error(), "is a secure parameter; use WithBindSecureParam* instead") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("Mutual exclusivity: WithBindSecureParamString on regular param fails", func(t *testing.T) {
+		_, err := baseTool.ToolFrom(WithBindSecureParamString("query", "val"))
+		if err == nil {
+			t.Fatalf("expected error binding regular param via WithBindSecureParamString, got nil")
+		}
+		if !strings.Contains(err.Error(), "is a regular parameter; use WithBindParam* instead") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("WithBindSecureParamString on unknown parameter fails", func(t *testing.T) {
+		_, err := baseTool.ToolFrom(WithBindSecureParamString("unknown", "val"))
+		if err == nil {
+			t.Fatalf("expected error on unknown parameter, got nil")
+		}
+		if !strings.Contains(err.Error(), "no secure parameter named \"unknown\" on the tool") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("Re-binding an already bound secure parameter fails", func(t *testing.T) {
+		boundTool, err := baseTool.ToolFrom(WithBindSecureParamString("token", "val1"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		_, err = boundTool.ToolFrom(WithBindSecureParamString("token", "val2"))
+		if err == nil {
+			t.Fatalf("expected error re-binding already bound secure param, got nil")
+		}
+		if !strings.Contains(err.Error(), "cannot override existing bound secure parameter") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("ToolFrom with nil option returns error", func(t *testing.T) {
+		_, err := baseTool.ToolFrom(nil)
+		if err == nil {
+			t.Fatalf("expected error on nil ToolOption, got nil")
+		}
+		if !strings.Contains(err.Error(), "received a nil ToolOption in options list") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+}
+
+func TestToolboxTool_Invoke_FastFail_And_PromptInjectionDefense(t *testing.T) {
+	recTr := &recordingTransport{baseURL: "http://example.com"}
+	tool := &ToolboxTool{
+		name: "payment-tool",
+		parameters: []ParameterSchema{
+			{Name: "amount", Type: "integer", Required: true},
+		},
+		secureParameters: []ParameterSchema{
+			{Name: "api_key", Type: "string", Required: true},
+		},
+		transport: recTr,
+	}
+
+	t.Run("Fast-fail on missing required secure parameter before transport", func(t *testing.T) {
+		_, err := tool.Invoke(context.Background(), map[string]any{"amount": 100})
+		if err == nil {
+			t.Fatalf("expected fast-fail error on missing required secure parameter, got nil")
+		}
+		if !strings.Contains(err.Error(), "missing required secure parameter(s) [api_key] for tool \"payment-tool\"") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+		if recTr.capturedPayload != nil || recTr.capturedSecure != nil {
+			t.Errorf("transport was invoked despite fast-fail condition!")
+		}
+	})
+
+	t.Run("Prompt-injection defense: Passing secure parameter in input is rejected", func(t *testing.T) {
+		boundTool, err := tool.ToolFrom(WithBindSecureParamString("api_key", "secret-key"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// User/LLM tries to inject api_key in invocation input
+		_, err = boundTool.Invoke(context.Background(), map[string]any{
+			"amount":  100,
+			"api_key": "attacker-injected-key",
+		})
+		if err == nil {
+			t.Fatalf("expected prompt injection to be rejected, got nil")
+		}
+		if !strings.Contains(err.Error(), "unexpected parameter 'api_key' provided") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("Successful invocation sends separate payload and securePayload", func(t *testing.T) {
+		recTr.capturedPayload = nil
+		recTr.capturedSecure = nil
+
+		boundTool, err := tool.ToolFrom(WithBindSecureParamStringFunc("api_key", func() (string, error) {
+			return "dynamic-vault-token", nil
+		}))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		res, err := boundTool.Invoke(context.Background(), map[string]any{"amount": 100})
+		if err != nil {
+			t.Fatalf("unexpected invoke error: %v", err)
+		}
+		if res != "ok" {
+			t.Errorf("unexpected result: %v", res)
+		}
+
+		if recTr.capturedPayload["amount"] != 100 {
+			t.Errorf("expected payload amount=100, got: %v", recTr.capturedPayload["amount"])
+		}
+		if recTr.capturedSecure["api_key"] != "dynamic-vault-token" {
+			t.Errorf("expected securePayload api_key='dynamic-vault-token', got: %v", recTr.capturedSecure["api_key"])
+		}
+	})
+
+	t.Run("Unbound secure parameter with default is injected into securePayload", func(t *testing.T) {
+		recTr.capturedPayload = nil
+		recTr.capturedSecure = nil
+
+		toolWithDefault := &ToolboxTool{
+			name: "default-secure-tool",
+			parameters: []ParameterSchema{
+				{Name: "data", Type: "string", Required: true},
+			},
+			secureParameters: []ParameterSchema{
+				{Name: "region", Type: "string", Required: true, Default: "us-central1"},
+			},
+			transport: recTr,
+		}
+
+		res, err := toolWithDefault.Invoke(context.Background(), map[string]any{"data": "hello"})
+		if err != nil {
+			t.Fatalf("unexpected invoke error: %v", err)
+		}
+		if res != "ok" {
+			t.Errorf("unexpected result: %v", res)
+		}
+		if recTr.capturedSecure == nil || recTr.capturedSecure["region"] != "us-central1" {
+			t.Errorf("expected securePayload region='us-central1', got: %v", recTr.capturedSecure)
+		}
+	})
+
+	t.Run("Binding auth token to tool with nil authTokenSources succeeds without panic", func(t *testing.T) {
+		toolWithoutAuth := &ToolboxTool{
+			name: "unauth-tool",
+			parameters: []ParameterSchema{
+				{Name: "query", Type: "string"},
+			},
+		}
+		boundTool, err := toolWithoutAuth.ToolFrom(WithAuthTokenString("service_x", "tok123"))
+		if err != nil {
+			t.Fatalf("unexpected error binding auth token to tool with nil authTokenSources: %v", err)
+		}
+		if boundTool.authTokenSources["service_x"] == nil {
+			t.Fatalf("expected auth token source for service_x to be bound")
+		}
+	})
+
+	t.Run("Binding all secure parameters leaves non-nil empty slice", func(t *testing.T) {
+		baseSecure := &ToolboxTool{
+			name: "base-sec",
+			secureParameters: []ParameterSchema{
+				{Name: "sec1", Type: "string", Required: true},
+			},
+		}
+		boundAll, err := baseSecure.ToolFrom(WithBindSecureParamString("sec1", "val1"))
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if boundAll.SecureParameters() == nil || len(boundAll.SecureParameters()) != 0 {
+			t.Errorf("expected non-nil empty slice for SecureParameters, got %v", boundAll.SecureParameters())
+		}
+	})
+}
+
+func TestToolboxTool_ResolveAndBuildSecurePayload(t *testing.T) {
+	testCases := []struct {
+		name        string
+		tool        *ToolboxTool
+		expected    map[string]any
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name: "returns nil when no secure parameters exist",
+			tool: &ToolboxTool{
+				name: "plain-tool",
+			},
+			expected: nil,
+		},
+		{
+			name: "resolves static, dynamic, and default secure parameters",
+			tool: &ToolboxTool{
+				name: "sec-tool",
+				secureParameters: []ParameterSchema{
+					{Name: "token", Type: "string", Required: true},
+					{Name: "account", Type: "string", Required: true},
+					{Name: "region", Type: "string", Default: "us-east-1"},
+				},
+				boundSecureParams: map[string]any{
+					"token": "static-token",
+					"account": func() (string, error) {
+						return "acc-12345", nil
+					},
+				},
+				boundSecureParamSchemas: map[string]ParameterSchema{
+					"token":   {Name: "token", Type: "string"},
+					"account": {Name: "account", Type: "string"},
+				},
+			},
+			expected: map[string]any{
+				"token":   "static-token",
+				"account": "acc-12345",
+				"region":  "us-east-1",
+			},
+		},
+		{
+			name: "fails when dynamic secure parameter function returns an error",
+			tool: &ToolboxTool{
+				name: "failing-sec-tool",
+				secureParameters: []ParameterSchema{
+					{Name: "token", Type: "string"},
+				},
+				boundSecureParams: map[string]any{
+					"token": func() (string, error) {
+						return "", errors.New("vault connection timed out")
+					},
+				},
+			},
+			wantErr:     true,
+			errContains: "failed to resolve bound secure parameter function for 'token'",
+		},
+		{
+			name: "fails when resolved value fails schema validation",
+			tool: &ToolboxTool{
+				name: "type-mismatch-tool",
+				secureParameters: []ParameterSchema{
+					{Name: "port", Type: "integer"},
+				},
+				boundSecureParams: map[string]any{
+					"port": "not-an-integer",
+				},
+				boundSecureParamSchemas: map[string]ParameterSchema{
+					"port": {Name: "port", Type: "integer"},
+				},
+			},
+			wantErr:     true,
+			errContains: "resolved bound secure parameter 'port' failed validation",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			payload, err := tc.tool.resolveAndBuildSecurePayload()
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error containing %q, got nil", tc.errContains)
+				}
+				if !strings.Contains(err.Error(), tc.errContains) {
+					t.Errorf("expected error containing %q, got %q", tc.errContains, err.Error())
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !reflect.DeepEqual(payload, tc.expected) {
+				t.Errorf("payload mismatch:\nExpected: %v\nGot:      %v", tc.expected, payload)
+			}
+		})
+	}
+}
+

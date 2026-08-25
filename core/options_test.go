@@ -689,3 +689,36 @@ func TestWithSupportedProtocols(t *testing.T) {
 		}
 	})
 }
+
+func TestWithBindSecureParam_TypedFunctions(t *testing.T) {
+	t.Run("String and StringFunc", func(t *testing.T) {
+		cfg := newToolConfig()
+		err := WithBindSecureParamString("s1", "val")(cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		err = WithBindSecureParamStringFunc("s2", func() (string, error) {
+			return "fn_val", nil
+		})(cfg)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if cfg.SecureParams["s1"] != "val" {
+			t.Errorf("expected s1=val, got: %v", cfg.SecureParams["s1"])
+		}
+	})
+
+	t.Run("Int, Float, Bool and Array/Map bindings", func(t *testing.T) {
+		cfg := newToolConfig()
+		_ = WithBindSecureParamInt("i", 42)(cfg)
+		_ = WithBindSecureParamFloat("f", 3.14)(cfg)
+		_ = WithBindSecureParamBool("b", true)(cfg)
+		_ = WithBindSecureParamStringArray("arr", []string{"a", "b"})(cfg)
+		_ = WithBindSecureParamStringMap("m", map[string]string{"k": "v"})(cfg)
+
+		if cfg.SecureParams["i"] != 42 || cfg.SecureParams["f"] != 3.14 || cfg.SecureParams["b"] != true {
+			t.Errorf("unexpected values in SecureParams: %+v", cfg.SecureParams)
+		}
+	})
+}
+

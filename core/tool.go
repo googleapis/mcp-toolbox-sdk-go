@@ -29,19 +29,22 @@ import (
 
 // ToolboxTool represents an immutable, universal definition of a Toolbox tool.
 type ToolboxTool struct {
-	name                string
-	description         string
-	parameters          []ParameterSchema
-	transport           transport.Transport
-	authTokenSources    map[string]oauth2.TokenSource
-	boundParams         map[string]any
-	boundParamSchemas   map[string]ParameterSchema
-	requiredAuthnParams map[string][]string
-	requiredAuthzTokens []string
-	clientHeaderSources map[string]oauth2.TokenSource
-	clientName          string
-	clientVersion       string
-	supportedProtocols  []string
+	name                    string
+	description             string
+	parameters              []ParameterSchema
+	secureParameters        []ParameterSchema
+	transport               transport.Transport
+	authTokenSources        map[string]oauth2.TokenSource
+	boundParams             map[string]any
+	boundParamSchemas       map[string]ParameterSchema
+	boundSecureParams       map[string]any
+	boundSecureParamSchemas map[string]ParameterSchema
+	requiredAuthnParams     map[string][]string
+	requiredAuthzTokens     []string
+	clientHeaderSources     map[string]oauth2.TokenSource
+	clientName              string
+	clientVersion           string
+	supportedProtocols      []string
 }
 
 // Name returns the tool's name.
@@ -62,7 +65,15 @@ func (tt *ToolboxTool) Parameters() []ParameterSchema {
 	return paramsCopy
 }
 
+// SecureParameters returns the list of unbound secure parameters for the tool.
+func (tt *ToolboxTool) SecureParameters() []ParameterSchema {
+	secCopy := make([]ParameterSchema, len(tt.secureParameters))
+	copy(secCopy, tt.secureParameters)
+	return secCopy
+}
+
 // InputSchema generates an OpenAPI JSON Schema for the tool's input parameters and returns it as raw bytes.
+// Secure parameters are strictly isolated and never included in InputSchema.
 func (tt *ToolboxTool) InputSchema() ([]byte, error) {
 	properties := make(map[string]any)
 	required := make([]string, 0)
@@ -97,7 +108,7 @@ func (tt *ToolboxTool) InputSchema() ([]byte, error) {
 
 // DescribeParameters returns a single, human-readable string that describes all
 // of the tool's unbound parameters, including their names, types, and
-// descriptions.
+// descriptions. Secure parameters are strictly isolated and excluded.
 //
 // Returns:
 //
@@ -116,12 +127,13 @@ func (tt *ToolboxTool) DescribeParameters() string {
 
 // ToolFrom creates a new, more specialized tool from an existing one by applying
 // additional options. This is useful for creating variations of a tool with
-// different bound parameters without modifying the original and
-// all provided options must be applicable.
+// different bound parameters or secure parameters without modifying the original,
+// and all provided options must be applicable.
 //
 // Inputs:
 //   - opts: A variadic list of ToolOption functions to further configure the
-//     new tool, such as binding more parameters.
+//     new tool, such as binding parameters, binding secure parameters, or
+//     providing auth tokens.
 //
 // Returns:
 //
@@ -131,6 +143,9 @@ func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 	// Create a config and apply the new options, checking for internal duplicates.
 	config := newToolConfig()
 	for _, opt := range opts {
+		if opt == nil {
+			return nil, fmt.Errorf("ToolFrom: received a nil ToolOption in options list")
+		}
 		if err := opt(config); err != nil {
 			return nil, err
 		}
@@ -150,26 +165,38 @@ func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 			if _, exists := newTt.authTokenSources[name]; exists {
 				return nil, fmt.Errorf("cannot override existing auth token source: '%s'", name)
 			}
+			if newTt.authTokenSources == nil {
+				newTt.authTokenSources = make(map[string]oauth2.TokenSource)
+			}
 			newTt.authTokenSources[name] = source
 		}
 	}
 
-	// Validate and merge new BoundParams, preventing overrides.
 	paramNames := make(map[string]ParameterSchema)
 	for _, p := range tt.parameters {
 		paramNames[p.Name] = p
 	}
 
+	secParamNames := make(map[string]ParameterSchema)
+	for _, p := range tt.secureParameters {
+		secParamNames[p.Name] = p
+	}
+
+	// Validate and merge new BoundParams
 	for name, val := range config.BoundParams {
-		// A parameter is valid to bind if it exists in the unbound parameters list.
+		if _, exists := secParamNames[name]; exists {
+			return nil, fmt.Errorf("parameter %q is a secure parameter; use WithBindSecureParam* instead", name)
+		}
+		if _, exists := tt.boundSecureParams[name]; exists {
+			return nil, fmt.Errorf("parameter %q is a secure parameter; use WithBindSecureParam* instead", name)
+		}
+
 		schema, exists := paramNames[name]
 		if !exists {
-			// If it's not in the unbound list, check if it was already bound on the parent.
-			if _, existsInParent := tt.boundParams[name]; !existsInParent {
-				return nil, fmt.Errorf("unable to bind parameter: no parameter named '%s' on the tool", name)
+			if _, existsInParent := tt.boundParams[name]; existsInParent {
+				return nil, fmt.Errorf("cannot override existing bound parameter: '%s'", name)
 			}
-			// If it exists in the parent's bound params, it's an attempt to override.
-			return nil, fmt.Errorf("cannot override existing bound parameter: '%s'", name)
+			return nil, fmt.Errorf("unable to bind parameter: no parameter named '%s' on the tool", name)
 		}
 
 		if newTt.boundParamSchemas == nil {
@@ -184,13 +211,50 @@ func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 	}
 
 	// Recalculate the remaining unbound parameters for the new tool.
-	var newParams []ParameterSchema
+	newParams := make([]ParameterSchema, 0)
 	for _, p := range tt.parameters {
 		if _, exists := newTt.boundParams[p.Name]; !exists {
 			newParams = append(newParams, p)
 		}
 	}
 	newTt.parameters = newParams
+
+	// Validate and merge new SecureParams
+	for name, val := range config.SecureParams {
+		if _, exists := paramNames[name]; exists {
+			return nil, fmt.Errorf("parameter %q is a regular parameter; use WithBindParam* instead", name)
+		}
+		if _, exists := tt.boundParams[name]; exists {
+			return nil, fmt.Errorf("parameter %q is a regular parameter; use WithBindParam* instead", name)
+		}
+
+		schema, exists := secParamNames[name]
+		if !exists {
+			if _, existsInParent := tt.boundSecureParams[name]; existsInParent {
+				return nil, fmt.Errorf("cannot override existing bound secure parameter: %q", name)
+			}
+			return nil, fmt.Errorf("unable to bind secure parameter: no secure parameter named %q on the tool", name)
+		}
+
+		if newTt.boundSecureParamSchemas == nil {
+			newTt.boundSecureParamSchemas = make(map[string]ParameterSchema)
+		}
+		if newTt.boundSecureParams == nil {
+			newTt.boundSecureParams = make(map[string]any)
+		}
+
+		newTt.boundSecureParamSchemas[name] = schema
+		newTt.boundSecureParams[name] = val
+	}
+
+	// Recalculate remaining unbound secure parameters
+	newSecParams := make([]ParameterSchema, 0)
+	for _, p := range tt.secureParameters {
+		if _, exists := newTt.boundSecureParams[p.Name]; !exists {
+			newSecParams = append(newSecParams, p)
+		}
+	}
+	newTt.secureParameters = newSecParams
 
 	return newTt, nil
 }
@@ -199,58 +263,78 @@ func (tt *ToolboxTool) ToolFrom(opts ...ToolOption) (*ToolboxTool, error) {
 // that derivative tools created with ToolFrom cannot mutate the parent.
 func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 	newTt := &ToolboxTool{
-		name:                tt.name,
-		description:         tt.description,
-		transport:           tt.transport,
-		parameters:          make([]ParameterSchema, len(tt.parameters)),
-		authTokenSources:    make(map[string]oauth2.TokenSource, len(tt.authTokenSources)),
-		boundParams:         make(map[string]any, len(tt.boundParams)),
-		boundParamSchemas:   make(map[string]ParameterSchema, len(tt.boundParamSchemas)),
-		requiredAuthnParams: make(map[string][]string, len(tt.requiredAuthnParams)),
-		requiredAuthzTokens: make([]string, len(tt.requiredAuthzTokens)),
-		clientHeaderSources: make(map[string]oauth2.TokenSource, len(tt.clientHeaderSources)),
-		clientName:          tt.clientName,
-		clientVersion:       tt.clientVersion,
+		name:          tt.name,
+		description:   tt.description,
+		transport:     tt.transport,
+		clientName:    tt.clientName,
+		clientVersion: tt.clientVersion,
 	}
 
-	if tt.supportedProtocols != nil {
-		newTt.supportedProtocols = make([]string, len(tt.supportedProtocols))
-		copy(newTt.supportedProtocols, tt.supportedProtocols)
+	if tt.parameters != nil {
+		newTt.parameters = make([]ParameterSchema, len(tt.parameters))
+		copy(newTt.parameters, tt.parameters)
 	}
-
+	if tt.secureParameters != nil {
+		newTt.secureParameters = make([]ParameterSchema, len(tt.secureParameters))
+		copy(newTt.secureParameters, tt.secureParameters)
+	}
+	if tt.authTokenSources != nil {
+		newTt.authTokenSources = make(map[string]oauth2.TokenSource, len(tt.authTokenSources))
+		maps.Copy(newTt.authTokenSources, tt.authTokenSources)
+	}
+	if tt.boundParams != nil {
+		newTt.boundParams = make(map[string]any, len(tt.boundParams))
+		for k, v := range tt.boundParams {
+			val := reflect.ValueOf(v)
+			if val.Kind() == reflect.Slice {
+				newSlice := reflect.MakeSlice(val.Type(), val.Len(), val.Cap())
+				reflect.Copy(newSlice, val)
+				newTt.boundParams[k] = newSlice.Interface()
+			} else {
+				newTt.boundParams[k] = v
+			}
+		}
+	}
 	if tt.boundParamSchemas != nil {
 		newTt.boundParamSchemas = make(map[string]ParameterSchema, len(tt.boundParamSchemas))
 		maps.Copy(newTt.boundParamSchemas, tt.boundParamSchemas)
 	}
-
-	// Perform deep copies for slices and maps to prevent shared state.
-	copy(newTt.parameters, tt.parameters)
-	copy(newTt.requiredAuthzTokens, tt.requiredAuthzTokens)
-
-	maps.Copy(newTt.authTokenSources, tt.authTokenSources)
-	maps.Copy(newTt.clientHeaderSources, tt.clientHeaderSources)
-	maps.Copy(newTt.boundParamSchemas, tt.boundParamSchemas)
-
-	for k, v := range tt.boundParams {
-		val := reflect.ValueOf(v)
-		if val.Kind() == reflect.Slice {
-			// If it's a slice, create a new slice of the same type and length.
-			newSlice := reflect.MakeSlice(val.Type(), val.Len(), val.Cap())
-			// Copy the elements from the old slice to the new one.
-			reflect.Copy(newSlice, val)
-			// Assign the new, independent slice to the clone's map.
-			newTt.boundParams[k] = newSlice.Interface()
-		} else {
-			// If it's not a slice, just copy the value directly.
-			newTt.boundParams[k] = v
+	if tt.boundSecureParams != nil {
+		newTt.boundSecureParams = make(map[string]any, len(tt.boundSecureParams))
+		for k, v := range tt.boundSecureParams {
+			val := reflect.ValueOf(v)
+			if val.Kind() == reflect.Slice {
+				newSlice := reflect.MakeSlice(val.Type(), val.Len(), val.Cap())
+				reflect.Copy(newSlice, val)
+				newTt.boundSecureParams[k] = newSlice.Interface()
+			} else {
+				newTt.boundSecureParams[k] = v
+			}
 		}
 	}
-
-	// Manually deep copy the map of string slices.
-	for k, v := range tt.requiredAuthnParams {
-		newSlice := make([]string, len(v))
-		copy(newSlice, v)
-		newTt.requiredAuthnParams[k] = newSlice
+	if tt.boundSecureParamSchemas != nil {
+		newTt.boundSecureParamSchemas = make(map[string]ParameterSchema, len(tt.boundSecureParamSchemas))
+		maps.Copy(newTt.boundSecureParamSchemas, tt.boundSecureParamSchemas)
+	}
+	if tt.requiredAuthnParams != nil {
+		newTt.requiredAuthnParams = make(map[string][]string, len(tt.requiredAuthnParams))
+		for k, v := range tt.requiredAuthnParams {
+			newSlice := make([]string, len(v))
+			copy(newSlice, v)
+			newTt.requiredAuthnParams[k] = newSlice
+		}
+	}
+	if tt.requiredAuthzTokens != nil {
+		newTt.requiredAuthzTokens = make([]string, len(tt.requiredAuthzTokens))
+		copy(newTt.requiredAuthzTokens, tt.requiredAuthzTokens)
+	}
+	if tt.clientHeaderSources != nil {
+		newTt.clientHeaderSources = make(map[string]oauth2.TokenSource, len(tt.clientHeaderSources))
+		maps.Copy(newTt.clientHeaderSources, tt.clientHeaderSources)
+	}
+	if tt.supportedProtocols != nil {
+		newTt.supportedProtocols = make([]string, len(tt.supportedProtocols))
+		copy(newTt.supportedProtocols, tt.supportedProtocols)
 	}
 
 	return newTt
@@ -261,16 +345,29 @@ func (tt *ToolboxTool) cloneToolboxTool() *ToolboxTool {
 // Inputs:
 //   - ctx: The context to control the lifecycle of the API request.
 //   - input: A map of parameter names to values provided by the user for this
-//     specific invocation.
+//     specific invocation. Secure parameters cannot be passed in input and
+//     must be pre-configured on the tool.
 //
 // Returns:
 //
 //	The result from the API call, which can be a structured object (from a JSON
 //	'result' field) or a raw string. Returns an error if any step of the
-//	process fails.
+//	process fails, including if required secure parameters are missing.
 func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, error) {
+	// 1. Fast-fail: validate missing required secure parameters before anything else
+	var missingSecure []string
+	for _, p := range tt.secureParameters {
+		if p.Required && p.Default == nil {
+			if _, isBound := tt.boundSecureParams[p.Name]; !isBound {
+				missingSecure = append(missingSecure, p.Name)
+			}
+		}
+	}
+	if len(missingSecure) > 0 {
+		return nil, fmt.Errorf("missing required secure parameter(s) [%s] for tool %q", strings.Join(missingSecure, ", "), tt.name)
+	}
 
-	// Ensure all authentication tokens required by the tool are available.
+	// 2. Ensure all authentication tokens required by the tool are available.
 	if len(tt.requiredAuthnParams) > 0 || len(tt.requiredAuthzTokens) > 0 {
 		reqAuthServices := make(map[string]struct{})
 		for _, services := range tt.requiredAuthnParams {
@@ -282,7 +379,6 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 			reqAuthServices[service] = struct{}{}
 		}
 
-		// Check if each required service has a corresponding token source.
 		for service := range reqAuthServices {
 			if _, ok := tt.authTokenSources[service]; !ok {
 				return nil, fmt.Errorf("permission error: auth service '%s' is required to invoke this tool but was not provided", service)
@@ -290,15 +386,21 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 		}
 	}
 
-	// Validate the user's input and merge it with pre-configured bound parameters.
+	// 3. Validate user input and build finalPayload.
 	finalPayload, err := tt.validateAndBuildPayload(input)
 	if err != nil {
 		return nil, fmt.Errorf("tool payload processing failed: %w", err)
 	}
 
+	// 4. Resolve and build securePayload.
+	securePayload, err := tt.resolveAndBuildSecurePayload()
+	if err != nil {
+		return nil, err
+	}
+
+	// 5. Headers.
 	resolvedHeaders := make(map[string]string)
 
-	// Resolve Client Headers
 	for k, source := range tt.clientHeaderSources {
 		token, err := source.Token()
 		if err != nil {
@@ -307,25 +409,59 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 		resolvedHeaders[k] = token.AccessToken
 	}
 
-	// Resolve Auth Headers
 	for name, source := range tt.authTokenSources {
 		token, err := source.Token()
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve auth token %s: %w", name, err)
 		}
-		// Toolbox HTTP protocol expects the suffix "_token"
 		headerName := fmt.Sprintf("%s_token", name)
 		resolvedHeaders[headerName] = token.AccessToken
 	}
 
 	checkSecureHeaders(tt.transport.BaseURL(), len(tt.authTokenSources) > 0)
 
-	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, nil, resolvedHeaders)
+	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, securePayload, resolvedHeaders)
 	if err != nil {
 		return nil, err
 	}
 
 	return response, nil
+}
+
+// resolveValue resolves a static value or a dynamic function getter.
+func resolveValue(boundVal any) (any, error) {
+	switch v := boundVal.(type) {
+	case func() (string, error):
+		return v()
+	case func() (int, error):
+		return v()
+	case func() (float64, error):
+		return v()
+	case func() (bool, error):
+		return v()
+	case func() ([]string, error):
+		return v()
+	case func() ([]int, error):
+		return v()
+	case func() ([]float64, error):
+		return v()
+	case func() ([]bool, error):
+		return v()
+	case func() (map[string]string, error):
+		return v()
+	case func() (map[string]int, error):
+		return v()
+	case func() (map[string]float64, error):
+		return v()
+	case func() (map[string]bool, error):
+		return v()
+	case func() (map[string]any, error):
+		return v()
+	case func() (any, error):
+		return v()
+	default:
+		return boundVal, nil
+	}
 }
 
 // validateAndBuildPayload performs manual type validation and applies bound parameters.
@@ -338,24 +474,20 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 //	A map representing the final, validated JSON payload, or an error if
 //	validation or parameter resolution fails.
 func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string]any, error) {
-	// Create a map of the parameter schema for efficient lookups by name
 	paramSchema := make(map[string]ParameterSchema)
 	for _, p := range tt.parameters {
 		paramSchema[p.Name] = p
 	}
 
-	// Validate user input against the schema.
+	// Validate user input against the public parameter schema.
 	for key, value := range input {
 		param, isUnbound := paramSchema[key]
 		_, isBound := tt.boundParams[key]
 
-		// An input key is invalid if it's neither an expected unbound parameter
-		// nor a parameter that has been pre-configured (bound).
 		if !isUnbound || isBound {
 			return nil, fmt.Errorf("unexpected parameter '%s' provided", key)
 		}
 
-		// If the parameter is a valid unbound parameter, validate its type.
 		if isUnbound {
 			if err := param.ValidateType(value); err != nil {
 				return nil, err
@@ -363,7 +495,6 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 		}
 	}
 
-	// Initialize the final payload with the validated user input.
 	finalPayload := make(map[string]any, len(input)+len(tt.boundParams))
 	for k, v := range input {
 		if _, ok := paramSchema[k]; ok && v != nil {
@@ -386,40 +517,7 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 
 	// Loop through the bound parameters and add them to the payload.
 	for paramName, boundVal := range tt.boundParams {
-		var resolvedValue any
-		var resolveErr error
-		// A bound parameter can be a static value or a function that must be
-		// executed at invocation time to resolve the value.
-		switch v := boundVal.(type) {
-		case func() (string, error):
-			resolvedValue, resolveErr = v()
-		case func() (int, error):
-			resolvedValue, resolveErr = v()
-		case func() (float64, error):
-			resolvedValue, resolveErr = v()
-		case func() (bool, error):
-			resolvedValue, resolveErr = v()
-		case func() ([]string, error):
-			resolvedValue, resolveErr = v()
-		case func() ([]int, error):
-			resolvedValue, resolveErr = v()
-		case func() ([]float64, error):
-			resolvedValue, resolveErr = v()
-		case func() ([]bool, error):
-			resolvedValue, resolveErr = v()
-		case func() (map[string]string, error):
-			resolvedValue, resolveErr = v()
-		case func() (map[string]int, error):
-			resolvedValue, resolveErr = v()
-		case func() (map[string]float64, error):
-			resolvedValue, resolveErr = v()
-		case func() (map[string]bool, error):
-			resolvedValue, resolveErr = v()
-		case func() (map[string]any, error):
-			resolvedValue, resolveErr = v()
-		default:
-			resolvedValue = boundVal
-		}
+		resolvedValue, resolveErr := resolveValue(boundVal)
 		if resolveErr != nil {
 			return nil, fmt.Errorf("failed to resolve bound parameter function for '%s': %w", paramName, resolveErr)
 		}
@@ -431,8 +529,58 @@ func (tt *ToolboxTool) validateAndBuildPayload(input map[string]any) (map[string
 			}
 		}
 
-		finalPayload[paramName] = resolvedValue
+		if resolvedValue != nil {
+			finalPayload[paramName] = resolvedValue
+		}
 	}
 
 	return finalPayload, nil
+}
+
+// resolveAndBuildSecurePayload resolves bound secure parameter values, validates their types,
+// and applies defaults for unbound secure parameters.
+//
+// Returns:
+//
+//	A map representing the final, validated secure parameter payload, or an error if
+//	validation or parameter resolution fails. Returns nil if there are no secure parameters.
+func (tt *ToolboxTool) resolveAndBuildSecurePayload() (map[string]any, error) {
+	if len(tt.boundSecureParams) == 0 && len(tt.secureParameters) == 0 {
+		return nil, nil
+	}
+
+	var securePayload map[string]any
+	if len(tt.boundSecureParams) > 0 {
+		securePayload = make(map[string]any, len(tt.boundSecureParams))
+		for paramName, boundVal := range tt.boundSecureParams {
+			resolvedValue, resolveErr := resolveValue(boundVal)
+			if resolveErr != nil {
+				return nil, fmt.Errorf("failed to resolve bound secure parameter function for '%s': %w", paramName, resolveErr)
+			}
+			if schema, ok := tt.boundSecureParamSchemas[paramName]; ok {
+				if err := schema.ValidateType(resolvedValue); err != nil {
+					return nil, fmt.Errorf("resolved bound secure parameter '%s' failed validation: %w", paramName, err)
+				}
+			}
+			if resolvedValue != nil {
+				securePayload[paramName] = resolvedValue
+			}
+		}
+	}
+
+	// Apply defaults for unbound secure parameters
+	for _, p := range tt.secureParameters {
+		if _, isBound := tt.boundSecureParams[p.Name]; !isBound && p.Default != nil {
+			if securePayload == nil {
+				securePayload = make(map[string]any)
+			}
+			securePayload[p.Name] = p.Default
+		}
+	}
+
+	if len(securePayload) == 0 {
+		securePayload = nil
+	}
+
+	return securePayload, nil
 }
