@@ -63,6 +63,7 @@ func newToolConfig() *ToolConfig {
 	return &ToolConfig{
 		AuthTokenSources: make(map[string]oauth2.TokenSource),
 		BoundParams:      make(map[string]any),
+		SecureParams:     make(map[string]any),
 	}
 }
 
@@ -152,6 +153,7 @@ func WithDefaultToolOptions(opts ...ToolOption) ClientOption {
 type ToolConfig struct {
 	AuthTokenSources map[string]oauth2.TokenSource
 	BoundParams      map[string]any
+	SecureParams     map[string]any
 	Strict           bool
 	strictSet        bool
 }

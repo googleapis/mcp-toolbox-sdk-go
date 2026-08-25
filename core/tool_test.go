@@ -1331,3 +1331,233 @@ func TestInputSchema(t *testing.T) {
 		})
 	}
 }
+
+type recordingTransport struct {
+	baseURL         string
+	capturedPayload map[string]any
+	capturedSecure  map[string]any
+	capturedHeaders map[string]string
+}
+
+func (r *recordingTransport) BaseURL() string { return r.baseURL }
+func (r *recordingTransport) GetTool(ctx context.Context, name string, h map[string]string) (*transport.ManifestSchema, error) {
+	return nil, nil
+}
+func (r *recordingTransport) ListTools(ctx context.Context, set string, h map[string]string) (*transport.ManifestSchema, error) {
+	return nil, nil
+}
+func (r *recordingTransport) InvokeTool(ctx context.Context, name string, p map[string]any, sp map[string]any, h map[string]string) (any, error) {
+	r.capturedPayload = p
+	r.capturedSecure = sp
+	r.capturedHeaders = h
+	return "ok", nil
+}
+
+func TestToolboxTool_SecureParams_GettersAndInputSchema(t *testing.T) {
+	tool := &ToolboxTool{
+		name:        "secure-tool",
+		description: "A tool with secure parameters",
+		parameters: []ParameterSchema{
+			{Name: "public_arg", Type: "string", Required: true},
+		},
+		secureParameters: []ParameterSchema{
+			{Name: "api_key", Type: "string", Required: true, Description: "Secret API Key"},
+			{Name: "opt_sec", Type: "string", Required: false, Description: "Optional Secret"},
+		},
+		transport: &dummyTransport{baseURL: "http://example.com"},
+	}
+
+	t.Run("SecureParameters returns safe copy of unbound secure params", func(t *testing.T) {
+		secParams := tool.SecureParameters()
+		if len(secParams) != 2 {
+			t.Fatalf("expected 2 secure parameters, got %d", len(secParams))
+		}
+		if secParams[0].Name != "api_key" || secParams[1].Name != "opt_sec" {
+			t.Errorf("unexpected secure parameter names: %+v", secParams)
+		}
+		secParams[0].Name = "MUTATED"
+		if tool.secureParameters[0].Name == "MUTATED" {
+			t.Fatalf("SecureParameters did not return a safe copy")
+		}
+	})
+
+	t.Run("InputSchema strictly excludes secure parameters", func(t *testing.T) {
+		schemaBytes, err := tool.InputSchema()
+		if err != nil {
+			t.Fatalf("InputSchema error: %v", err)
+		}
+		var schemaMap map[string]any
+		if err := json.Unmarshal(schemaBytes, &schemaMap); err != nil {
+			t.Fatalf("Unmarshal error: %v", err)
+		}
+		props, ok := schemaMap["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("missing properties in schema")
+		}
+		if _, exists := props["public_arg"]; !exists {
+			t.Errorf("expected public_arg in InputSchema properties")
+		}
+		if _, exists := props["api_key"]; exists {
+			t.Errorf("CRITICAL: secure parameter 'api_key' leaked in InputSchema properties")
+		}
+		if _, exists := props["opt_sec"]; exists {
+			t.Errorf("CRITICAL: secure parameter 'opt_sec' leaked in InputSchema properties")
+		}
+	})
+}
+
+func TestToolboxTool_BindSecureParam_And_Validation(t *testing.T) {
+	baseTool := &ToolboxTool{
+		name: "my-secure-tool",
+		parameters: []ParameterSchema{
+			{Name: "query", Type: "string", Required: true},
+		},
+		secureParameters: []ParameterSchema{
+			{Name: "token", Type: "string", Required: true},
+			{Name: "opt_token", Type: "string", Required: false},
+		},
+		transport: &dummyTransport{baseURL: "http://example.com"},
+	}
+
+	t.Run("BindSecureParam binds static and dynamic values", func(t *testing.T) {
+		boundTool, err := baseTool.BindSecureParam("token", "secret-xyz")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(boundTool.SecureParameters()) != 1 {
+			t.Fatalf("expected 1 remaining unbound secure param, got %d", len(boundTool.SecureParameters()))
+		}
+		if boundTool.BoundSecureParams()["token"] != "secret-xyz" {
+			t.Fatalf("expected bound secure param 'token' to be 'secret-xyz'")
+		}
+
+		// Dynamic func binding
+		dynamicTool, err := baseTool.BindSecureParam("token", func() (string, error) {
+			return "dynamic-token", nil
+		})
+		if err != nil {
+			t.Fatalf("unexpected error binding func: %v", err)
+		}
+		if dynamicTool.BoundSecureParams()["token"] == nil {
+			t.Fatalf("expected bound secure param function")
+		}
+	})
+
+	t.Run("Mutual exclusivity: BindParam on secure param fails", func(t *testing.T) {
+		_, err := baseTool.BindParam("token", "val")
+		if err == nil {
+			t.Fatalf("expected error binding secure param via BindParam, got nil")
+		}
+		if !strings.Contains(err.Error(), "is a secure parameter; use BindSecureParam/BindSecureParams instead") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("Mutual exclusivity: BindSecureParam on regular param fails", func(t *testing.T) {
+		_, err := baseTool.BindSecureParam("query", "val")
+		if err == nil {
+			t.Fatalf("expected error binding regular param via BindSecureParam, got nil")
+		}
+		if !strings.Contains(err.Error(), "is a regular parameter; use BindParam/BindParams instead") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("BindSecureParam on unknown parameter fails", func(t *testing.T) {
+		_, err := baseTool.BindSecureParam("unknown", "val")
+		if err == nil {
+			t.Fatalf("expected error on unknown parameter, got nil")
+		}
+		if !strings.Contains(err.Error(), "no secure parameter named \"unknown\" on the tool") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("Re-binding an already bound secure parameter fails", func(t *testing.T) {
+		boundTool, err := baseTool.BindSecureParam("token", "val1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		_, err = boundTool.BindSecureParam("token", "val2")
+		if err == nil {
+			t.Fatalf("expected error re-binding already bound secure param, got nil")
+		}
+		if !strings.Contains(err.Error(), "cannot override existing bound secure parameter") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+}
+
+func TestToolboxTool_Invoke_FastFail_And_PromptInjectionDefense(t *testing.T) {
+	recTr := &recordingTransport{baseURL: "http://example.com"}
+	tool := &ToolboxTool{
+		name: "payment-tool",
+		parameters: []ParameterSchema{
+			{Name: "amount", Type: "integer", Required: true},
+		},
+		secureParameters: []ParameterSchema{
+			{Name: "api_key", Type: "string", Required: true},
+		},
+		transport: recTr,
+	}
+
+	t.Run("Fast-fail on missing required secure parameter before transport", func(t *testing.T) {
+		_, err := tool.Invoke(context.Background(), map[string]any{"amount": 100})
+		if err == nil {
+			t.Fatalf("expected fast-fail error on missing required secure parameter, got nil")
+		}
+		if !strings.Contains(err.Error(), "missing required secure parameter(s) [api_key] for tool \"payment-tool\"") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+		if recTr.capturedPayload != nil || recTr.capturedSecure != nil {
+			t.Errorf("transport was invoked despite fast-fail condition!")
+		}
+	})
+
+	t.Run("Prompt-injection defense: Passing secure parameter in input is rejected", func(t *testing.T) {
+		boundTool, err := tool.BindSecureParam("api_key", "secret-key")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// User/LLM tries to inject api_key in invocation input
+		_, err = boundTool.Invoke(context.Background(), map[string]any{
+			"amount":  100,
+			"api_key": "attacker-injected-key",
+		})
+		if err == nil {
+			t.Fatalf("expected prompt injection to be rejected, got nil")
+		}
+		if !strings.Contains(err.Error(), "unexpected parameter 'api_key' provided") {
+			t.Errorf("unexpected error message: %v", err)
+		}
+	})
+
+	t.Run("Successful invocation sends separate payload and securePayload", func(t *testing.T) {
+		recTr.capturedPayload = nil
+		recTr.capturedSecure = nil
+
+		boundTool, err := tool.BindSecureParam("api_key", func() (string, error) {
+			return "dynamic-vault-token", nil
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		res, err := boundTool.Invoke(context.Background(), map[string]any{"amount": 100})
+		if err != nil {
+			t.Fatalf("unexpected invoke error: %v", err)
+		}
+		if res != "ok" {
+			t.Errorf("unexpected result: %v", res)
+		}
+
+		if recTr.capturedPayload["amount"] != 100 {
+			t.Errorf("expected payload amount=100, got: %v", recTr.capturedPayload["amount"])
+		}
+		if recTr.capturedSecure["api_key"] != "dynamic-vault-token" {
+			t.Errorf("expected securePayload api_key='dynamic-vault-token', got: %v", recTr.capturedSecure["api_key"])
+		}
+	})
+}
+
