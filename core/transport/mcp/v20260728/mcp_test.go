@@ -129,7 +129,7 @@ func TestInvokeToolAndHeaders(t *testing.T) {
 	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
 	require.NoError(t, err)
 
-	res, err := tr.InvokeTool(context.Background(), "test_tool", nil, nil)
+	res, err := tr.InvokeTool(context.Background(), "test_tool", nil, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "hello", res)
 }
@@ -163,7 +163,7 @@ func TestInvokeTool_NilArgumentsSerializedAsObject(t *testing.T) {
 	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
 	require.NoError(t, err)
 
-	res, err := tr.InvokeTool(context.Background(), "test_tool", nil, nil)
+	res, err := tr.InvokeTool(context.Background(), "test_tool", nil, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "ok", res)
 }
@@ -190,7 +190,7 @@ func TestPrepareHeadersMcpName(t *testing.T) {
 	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
 	require.NoError(t, err)
 
-	res, err := tr.InvokeTool(context.Background(), "my_tool", nil, nil)
+	res, err := tr.InvokeTool(context.Background(), "my_tool", nil, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "ok", res)
 }
@@ -262,7 +262,7 @@ func TestResultTypeParsingAndFallback(t *testing.T) {
 	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
 	require.NoError(t, err)
 
-	res, err := tr.InvokeTool(context.Background(), "test_tool", nil, nil)
+	res, err := tr.InvokeTool(context.Background(), "test_tool", nil, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "test output", res)
 }
@@ -435,7 +435,7 @@ func TestInvokeTool_ErrorResult(t *testing.T) {
 	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
 	require.NoError(t, err)
 
-	_, err = tr.InvokeTool(context.Background(), "tool", nil, nil)
+	_, err = tr.InvokeTool(context.Background(), "tool", nil, nil, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "tool execution resulted in error")
 }
@@ -450,7 +450,7 @@ func TestInvokeTool_RPCError(t *testing.T) {
 	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
 	require.NoError(t, err)
 
-	_, err = tr.InvokeTool(context.Background(), "tool", nil, nil)
+	_, err = tr.InvokeTool(context.Background(), "tool", nil, nil, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to invoke tool 'tool':")
 }
@@ -543,7 +543,7 @@ func TestInvokeTool_ComplexContent(t *testing.T) {
 	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
 	require.NoError(t, err)
 
-	res, err := tr.InvokeTool(context.Background(), "t", nil, nil)
+	res, err := tr.InvokeTool(context.Background(), "t", nil, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "Part 1 Part 2", res)
 }
@@ -564,7 +564,7 @@ func TestInvokeTool_EmptyResult(t *testing.T) {
 	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
 	require.NoError(t, err)
 
-	res, err := tr.InvokeTool(context.Background(), "t", nil, nil)
+	res, err := tr.InvokeTool(context.Background(), "t", nil, nil, nil)
 	require.NoError(t, err)
 	assert.Equal(t, "null", res)
 }
@@ -589,7 +589,7 @@ func TestInvokeTool_ContentProcessing_Scenarios(t *testing.T) {
 		tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
 		require.NoError(t, err)
 
-		res, err := tr.InvokeTool(context.Background(), "tool", nil, nil)
+		res, err := tr.InvokeTool(context.Background(), "tool", nil, nil, nil)
 		require.NoError(t, err)
 		assert.Equal(t, `[{"foo":"bar"},{"foo":"quux"}]`, res)
 	})
@@ -748,6 +748,188 @@ func TestJSONRPCError_ProtocolNegotiation(t *testing.T) {
 			assert.Equal(t, tc.expectedFallback, negErr.FallbackVersion)
 		})
 	}
+}
+
+func TestClientCapabilities_AdvertisesSecureParamsExtension(t *testing.T) {
+	var capturedMeta map[string]any
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+
+		var req map[string]any
+		require.NoError(t, json.Unmarshal(body, &req))
+		params, ok := req["params"].(map[string]any)
+		if ok {
+			capturedMeta, _ = params["_meta"].(map[string]any)
+		}
+
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"jsonrpc": "2.0",
+			"id": "1",
+			"result": {
+				"tools": []
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
+	require.NoError(t, err)
+
+	_, err = tr.ListTools(context.Background(), "", nil)
+	require.NoError(t, err)
+
+	require.NotNil(t, capturedMeta)
+	caps, ok := capturedMeta["io.modelcontextprotocol/clientCapabilities"].(map[string]any)
+	require.True(t, ok, "clientCapabilities must be present in _meta")
+	exts, ok := caps["extensions"].(map[string]any)
+	require.True(t, ok, "extensions must be present in clientCapabilities")
+	_, exists := exts[transport.ExtensionSecureParams]
+	assert.True(t, exists, "ExtensionSecureParams ('com.google.cloud/toolbox.v1') must be advertised")
+}
+
+func TestListTools_ParsesSecureInputSchema(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"jsonrpc": "2.0",
+			"id": "1",
+			"result": {
+				"tools": [
+					{
+						"name": "my-secure-tool",
+						"description": "Tool with secure params",
+						"inputSchema": {
+							"type": "object",
+							"properties": {
+								"id": {
+									"type": "integer",
+									"description": "User ID"
+								}
+							},
+							"required": ["id"]
+						},
+						"secureInputSchema": {
+							"type": "object",
+							"properties": {
+								"api_key": {
+									"type": "string",
+									"description": "Secret API Key"
+								}
+							},
+							"required": ["api_key"]
+						}
+					}
+				]
+			}
+		}`))
+	}))
+	defer ts.Close()
+
+	tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
+	require.NoError(t, err)
+
+	manifest, err := tr.ListTools(context.Background(), "", nil)
+	require.NoError(t, err)
+
+	tool, exists := manifest.Tools["my-secure-tool"]
+	require.True(t, exists)
+	assert.Equal(t, "Tool with secure params", tool.Description)
+
+	// Public parameters
+	require.Len(t, tool.Parameters, 1)
+	assert.Equal(t, "id", tool.Parameters[0].Name)
+	assert.Equal(t, "integer", tool.Parameters[0].Type)
+	assert.True(t, tool.Parameters[0].Required)
+
+	// Secure parameters
+	require.Len(t, tool.SecureParameters, 1)
+	assert.Equal(t, "api_key", tool.SecureParameters[0].Name)
+	assert.Equal(t, "string", tool.SecureParameters[0].Type)
+	assert.True(t, tool.SecureParameters[0].Required)
+	assert.Equal(t, "Secret API Key", tool.SecureParameters[0].Description)
+}
+
+func TestInvokeTool_SecureArguments_Serialization(t *testing.T) {
+	t.Run("Includes secureArguments when non-empty", func(t *testing.T) {
+		var capturedParams map[string]any
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			require.NoError(t, err)
+
+			var req map[string]any
+			require.NoError(t, json.Unmarshal(body, &req))
+			capturedParams, _ = req["params"].(map[string]any)
+
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{
+				"jsonrpc": "2.0",
+				"id": "1",
+				"result": {
+					"content": [{"type": "text", "text": "success"}]
+				}
+			}`))
+		}))
+		defer ts.Close()
+
+		tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
+		require.NoError(t, err)
+
+		payload := map[string]any{"id": 42}
+		securePayload := map[string]any{"api_key": "secret-token-123"}
+		res, err := tr.InvokeTool(context.Background(), "my-secure-tool", payload, securePayload, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "success", res)
+
+		require.NotNil(t, capturedParams)
+		assert.Equal(t, "my-secure-tool", capturedParams["name"])
+
+		args, ok := capturedParams["arguments"].(map[string]any)
+		require.True(t, ok)
+		assert.Equal(t, float64(42), args["id"])
+
+		secArgs, ok := capturedParams["secureArguments"].(map[string]any)
+		require.True(t, ok, "secureArguments must be serialized")
+		assert.Equal(t, "secret-token-123", secArgs["api_key"])
+	})
+
+	t.Run("Omits secureArguments when nil", func(t *testing.T) {
+		var capturedParams map[string]any
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			require.NoError(t, err)
+
+			var req map[string]any
+			require.NoError(t, json.Unmarshal(body, &req))
+			capturedParams, _ = req["params"].(map[string]any)
+
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{
+				"jsonrpc": "2.0",
+				"id": "1",
+				"result": {
+					"content": [{"type": "text", "text": "success"}]
+				}
+			}`))
+		}))
+		defer ts.Close()
+
+		tr, err := New(ts.URL, ts.Client(), "test-client", "1.0.0")
+		require.NoError(t, err)
+
+		payload := map[string]any{"id": 42}
+		res, err := tr.InvokeTool(context.Background(), "my-tool", payload, nil, nil)
+		require.NoError(t, err)
+		assert.Equal(t, "success", res)
+
+		require.NotNil(t, capturedParams)
+		_, exists := capturedParams["secureArguments"]
+		assert.False(t, exists, "secureArguments must be omitted when nil")
+	})
 }
 
 

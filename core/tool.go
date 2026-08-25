@@ -320,7 +320,7 @@ func (tt *ToolboxTool) Invoke(ctx context.Context, input map[string]any) (any, e
 
 	checkSecureHeaders(tt.transport.BaseURL(), len(tt.authTokenSources) > 0)
 
-	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, resolvedHeaders)
+	response, err := tt.transport.InvokeTool(ctx, tt.name, finalPayload, nil, resolvedHeaders)
 	if err != nil {
 		return nil, err
 	}

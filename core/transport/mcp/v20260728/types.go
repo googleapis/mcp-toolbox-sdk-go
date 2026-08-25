@@ -79,10 +79,11 @@ type mcpResult struct {
 
 // mcpTool represents a single tool definition from the server.
 type mcpTool struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description,omitempty"`
-	InputSchema map[string]any `json:"inputSchema"`
-	Meta        map[string]any `json:"_meta,omitempty"`
+	Name              string         `json:"name"`
+	Description       string         `json:"description,omitempty"`
+	InputSchema       map[string]any `json:"inputSchema"`
+	SecureInputSchema map[string]any `json:"secureInputSchema,omitempty"`
+	Meta              map[string]any `json:"_meta,omitempty"`
 }
 
 // listToolsResult holds the response from the 'tools/list' method.
@@ -93,8 +94,9 @@ type listToolsResult struct {
 
 // callToolRequestParams holds the parameters for the 'tools/call' method.
 type callToolRequestParams struct {
-	Name      string         `json:"name"`
-	Arguments map[string]any `json:"arguments"`
+	Name            string         `json:"name"`
+	Arguments       map[string]any `json:"arguments"`
+	SecureArguments map[string]any `json:"secureArguments,omitempty"`
 }
 
 // callToolResult holds the response from the 'tools/call' method.

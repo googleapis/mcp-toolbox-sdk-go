@@ -47,7 +47,7 @@ func (d *dummyTransport) GetTool(ctx context.Context, name string, h map[string]
 func (d *dummyTransport) ListTools(ctx context.Context, set string, h map[string]string) (*transport.ManifestSchema, error) {
 	return nil, nil
 }
-func (d *dummyTransport) InvokeTool(ctx context.Context, name string, p map[string]any, h map[string]string) (any, error) {
+func (d *dummyTransport) InvokeTool(ctx context.Context, name string, p map[string]any, sp map[string]any, h map[string]string) (any, error) {
 	return nil, nil
 }
 
