@@ -56,10 +56,11 @@ type mcpRPCResponse struct {
 
 // mcpTool represents a single tool definition in an MCP list response.
 type mcpTool struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description,omitempty"`
-	InputSchema map[string]any `json:"inputSchema"`
-	Meta        map[string]any `json:"_meta,omitempty"`
+	Name              string         `json:"name"`
+	Description       string         `json:"description,omitempty"`
+	InputSchema       map[string]any `json:"inputSchema"`
+	SecureInputSchema map[string]any `json:"secureInputSchema,omitempty"`
+	Meta              map[string]any `json:"_meta,omitempty"`
 }
 
 // newMockMCPServer creates a server that simulates the MCP lifecycle (initialize -> list) defaulting to 2026-07-28 protocol version.
@@ -1411,3 +1412,117 @@ func TestToolInvocation_PreservesURLQueryParams(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "foo=bar&baz=123", requestedRawQuery)
 }
+
+func TestLoadTool_WithBindSecureParam(t *testing.T) {
+	mcpTools := []mcpTool{
+		{
+			Name:        "secure-tool",
+			Description: "A test secure tool",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"public_arg": map[string]any{"type": "string"},
+				},
+				"required": []string{"public_arg"},
+			},
+			SecureInputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"api_key": map[string]any{"type": "string"},
+				},
+				"required": []string{"api_key"},
+			},
+		},
+	}
+	server := newMockMCPServer(t, mcpTools)
+	defer server.Close()
+
+	client, err := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+	require.NoError(t, err)
+
+	t.Run("Successfully loads and binds secure parameters", func(t *testing.T) {
+		tool, err := client.LoadTool("secure-tool", context.Background(), WithBindSecureParamString("api_key", "my-secret-key"))
+		require.NoError(t, err)
+		assert.Equal(t, "my-secret-key", tool.boundSecureParams["api_key"])
+		assert.Empty(t, tool.SecureParameters(), "bound secure parameter should be removed from unbound list")
+	})
+
+	t.Run("Validation failure on unused secure parameter", func(t *testing.T) {
+		_, err := client.LoadTool("secure-tool", context.Background(),
+			WithBindSecureParamString("api_key", "my-secret-key"),
+			WithBindSecureParamString("unused", "extra"),
+		)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no secure parameter named \"unused\" found on tool \"secure-tool\"")
+	})
+
+	t.Run("Validation failure when regular param passed via WithBindSecureParam", func(t *testing.T) {
+		_, err := client.LoadTool("secure-tool", context.Background(), WithBindSecureParamString("public_arg", "val"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "parameter \"public_arg\" is a regular parameter; use WithBindParam* instead")
+	})
+}
+
+func TestLoadToolset_WithBindSecureParam(t *testing.T) {
+	mcpTools := []mcpTool{
+		{
+			Name: "tool1",
+			InputSchema: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{},
+			},
+			SecureInputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"key1": map[string]any{"type": "string"},
+				},
+			},
+		},
+		{
+			Name: "tool2",
+			InputSchema: map[string]any{
+				"type":       "object",
+				"properties": map[string]any{},
+			},
+			SecureInputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"key2": map[string]any{"type": "string"},
+				},
+			},
+		},
+	}
+	server := newMockMCPServer(t, mcpTools)
+	defer server.Close()
+
+	client, err := NewToolboxClient(server.URL, WithHTTPClient(server.Client()))
+	require.NoError(t, err)
+
+	t.Run("Non-strict mode succeeds if secure params are used across toolset", func(t *testing.T) {
+		tools, err := client.LoadToolset("", context.Background(),
+			WithBindSecureParamString("key1", "val1"),
+			WithBindSecureParamString("key2", "val2"),
+		)
+		require.NoError(t, err)
+		assert.Len(t, tools, 2)
+	})
+
+	t.Run("Non-strict mode fails if secure param is not used by any tool", func(t *testing.T) {
+		_, err := client.LoadToolset("", context.Background(),
+			WithBindSecureParamString("key1", "val1"),
+			WithBindSecureParamString("completely_unused", "val"),
+		)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unused secure parameters could not be applied to any tool: completely_unused")
+	})
+
+	t.Run("Strict mode fails if any tool does not use all secure params", func(t *testing.T) {
+		_, err := client.LoadToolset("", context.Background(),
+			WithStrict(true),
+			WithBindSecureParamString("key1", "val1"),
+		)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no secure parameter named \"key1\" found on tool \"tool2\"")
+	})
+}
+
