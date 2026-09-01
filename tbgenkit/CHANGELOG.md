@@ -2,6 +2,8 @@
 
 ## [0.10.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.9.0...tbgenkit/v0.10.0) (2026-09-01)
 
+### Features
+* **tbgenkit:** support secure parameters in TBGenkit ([#333](https://github.com/googleapis/mcp-toolbox-sdk-go/pull/333))([66d1ff3](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/66d1ff34cd7eb31608cd53220dcaa52804ca2e0a))
 
 ### Bug Fixes
 
@@ -9,9 +11,6 @@
 
 
 ### Miscellaneous Chores
-
-* **core:** release 1.2.0 ([#340](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/340)) ([64f32b3](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/64f32b3bdc791bb35295f757ec065e0b2194c9c9))
-* **tbgenkit:** release 0.10.0 ([#342](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/342)) ([50bb46b](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/50bb46b465a3bd6b00bd7fbc23961bc0b6e3e998))
 * Update core dependency in TBADK & TBGenkit ([#345](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/345)) ([4cccc60](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/4cccc60f39572ad80f334bef8446c8ed5fcceb3a))
 
 ## [0.9.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.8.0...tbgenkit/v0.9.0) (2026-08-04)
