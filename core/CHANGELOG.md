@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.2.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v1.1.0...core/v1.2.0) (2026-09-01)
+
+
+### Features
+
+* **core:** client options and tool/set loading with secure parameters ([5541ff2](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/5541ff2becf0dc5cede7f34489700c873266ec38))
+* **core:** protocol and wire transport support for secure parameters ([4e5d650](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/4e5d65060472b0024fe698609877262390443b49))
+* **core:** tool-level secure parameter binding, fast-fail and validation ([ef2f9cb](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/ef2f9cbbdcc28b18dfed4bb41b7f94f46c40d040))
+
+
+### Bug Fixes
+
+* **mcp:** include tool output in error message on execution failure ([#324](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/324)) ([910b97e](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/910b97ee7fddc7facca50bbd3cdbc4b774d00c7a))
+
+
 ## [1.1.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v1.0.0...core/v1.1.0) (2026-08-04)
 
 
