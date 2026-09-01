@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v1.2.0...tbadk/v0.10.0) (2026-09-01)
+
+
+### Miscellaneous Chores
+
+* **tbgenkit:** release 0.10.0 ([#342](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/342)) ([50bb46b](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/50bb46b465a3bd6b00bd7fbc23961bc0b6e3e998))
+* Update core dependency in TBADK & TBGenkit ([#345](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/345)) ([4cccc60](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/4cccc60f39572ad80f334bef8446c8ed5fcceb3a))
+
 ## [1.2.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v1.1.0...tbadk/v1.2.0) (2026-09-01)
 
 
