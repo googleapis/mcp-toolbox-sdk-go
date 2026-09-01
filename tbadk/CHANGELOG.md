@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.3.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v1.2.0...tbadk/v1.3.0) (2026-09-01)
+
+
+### Features
+
+* **tbadk:** support secure parameters in ADK tools and client ([f05e55d](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/f05e55da22b7b52b6d443b680175fca17a06f3b4))
+
+
+### Bug Fixes
+
+* **mcp:** include tool output in error message on execution failure ([#324](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/324)) ([910b97e](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/910b97ee7fddc7facca50bbd3cdbc4b774d00c7a))
+
+### Miscellaneous Chores
+
+* Update core dependency in TBADK & TBGenkit ([#345](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/345)) ([4cccc60](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/4cccc60f39572ad80f334bef8446c8ed5fcceb3a))
+
 ## [1.2.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v1.1.0...tbadk/v1.2.0) (2026-09-01)
 
 
