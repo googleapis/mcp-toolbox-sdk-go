@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v1.2.0...core/v0.10.0) (2026-09-01)
+
+
+### Miscellaneous Chores
+
+* **tbgenkit:** release 0.10.0 ([#342](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/342)) ([50bb46b](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/50bb46b465a3bd6b00bd7fbc23961bc0b6e3e998))
+
 ## [1.2.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/core/v1.1.0...core/v1.2.0) (2026-09-01)
 
 

@@ -16,4 +16,4 @@ package mcp
 
 // SDKVersion is the current version of the library.
 // This is updated automatically by release-please.
-const SDKVersion = "1.2.0" // x-release-please-version
+const SDKVersion = "0.10.0" // x-release-please-version
