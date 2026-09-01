@@ -71,8 +71,8 @@ github.com/googleapis/enterprise-certificate-proxy v0.3.15 h1:xolVQTEXusUcAA5Ugt
 github.com/googleapis/enterprise-certificate-proxy v0.3.15/go.mod h1:vqVt9yG9480NtzREnTlmGSBmFrA+bzb0yl0TxoBQXOg=
 github.com/googleapis/gax-go/v2 v2.22.0 h1:PjIWBpgGIVKGoCXuiCoP64altEJCj3/Ei+kSU5vlZD4=
 github.com/googleapis/gax-go/v2 v2.22.0/go.mod h1:irWBbALSr0Sk3qlqb9SyJ1h68WjgeFuiOzI4Rqw5+aY=
-github.com/googleapis/mcp-toolbox-sdk-go/core v1.1.0 h1:pjYUaHeZVfTS0weuEu0Mf5NasjiJamQhKVKGNT8F2fw=
-github.com/googleapis/mcp-toolbox-sdk-go/core v1.1.0/go.mod h1:NrLXP/ZL2wix2KDWMxPnfSg/HqqaoqXirvOl9cOQyaQ=
+github.com/googleapis/mcp-toolbox-sdk-go/core v1.2.0 h1:k0pE6gBiW9RAYIfJnAh+ZqTG33+NXiKSUwHtQLmwCpA=
+github.com/googleapis/mcp-toolbox-sdk-go/core v1.2.0/go.mod h1:NrLXP/ZL2wix2KDWMxPnfSg/HqqaoqXirvOl9cOQyaQ=
 github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
