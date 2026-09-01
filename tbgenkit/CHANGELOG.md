@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.10.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.9.0...tbgenkit/v0.10.0) (2026-09-01)
+
+
+### Bug Fixes
+
+* **mcp:** include tool output in error message on execution failure ([#324](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/324)) ([910b97e](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/910b97ee7fddc7facca50bbd3cdbc4b774d00c7a))
+
+
+### Miscellaneous Chores
+
+* **core:** release 1.2.0 ([#340](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/340)) ([64f32b3](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/64f32b3bdc791bb35295f757ec065e0b2194c9c9))
+* **tbgenkit:** release 0.10.0 ([#342](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/342)) ([50bb46b](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/50bb46b465a3bd6b00bd7fbc23961bc0b6e3e998))
+* Update core dependency in TBADK & TBGenkit ([#345](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/345)) ([4cccc60](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/4cccc60f39572ad80f334bef8446c8ed5fcceb3a))
+
 ## [0.9.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.8.0...tbgenkit/v0.9.0) (2026-08-04)
 
 
