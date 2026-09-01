@@ -13,10 +13,6 @@
 * **mcp:** include tool output in error message on execution failure ([#324](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/324)) ([910b97e](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/910b97ee7fddc7facca50bbd3cdbc4b774d00c7a))
 
 
-### Miscellaneous Chores
-
-* **core:** release 1.2.0 ([#340](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/340)) ([64f32b3](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/64f32b3bdc791bb35295f757ec065e0b2194c9c9))
-
 ## [1.1.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbadk/v1.0.0...tbadk/v1.1.0) (2026-08-04)
 
 
