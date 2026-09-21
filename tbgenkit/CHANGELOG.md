@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.10.0...tbgenkit/v0.10.1) (2026-09-21)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump google.golang.org/grpc in /tbgenkit ([#346](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/346)) ([b9cd670](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/b9cd6701e7f61fbe11ef3970683ebd7aca6173c0))
+* **deps:** bump google.golang.org/grpc in /tbgenkit ([#355](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/355)) ([af7e868](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/af7e86857009462d06c9c719fbb1de04485e22ab))
+* **deps:** update mcp toolbox server for integration tests to v1.11.0 ([#349](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/349)) ([2dd3c58](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/2dd3c58d86faa697c0ae8a104ba73926b3fa54a2))
+
 ## [0.10.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.9.0...tbgenkit/v0.10.0) (2026-09-01)
 
 ### Features
