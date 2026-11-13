@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.1](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.10.0...tbgenkit/v0.10.1) (2026-11-13)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump go.opentelemetry.io/otel/sdk in /tbgenkit ([#352](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/352)) ([7b28866](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/7b28866c37f2856f476d27ce5047c987b81a4a54))
+* **deps:** bump google.golang.org/grpc in /tbgenkit ([#346](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/346)) ([b9cd670](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/b9cd6701e7f61fbe11ef3970683ebd7aca6173c0))
+* **deps:** bump google.golang.org/grpc in /tbgenkit ([#355](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/355)) ([af7e868](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/af7e86857009462d06c9c719fbb1de04485e22ab))
+* **deps:** update mcp toolbox server for integration tests to v1.11.0 ([#349](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/349)) ([2dd3c58](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/2dd3c58d86faa697c0ae8a104ba73926b3fa54a2))
+* **deps:** update mcp toolbox server for integration tests to v1.17.0 ([#353](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/353)) ([4e28752](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/4e28752db666217f727a043aeed9229b1c5f233d))
+* **deps:** update module github.com/go-jose/go-jose/v4 to v4.1.6 [security] ([#358](https://github.com/googleapis/mcp-toolbox-sdk-go/issues/358)) ([30df890](https://github.com/googleapis/mcp-toolbox-sdk-go/commit/30df8909f46b2e3bd946ed15c697a611b3969689))
+
 ## [0.10.0](https://github.com/googleapis/mcp-toolbox-sdk-go/compare/tbgenkit/v0.9.0...tbgenkit/v0.10.0) (2026-09-01)
 
 ### Features
