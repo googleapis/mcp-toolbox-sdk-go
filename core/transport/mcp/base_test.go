@@ -19,6 +19,7 @@ package mcp
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -79,6 +80,16 @@ func TestNewBaseTransport(t *testing.T) {
 			baseURL:  "http://api.com?tag=1&tag=2",
 			expected: "http://api.com/mcp/?tag=1&tag=2",
 		},
+		{
+			name:     "Preserves Encoded Slash in Base Path",
+			baseURL:  "http://example.com/foo%2Fbar",
+			expected: "http://example.com/foo%2Fbar/mcp/",
+		},
+		{
+			name:     "Preserves Encoded Slash When MCP Suffix Present",
+			baseURL:  "http://example.com/foo%2Fbar/mcp",
+			expected: "http://example.com/foo%2Fbar/mcp/",
+		},
 	}
 
 	for _, tc := range tests {
@@ -132,6 +143,7 @@ func TestAppendToolsetPath(t *testing.T) {
 		{name: "Traversal attempt", baseURL: base, toolsetName: "../../admin", expected: base + "..%2F..%2Fadmin"},
 		{name: "Traversal attempt with query parameters", baseURL: base + "?num_rows=2&env=test", toolsetName: "../../admin", expected: base + "..%2F..%2Fadmin?num_rows=2&env=test"},
 		{name: "Slash and space with escaped base path", baseURL: "http://example.com/my%20api/mcp/?env=test", toolsetName: "a/b c", expected: "http://example.com/my%20api/mcp/a%2Fb%20c?env=test"},
+		{name: "Preserves encoded slash in base path", baseURL: "http://example.com/foo%2Fbar/mcp/", toolsetName: "a/b", expected: "http://example.com/foo%2Fbar/mcp/a%2Fb"},
 		// Other characters keep Go's default path escaping.
 		{name: "Backslash", baseURL: base, toolsetName: `..\admin`, expected: base + "..%5Cadmin"},
 		{name: "Percent", baseURL: base, toolsetName: "%2e%2e", expected: base + "%252e%252e"},
@@ -170,6 +182,35 @@ func TestAppendToolsetPath(t *testing.T) {
 				t.Errorf("Expected %s, got %s", tc.expected, res)
 			}
 		})
+	}
+}
+
+func TestCheckRedirectResponse(t *testing.T) {
+	bodyText := strings.Repeat("x", 1024)
+	r := strings.NewReader(bodyText)
+	respNoLoc := &http.Response{
+		StatusCode: http.StatusFound,
+		Header:     http.Header{},
+		Body:       io.NopCloser(r),
+	}
+	err := CheckRedirectResponse(respNoLoc)
+	if err == nil {
+		t.Fatal("Expected error for 302 response")
+	}
+	if strings.Contains(err.Error(), `""`) {
+		t.Errorf("Expected empty Location to omit empty quotes, got %q", err.Error())
+	}
+	if r.Len() != 0 {
+		t.Errorf("Expected redirect body to be drained, %d bytes remaining", r.Len())
+	}
+
+	okResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Location": []string{"https://ignored.example/"}},
+		Body:       io.NopCloser(strings.NewReader("ok")),
+	}
+	if err := CheckRedirectResponse(okResp); err != nil {
+		t.Fatalf("Expected nil for 200 response, got %v", err)
 	}
 }
 
@@ -558,7 +599,7 @@ func TestConvertToolDefinition(t *testing.T) {
 				"toolbox/authParam": map[string]any{
 					"param": []any{"legacy-auth"},
 				},
-				"toolbox/authInvoke":  []any{"legacy-invoke"},
+				"toolbox/authInvoke": []any{"legacy-invoke"},
 			},
 		}
 

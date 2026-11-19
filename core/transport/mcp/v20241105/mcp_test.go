@@ -727,3 +727,19 @@ func TestRequest_RedirectNotFollowed(t *testing.T) {
 		})
 	}
 }
+
+func TestListTools_InvalidToolsetFailsBeforeHandshake(t *testing.T) {
+	var serverHits atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		serverHits.Add(1)
+	}))
+	defer server.Close()
+
+	tr, err := New(server.URL, server.Client(), "test-client", "1.0.0")
+	require.NoError(t, err)
+
+	_, err = tr.ListTools(context.Background(), "..", nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), `invalid toolset name ".."`)
+	assert.Equal(t, int32(0), serverHits.Load(), "invalid toolset name must fail before handshake")
+}

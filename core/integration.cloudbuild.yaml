@@ -68,7 +68,7 @@ steps:
     script: |
       go mod edit -replace github.com/googleapis/mcp-toolbox-sdk-go/core=../core
       go mod tidy
-      go test -coverprofile=coverage-tbadk-unit.out -covermode=atomic ./... -v -race
+      go test -tags=unit -coverprofile=coverage-tbadk-unit.out -covermode=atomic ./... -v -race
       go test -tags=e2e -coverprofile=coverage-tbadk-e2e.out -covermode=atomic ./... -v -race
 
   # Verify dependents (TBGenKit) to ensure Core changes don't break them

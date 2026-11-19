@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -64,14 +65,17 @@ func NewBaseTransport(baseURL string, client *http.Client) (*BaseMcpTransport, e
 		return nil, fmt.Errorf("invalid base URL: %w", err)
 	}
 
-	path := strings.TrimRight(parsedURL.Path, "/")
-	if !strings.HasSuffix(path, "/mcp") {
-		path, err = url.JoinPath(path, "mcp")
-		if err != nil {
-			return nil, err
-		}
+	escapedPath := strings.TrimRight(parsedURL.EscapedPath(), "/")
+	if !strings.HasSuffix(escapedPath, "/mcp") {
+		escapedPath += "/mcp"
 	}
-	parsedURL.Path = path + "/"
+	escapedPath += "/"
+	unescapedPath, err := url.PathUnescape(escapedPath)
+	if err != nil {
+		return nil, fmt.Errorf("invalid base URL path: %w", err)
+	}
+	parsedURL.Path = unescapedPath
+	parsedURL.RawPath = escapedPath
 
 	return &BaseMcpTransport{
 		baseURL:    parsedURL.String(),
@@ -91,6 +95,22 @@ func withoutRedirects(client *http.Client) *http.Client {
 		return http.ErrUseLastResponse
 	}
 	return &c
+}
+
+const maxRedirectDrainBytes = 4096
+
+// CheckRedirectResponse drains up to a few kilobytes of a 3xx response body so
+// keep-alive connections can be reused, and returns an error describing the
+// blocked redirect. Non-3xx responses return nil.
+func CheckRedirectResponse(resp *http.Response) error {
+	if resp.StatusCode < http.StatusMultipleChoices || resp.StatusCode >= http.StatusBadRequest {
+		return nil
+	}
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxRedirectDrainBytes))
+	if location := resp.Header.Get("Location"); location != "" {
+		return fmt.Errorf("toolbox server responded with HTTP %d redirect to %q; automatic redirects are disabled for security, configure the client with the final server URL", resp.StatusCode, location)
+	}
+	return fmt.Errorf("toolbox server responded with HTTP %d redirect; automatic redirects are disabled for security, configure the client with the final server URL", resp.StatusCode)
 }
 
 // toolsetNameReplacer restores ";" and "," after url.PathEscape. url.PathEscape
@@ -113,10 +133,14 @@ func AppendToolsetPath(baseURLStr, toolsetName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to parse URL: %w", err)
 	}
-	basePath := strings.TrimRight(parsedURL.Path, "/") + "/"
-	parsedURL.Path = basePath + toolsetName
-	// RawPath is a valid encoding of Path, so URL.String() emits it unchanged.
-	parsedURL.RawPath = (&url.URL{Path: basePath}).EscapedPath() + toolsetNameReplacer.Replace(url.PathEscape(toolsetName))
+	escapedBase := strings.TrimRight(parsedURL.EscapedPath(), "/") + "/"
+	escapedPath := escapedBase + toolsetNameReplacer.Replace(url.PathEscape(toolsetName))
+	unescapedPath, err := url.PathUnescape(escapedPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to unescape URL path: %w", err)
+	}
+	parsedURL.Path = unescapedPath
+	parsedURL.RawPath = escapedPath
 	return parsedURL.String(), nil
 }
 
