@@ -28,6 +28,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1524,5 +1525,124 @@ func TestLoadToolset_WithBindSecureParam(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no secure parameter named \"key1\" found on tool \"tool2\"")
 	})
+}
+
+// TestToolboxClient_DoesNotFollowRedirects verifies that a redirect from the
+// Toolbox server is reported as an error and never followed, for every
+// protocol version and for both the default and a caller-supplied http.Client.
+func TestToolboxClient_DoesNotFollowRedirects(t *testing.T) {
+	protocols := []Protocol{MCPv20260728, MCPv20251125, MCPv20250618, MCPv20250326, MCPv20241105}
+	statusCodes := []int{
+		http.StatusMovedPermanently,
+		http.StatusFound,
+		http.StatusSeeOther,
+		http.StatusTemporaryRedirect,
+		http.StatusPermanentRedirect,
+	}
+
+	for _, protocol := range protocols {
+		for _, status := range statusCodes {
+			for _, withCallerClient := range []bool{false, true} {
+				clientKind := "default client"
+				if withCallerClient {
+					clientKind = "caller client"
+				}
+				t.Run(fmt.Sprintf("%s/%d/%s", protocol, status, clientKind), func(t *testing.T) {
+					var targetHits, serverHits atomic.Int32
+					target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						targetHits.Add(1)
+					}))
+					defer target.Close()
+					location := target.URL + "/mcp/"
+					server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						serverHits.Add(1)
+						w.Header().Set("Location", location)
+						w.WriteHeader(status)
+					}))
+					defer server.Close()
+
+					opts := []ClientOption{WithProtocol(protocol)}
+					var callerClient *http.Client
+					var callerPolicyCalled atomic.Bool
+					if withCallerClient {
+						callerClient = &http.Client{
+							Timeout: 10 * time.Second,
+							CheckRedirect: func(*http.Request, []*http.Request) error {
+								callerPolicyCalled.Store(true)
+								return nil // Would follow every redirect.
+							},
+						}
+						opts = append(opts, WithHTTPClient(callerClient))
+					}
+
+					client, err := NewToolboxClient(server.URL, opts...)
+					require.NoError(t, err)
+
+					_, err = client.LoadToolset("", context.Background())
+					require.Error(t, err)
+					assert.Contains(t, err.Error(), fmt.Sprintf("toolbox server responded with HTTP %d redirect to %q; automatic redirects are disabled for security, configure the client with the final server URL", status, location))
+					assert.Equal(t, int32(1), serverHits.Load(), "expected exactly one request to the Toolbox server")
+					assert.Equal(t, int32(0), targetHits.Load(), "the redirect target must not receive any request")
+
+					if withCallerClient {
+						assert.False(t, callerPolicyCalled.Load(), "the caller's CheckRedirect must not be consulted")
+						assert.Same(t, callerClient, client.httpClient)
+						assert.Equal(t, 10*time.Second, callerClient.Timeout)
+						assert.Nil(t, callerClient.Transport)
+						assert.Nil(t, callerClient.Jar)
+						require.NotNil(t, callerClient.CheckRedirect)
+						assert.NoError(t, callerClient.CheckRedirect(nil, nil), "the caller's CheckRedirect must not be replaced")
+					}
+				})
+			}
+		}
+	}
+}
+
+// TestToolInvoke_DoesNotFollowRedirects verifies that a redirect answering a
+// tool call does not forward auth tokens or secure parameters to the target.
+func TestToolInvoke_DoesNotFollowRedirects(t *testing.T) {
+	var targetHits atomic.Int32
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		targetHits.Add(1)
+	}))
+	defer target.Close()
+
+	secureTool := mcpTool{
+		Name:        "secure-tool",
+		InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
+		SecureInputSchema: map[string]any{
+			"type":       "object",
+			"properties": map[string]any{"api_key": map[string]any{"type": "string"}},
+		},
+		Meta: map[string]any{"com.google.cloud/authInvoke": []string{"my-service"}},
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var req mcpRPCRequest
+		_ = json.Unmarshal(body, &req)
+		if req.Method == "tools/call" {
+			w.Header().Set("Location", target.URL)
+			w.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
+		result, _ := json.Marshal(map[string]any{"tools": []mcpTool{secureTool}})
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(mcpRPCResponse{JSONRPC: "2.0", ID: req.ID, Result: result})
+	}))
+	defer server.Close()
+
+	client, err := NewToolboxClient(server.URL)
+	require.NoError(t, err)
+	tool, err := client.LoadTool("secure-tool", context.Background(),
+		WithBindSecureParamString("api_key", "my-secret-key"),
+		WithAuthTokenString("my-service", "secret-token"),
+	)
+	require.NoError(t, err)
+
+	_, err = tool.Invoke(context.Background(), nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), fmt.Sprintf("toolbox server responded with HTTP 307 redirect to %q", target.URL))
+	assert.Equal(t, int32(0), targetHits.Load(), "auth tokens and secure parameters must not reach the redirect target")
 }
 

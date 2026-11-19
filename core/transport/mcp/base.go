@@ -52,10 +52,13 @@ func (b *BaseMcpTransport) BaseURL() string {
 }
 
 // NewBaseTransport creates a new base transport.
+//
+// Requests to the Toolbox server never follow HTTP redirects, because a
+// redirect could forward auth token headers or, for 307/308, re-send a request
+// body containing secure parameters to another host. The provided client is
+// not modified; a shallow copy with redirects disabled is used instead.
 func NewBaseTransport(baseURL string, client *http.Client) (*BaseMcpTransport, error) {
-	if client == nil {
-		client = &http.Client{}
-	}
+	client = withoutRedirects(client)
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("invalid base URL: %w", err)
@@ -76,16 +79,44 @@ func NewBaseTransport(baseURL string, client *http.Client) (*BaseMcpTransport, e
 	}, nil
 }
 
+// withoutRedirects returns a shallow copy of client (or a new client if nil)
+// that returns redirect responses to the caller instead of following them.
+// The copy keeps the original Transport, Timeout and Jar.
+func withoutRedirects(client *http.Client) *http.Client {
+	var c http.Client
+	if client != nil {
+		c = *client
+	}
+	c.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	return &c
+}
+
+// toolsetNameReplacer restores ";" and "," after url.PathEscape. url.PathEscape
+// matches Go's default URL path escaping except that it also escapes "/", ";"
+// and ",", so after this only "/" is escaped differently.
+var toolsetNameReplacer = strings.NewReplacer("%3B", ";", "%2C", ",")
+
 // AppendToolsetPath appends a toolset name to the base URL path while preserving query parameters.
+// The path uses Go's default URL path escaping, except that "/" in the toolset
+// name is escaped as "%2F" so that the name always forms exactly one path
+// segment. The names "." and ".." are rejected.
 func AppendToolsetPath(baseURLStr, toolsetName string) (string, error) {
 	if toolsetName == "" {
 		return baseURLStr, nil
+	}
+	if toolsetName == "." || toolsetName == ".." {
+		return "", fmt.Errorf("invalid toolset name %q", toolsetName)
 	}
 	parsedURL, err := url.Parse(baseURLStr)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse URL: %w", err)
 	}
-	parsedURL.Path = strings.TrimRight(parsedURL.Path, "/") + "/" + toolsetName
+	basePath := strings.TrimRight(parsedURL.Path, "/") + "/"
+	parsedURL.Path = basePath + toolsetName
+	// RawPath is a valid encoding of Path, so URL.String() emits it unchanged.
+	parsedURL.RawPath = (&url.URL{Path: basePath}).EscapedPath() + toolsetNameReplacer.Replace(url.PathEscape(toolsetName))
 	return parsedURL.String(), nil
 }
 

@@ -19,7 +19,13 @@ package mcp
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/cookiejar"
+	"net/http/httptest"
+	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestNewBaseTransport(t *testing.T) {
@@ -89,11 +95,13 @@ func TestNewBaseTransport(t *testing.T) {
 }
 
 func TestAppendToolsetPath(t *testing.T) {
+	const base = "http://example.com/mcp/"
 	tests := []struct {
 		name        string
 		baseURL     string
 		toolsetName string
 		expected    string
+		wantErr     string
 	}{
 		{
 			name:        "Empty toolset name",
@@ -119,16 +127,152 @@ func TestAppendToolsetPath(t *testing.T) {
 			toolsetName: "my toolset",
 			expected:    "http://example.com/mcp/my%20toolset?num_rows=2",
 		},
+		// "/" is escaped so that the name stays a single path segment.
+		{name: "Slash", baseURL: base, toolsetName: "a/b", expected: base + "a%2Fb"},
+		{name: "Traversal attempt", baseURL: base, toolsetName: "../../admin", expected: base + "..%2F..%2Fadmin"},
+		{name: "Traversal attempt with query parameters", baseURL: base + "?num_rows=2&env=test", toolsetName: "../../admin", expected: base + "..%2F..%2Fadmin?num_rows=2&env=test"},
+		{name: "Slash and space with escaped base path", baseURL: "http://example.com/my%20api/mcp/?env=test", toolsetName: "a/b c", expected: "http://example.com/my%20api/mcp/a%2Fb%20c?env=test"},
+		// Other characters keep Go's default path escaping.
+		{name: "Backslash", baseURL: base, toolsetName: `..\admin`, expected: base + "..%5Cadmin"},
+		{name: "Percent", baseURL: base, toolsetName: "%2e%2e", expected: base + "%252e%252e"},
+		{name: "Space", baseURL: base, toolsetName: "a b", expected: base + "a%20b"},
+		{name: "Question mark, hash and percent", baseURL: base + "?env=test", toolsetName: "a?b#c%d", expected: base + "a%3Fb%23c%25d?env=test"},
+		{name: "Non-ASCII", baseURL: base, toolsetName: "café", expected: base + "caf%C3%A9"},
+		{name: "Tab between dots", baseURL: base, toolsetName: ".\t.", expected: base + ".%09."},
+		{name: "Tab before dots", baseURL: base, toolsetName: "\t..", expected: base + "%09.."},
+		{name: "Newline after dots", baseURL: base, toolsetName: "..\n", expected: base + "..%0A"},
+		{name: "Carriage return between dots", baseURL: base, toolsetName: ".\r.", expected: base + ".%0D."},
+		{name: "Tab", baseURL: base, toolsetName: "a\tb", expected: base + "a%09b"},
+		{name: "NUL", baseURL: base, toolsetName: "\x00", expected: base + "%00"},
+		{name: "Control character 0x1F", baseURL: base, toolsetName: "\x1f", expected: base + "%1F"},
+		{name: "DEL", baseURL: base, toolsetName: "\x7f", expected: base + "%7F"},
+		{name: "Semicolon and comma are not escaped", baseURL: base, toolsetName: "a;b,c", expected: base + "a;b,c"},
+		{name: "Semicolon and comma with query parameters", baseURL: base + "?env=test", toolsetName: "a;b,c", expected: base + "a;b,c?env=test"},
+		{name: "Sub-delimiters, colon and at sign are not escaped", baseURL: base, toolsetName: "a+b:c@d=e$f&g", expected: base + "a+b:c@d=e$f&g"},
+		// "." and ".." would be read as dot segments.
+		{name: "Dot is rejected", baseURL: base, toolsetName: ".", wantErr: `invalid toolset name "."`},
+		{name: "Dot-dot is rejected", baseURL: base + "?env=test", toolsetName: "..", wantErr: `invalid toolset name ".."`},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			res, err := AppendToolsetPath(tc.baseURL, tc.toolsetName)
+			if tc.wantErr != "" {
+				if err == nil || err.Error() != tc.wantErr {
+					t.Fatalf("Expected error %q, got result %q and error %v", tc.wantErr, res, err)
+				}
+				return
+			}
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 			if res != tc.expected {
 				t.Errorf("Expected %s, got %s", tc.expected, res)
+			}
+		})
+	}
+}
+
+func TestNewBaseTransport_DoesNotFollowRedirects(t *testing.T) {
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatalf("Failed to create cookie jar: %v", err)
+	}
+	callerTransport := &http.Transport{}
+	defer callerTransport.CloseIdleConnections()
+
+	tests := []struct {
+		name   string
+		client func(policyCalled *atomic.Bool) *http.Client
+	}{
+		{
+			name:   "Default client",
+			client: func(*atomic.Bool) *http.Client { return nil },
+		},
+		{
+			name: "Caller client keeps Transport, Timeout and Jar",
+			client: func(*atomic.Bool) *http.Client {
+				return &http.Client{Transport: callerTransport, Timeout: 5 * time.Second, Jar: jar}
+			},
+		},
+		{
+			name: "Caller client redirect policy is overridden",
+			client: func(policyCalled *atomic.Bool) *http.Client {
+				return &http.Client{
+					Timeout: 5 * time.Second,
+					CheckRedirect: func(*http.Request, []*http.Request) error {
+						policyCalled.Store(true)
+						return nil // Would follow every redirect.
+					},
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var targetHits atomic.Int32
+			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				targetHits.Add(1)
+			}))
+			defer target.Close()
+			redirector := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Location", target.URL)
+				w.WriteHeader(http.StatusTemporaryRedirect)
+			}))
+			defer redirector.Close()
+
+			var policyCalled atomic.Bool
+			callerClient := tc.client(&policyCalled)
+			var before http.Client
+			if callerClient != nil {
+				before = *callerClient
+			}
+
+			tr, err := NewBaseTransport(redirector.URL, callerClient)
+			if err != nil {
+				t.Fatalf("NewBaseTransport failed: %v", err)
+			}
+			if tr.HTTPClient == nil || tr.HTTPClient == callerClient {
+				t.Fatal("Expected the transport to use its own copy of the HTTP client")
+			}
+			if callerClient != nil {
+				if tr.HTTPClient.Transport != before.Transport || tr.HTTPClient.Timeout != before.Timeout || tr.HTTPClient.Jar != before.Jar {
+					t.Error("Expected the copy to keep the caller's Transport, Timeout and Jar")
+				}
+			}
+
+			req, err := http.NewRequest(http.MethodPost, tr.BaseURL(), strings.NewReader(`{"secureArguments":{"api_key":"secret"}}`))
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+			req.Header.Set("my-service_token", "secret-token")
+			resp, err := tr.HTTPClient.Do(req)
+			if err != nil {
+				t.Fatalf("Request failed: %v", err)
+			}
+			_ = resp.Body.Close()
+
+			if resp.StatusCode != http.StatusTemporaryRedirect || resp.Header.Get("Location") != target.URL {
+				t.Errorf("Expected the 307 redirect response to be returned, got %d with Location %q", resp.StatusCode, resp.Header.Get("Location"))
+			}
+			if hits := targetHits.Load(); hits != 0 {
+				t.Errorf("Expected the redirect target to receive no requests, got %d", hits)
+			}
+
+			if callerClient != nil {
+				if policyCalled.Load() {
+					t.Error("Expected the caller's CheckRedirect not to be consulted")
+				}
+				if callerClient.Transport != before.Transport || callerClient.Timeout != before.Timeout || callerClient.Jar != before.Jar {
+					t.Error("Expected the caller's http.Client to be left unmodified")
+				}
+				if (before.CheckRedirect == nil) != (callerClient.CheckRedirect == nil) {
+					t.Fatal("Expected the caller's CheckRedirect to be left unmodified")
+				}
+				if callerClient.CheckRedirect != nil && callerClient.CheckRedirect(nil, nil) != nil {
+					t.Error("Expected the caller's CheckRedirect to still be the caller's function")
+				}
 			}
 		})
 	}

@@ -20,9 +20,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/googleapis/mcp-toolbox-sdk-go/core/transport"
@@ -724,4 +726,38 @@ func TestNew_ClientVersion(t *testing.T) {
 			t.Errorf("expected clientVersion %q, got %q", mcp.SDKVersion, tr2.clientVersion)
 		}
 	})
+}
+
+func TestRequest_RedirectNotFollowed(t *testing.T) {
+	statusCodes := []int{
+		http.StatusMovedPermanently,
+		http.StatusFound,
+		http.StatusSeeOther,
+		http.StatusTemporaryRedirect,
+		http.StatusPermanentRedirect,
+	}
+	for _, status := range statusCodes {
+		t.Run(fmt.Sprint(status), func(t *testing.T) {
+			var targetHits atomic.Int32
+			target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				targetHits.Add(1)
+			}))
+			defer target.Close()
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Location", target.URL)
+				w.WriteHeader(status)
+			}))
+			defer server.Close()
+			want := fmt.Sprintf("toolbox server responded with HTTP %d redirect to %q", status, target.URL)
+
+			tr, err := New(server.URL, server.Client(), "test-client", "1.0.0")
+			require.NoError(t, err)
+
+			_, err = tr.ListTools(context.Background(), "", nil)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), want)
+
+			assert.Equal(t, int32(0), targetHits.Load(), "the redirect target must not receive any request")
+		})
+	}
 }

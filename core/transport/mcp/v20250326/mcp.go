@@ -292,6 +292,11 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 	}
 	defer resp.Body.Close()
 
+	// Redirects are not followed (see mcp.NewBaseTransport); report them instead.
+	if resp.StatusCode >= http.StatusMultipleChoices && resp.StatusCode < http.StatusBadRequest {
+		return nil, fmt.Errorf("toolbox server responded with HTTP %d redirect to %q; automatic redirects are disabled for security, configure the client with the final server URL", resp.StatusCode, resp.Header.Get("Location"))
+	}
+
 	supportedVersionsPriority := []string{
 		ProtocolVersion,
 		mcp20241105.ProtocolVersion,
