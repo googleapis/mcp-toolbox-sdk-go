@@ -98,6 +98,9 @@ func WithProtocol(p Protocol) ClientOption {
 }
 
 // WithHTTPClient provides a custom http.Client to the ToolboxClient.
+//
+// Requests to the Toolbox server never follow HTTP redirects, so the client's
+// CheckRedirect policy is not used. The provided client is not modified.
 func WithHTTPClient(client *http.Client) ClientOption {
 	return func(tc *ToolboxClient) error {
 		if client == nil {

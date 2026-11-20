@@ -70,14 +70,14 @@ func New(baseURL string, client *http.Client, clientName string, clientVersion s
 
 // ListTools fetches available tools
 func (t *McpTransport) ListTools(ctx context.Context, toolsetName string, headers map[string]string) (*transport.ManifestSchema, error) {
-	if err := t.EnsureInitialized(ctx, headers); err != nil {
-		return nil, err
-	}
-
 	// Append toolset name to base URL if provided
 	requestURL, err := mcp.AppendToolsetPath(t.BaseURL(), toolsetName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct toolset URL: %w", err)
+	}
+
+	if err := t.EnsureInitialized(ctx, headers); err != nil {
+		return nil, err
 	}
 
 	var result listToolsResult
@@ -291,6 +291,11 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 		return nil, fmt.Errorf("http request failed: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Redirects are not followed (see mcp.NewBaseTransport); report them instead.
+	if err := mcp.CheckRedirectResponse(resp); err != nil {
+		return nil, err
+	}
 
 	supportedVersionsPriority := []string{
 		ProtocolVersion,

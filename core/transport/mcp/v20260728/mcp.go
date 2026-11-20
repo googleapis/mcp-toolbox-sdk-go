@@ -183,6 +183,8 @@ func (t *McpTransport) sendRequest(ctx context.Context, url string, method strin
 }
 
 // sendNotification sends a standard JSON-RPC notification (no response expected).
+//
+//nolint:unused // Exercised by unit tests (-tags=unit).
 func (t *McpTransport) sendNotification(ctx context.Context, method string, params any, headers map[string]string) error {
 	req := jsonRPCNotification{
 		JSONRPC: "2.0",
@@ -254,6 +256,11 @@ func (t *McpTransport) doRPC(ctx context.Context, url string, reqBody any, heade
 		return fmt.Errorf("http request failed: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Redirects are not followed (see mcp.NewBaseTransport); report them instead.
+	if err := mcp.CheckRedirectResponse(resp); err != nil {
+		return err
+	}
 
 	supportedVersionsPriority := []string{
 		ProtocolVersion,
